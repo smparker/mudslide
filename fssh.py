@@ -225,7 +225,7 @@ class FSSH:
 
     def compute(self):
         # for now, define four possible outcomes of the simulation
-        outcomes = [0.0, 0.0, 0.0, 0.0]
+        outcomes = np.zeros([4])
         nsamples = int(self.options["samples"])
         for it in range(nsamples):
             traj = Trajectory(self.model, self.options)
@@ -246,7 +246,7 @@ if __name__ == "__main__":
                            position = -5.0,
                            mass = 2000.0,
                            total_time = 10.0 / (k / 2000.0),
-                           dt = 10,
+                           dt = 50,
                            samples = 100)
         results = fssh.compute()
         print "%12.6f %12.6f %12.6f %12.6f %12.6f" % (k, results[0], results[1], results[2], results[3])
