@@ -5,6 +5,15 @@ import scipy.integrate
 import math as m
 
 ## Tunneling through a single barrier model used in Tully's 1990 JCP
+#
+# \f[
+#   V_{11} = \left\{ \begin{array}{cr}
+#                   A (1 - e^{Bx}) & x < 0 \\
+#                  -A (1 - e^{-Bx}) & x > 0
+#                   \end{array} \right.
+# \f]
+# \f[ V_{22} = -V_{11} \f]
+# \f[ V_{12} = V_{21} = C e^{-D x^2} \f]
 class TullyModel:
     # parameters in Tully's model
     A = 0.0
@@ -12,21 +21,23 @@ class TullyModel:
     C = 0.0
     D = 0.0
 
-    # default to the values reported in Tully's 1990 JCP
+    ## Constructor that defaults to the values reported in Tully's 1990 JCP
     def __init__(self, a = 0.01, b = 1.6, c = 0.005, d = 1.0):
         self.A = a
         self.B = b
         self.C = c
         self.D = d
 
-    def V(self, R):
-        v11 = m.copysign(self.A, R) * ( 1.0 - m.exp(-self.B * abs(R)) )
+    ## \f$V(x)\f$
+    def V(self, x):
+        v11 = m.copysign(self.A, x) * ( 1.0 - m.exp(-self.B * abs(x)) )
         v22 = -v11
-        v12 = self.C * m.exp(-self.D * R * R)
+        v12 = self.C * m.exp(-self.D * x * x)
         out = np.array([ [v11, v12],
                          [v12, v22] ])
         return out
 
+    ## \f$\nabla V(x)\f$
     def Vgrad(self, R):
         v11 = self.A * self.B * m.exp(-self.B * abs(R))
         v22 = -v11
@@ -172,7 +183,6 @@ class Trajectory:
             delV = new_potential - old_potential
             component_kinetic = self.mode_kinetic_energy(np.ones([1]))
             if delV <= component_kinetic:
-                print "hopping!"
                 self.state = target_state
                 self.rescale_component(np.ones([1]), delV)
 
@@ -239,16 +249,18 @@ class FSSH:
 if __name__ == "__main__":
     model = TullyModel()
 
-    nk = int(100)
-    max_k = float(30.0)
-    min_k = max_k / nk
-    kpoints = np.linspace(min_k+5, max_k, nk)
+    nk = int(5)
+    #max_k = float(30.0)
+    #min_k = max_k / nk
+    min_k = 10.0
+    max_k = 15.0
+    kpoints = np.linspace(min_k, max_k, nk)
     for k in kpoints:
         fssh = FSSH(model, momentum = k,
                            position = -5.0,
                            mass = 2000.0,
                            total_time = 10.0 / (k / 2000.0),
                            dt = 50,
-                           samples = 100)
+                           samples = 2000)
         results = fssh.compute()
         print "%12.6f %12.6f %12.6f %12.6f %12.6f" % (k, results[0], results[1], results[2], results[3])
