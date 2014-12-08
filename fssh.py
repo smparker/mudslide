@@ -94,6 +94,7 @@ class Trajectory:
         # fixed initial parameters
         self.step = 0
         self.acceleration = 0.0
+        self.time = 0.0
 
         # read out of options
         self.dt = options["dt"]
@@ -206,6 +207,7 @@ class FSSH:
     ## Constructor requires model and options input as kwargs
     def __init__(self, model, **inp):
         self.model = model
+        self.options = {}
 
         # system parameters
         self.options["initial_state"] = inp.get("initial_state", "ground")
