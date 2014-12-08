@@ -15,12 +15,6 @@ import math as m
 # \f[ V_{22} = -V_{11} \f]
 # \f[ V_{12} = V_{21} = C e^{-D x^2} \f]
 class TullyModel:
-    # parameters in Tully's model
-    A = 0.0
-    B = 0.0
-    C = 0.0
-    D = 0.0
-
     ## Constructor that defaults to the values reported in Tully's 1990 JCP
     def __init__(self, a = 0.01, b = 1.6, c = 0.005, d = 1.0):
         self.A = a
@@ -49,15 +43,6 @@ class TullyModel:
 ## Wrapper around all the information computed for a set of electronics
 #  states at a given position: V, dV, eigenvectors, eigenvalues
 class ElectronicStates:
-    ## \f$H\f$
-    V = np.zeros([2, 2])
-    ## \f$\nabla H\f$
-    dV = np.zeros([2, 2])
-    ## eigenvectors of \f$H\f$
-    coeff = np.zeros([2,2])
-    ## eigenvalues of \f$H\f$
-    energies = np.zeros([2])
-
     ## Constructor
     # @param V Hamiltonian/potential
     # @param Vgrad Gradient of Hamiltonian/potential
@@ -93,17 +78,6 @@ class ElectronicStates:
 
 ## Class to propagate a single FSSH Trajectory
 class Trajectory:
-    model = TullyModel()
-    position = 0.0
-    velocity = 0.0
-    acceleration = 0.0
-    time = 0.0
-    mass = 1.0
-    rho = np.zeros([2,2], dtype=np.complex64, order='F')
-    step = 0
-    state = 0
-    dt = 0.1
-
     def __init__(self, model, options):
         # input explicitly
         self.model = model
@@ -119,6 +93,7 @@ class Trajectory:
 
         # fixed initial parameters
         self.step = 0
+        self.acceleration = 0.0
 
         # read out of options
         self.dt = options["dt"]
@@ -152,12 +127,16 @@ class Trajectory:
     # @param elec_states_0 ElectronicStates at \f$t\f$
     # @param elec_states_1 ElectronicStates at \f$t + dt\f$
     def propagate_rho(self, elec_states_0, elec_states_1):
+        H = 0.5 * (elec_states_0.V + elec_states_1.V)
+        energies, coeff = np.linalg.eigh(H)
+
+        D = 0.5 * (elec_states_0.compute_NAC_matrix(self.velocity)
+                    + elec_states_1.compute_NAC_matrix(self.velocity))
+        D[0,0] += energies[0]
+        D[1,1] += energies[1]
         def drho(time, y):
             ymat = np.reshape(y, [2, 2])
-            H = 0.5 * (elec_states_0.V + elec_states_1.V)
-            D = 0.5 * (elec_states_0.compute_NAC_matrix(self.velocity)
-                        + elec_states_1.compute_NAC_matrix(self.velocity))
-            tmp = np.dot(H + D, ymat)
+            tmp = np.dot(D, ymat)
             dro = -1j * (tmp - np.conj(tmp.T))
             return np.reshape(dro, [4])
 
@@ -224,11 +203,6 @@ class Trajectory:
 
 ## Class to manage many FSSH trajectories
 class FSSH:
-    ## model to be used for the simulations
-    model = TullyModel()
-    ## input options
-    options = {}
-
     ## Constructor requires model and options input as kwargs
     def __init__(self, model, **inp):
         self.model = model
