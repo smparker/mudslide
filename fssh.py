@@ -169,6 +169,7 @@ class Trajectory:
         if not integrator.successful():
             exit("Propagation of the electronic wavefunction failed!")
 
+    ## Compute probability of hopping, generate random number, and perform hops
     def surface_hopping(self, elec_states):
         d01 = elec_states.compute_derivative_coupling(0, 1)
         b01 = -2.0 * np.real(self.rho[0,1]) * np.dot(self.velocity, d01)
@@ -186,6 +187,7 @@ class Trajectory:
                 self.state = target_state
                 self.rescale_component(np.ones([1]), delV)
 
+    ## run simulation
     def simulate(self):
         electronics = ElectronicStates(model.V(self.position), model.Vgrad(self.position))
         # start by taking half step in velocity
@@ -205,7 +207,16 @@ class Trajectory:
             self.propagate_rho(electronics, new_electronics)
             self.surface_hopping(new_electronics)
             electronics = new_electronics
+            self.time += self.dt
 
+    ## Classifies end of simulation:
+    #
+    # result | classification
+    # -------|---------------
+    #   0    | lower state on the left
+    #   1    | lower state on the right
+    #   2    | upper state on the left
+    #   3    | upper state on the right
     def outcome(self):
         # first bit is left (0) or right (1), second bit is electronic state
         lr = 0 if self.position < 0.0 else 1
@@ -218,6 +229,7 @@ class FSSH:
     ## input options
     options = {}
 
+    ## Constructor requires model and options input as kwargs
     def __init__(self, model, **inp):
         self.model = model
 
@@ -230,11 +242,12 @@ class FSSH:
         # time parameters
         self.options["initial_time"]  = inp.get("initial_time", 0.0)
         self.options["dt"]            = inp.get("dt", 0.1)
-        self.options["total_time"]    = inp.get("total_time", abs(self.options["position"] / self.options["velocity"]))
+        self.options["total_time"]    = inp.get("total_time", 2.0 * abs(self.options["position"] / self.options["velocity"]))
 
         # statistical parameters
         self.options["samples"]       = inp.get("samples", 2000)
 
+    ## runs many trajectories and returns averaged results
     def compute(self):
         # for now, define four possible outcomes of the simulation
         outcomes = np.zeros([4])
