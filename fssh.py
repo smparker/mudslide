@@ -113,14 +113,12 @@ class Trajectory:
         self.dt = options["dt"]
         self.nsteps = int(options["total_time"] / self.dt)
 
-    def kinetic_energy(self, component = None):
-        if component == None:
-            component = self.velocity
-        return 0.5 * self.mass * np.dot(component, component)
+    def kinetic_energy(self):
+        return 0.5 * self.mass * np.dot(self.velocity, self.velocity)
 
     def mode_kinetic_energy(self, direction):
         component = np.dot(direction, self.velocity) / np.dot(direction, direction) * direction
-        return kinetic_energy(self, component)
+        return 0.5 * self.mass * np.dot(component, component)
 
     ## Rescales velocity in the specified direction and amount
     # @param direction array specifying the direction of the velocity to rescale
@@ -134,7 +132,7 @@ class Trajectory:
         c = reduction
         roots = np.roots([a, b, c])
         scal = min(roots, key=lambda x: abs(x))
-        self.velocity += scale * direction
+        self.velocity += scal * direction
 
     def step_forward(self):
         self.position += self.velocity * self.dt + 0.5 * self.acceleration * self.dt * self.dt
@@ -156,25 +154,27 @@ class Trajectory:
         integrator = scipy.integrate.complex_ode(drho).set_integrator('vode', method='bdf', with_jacobian=False)
         integrator.set_initial_value(rhovec, self.time)
         integrator.integrate(self.time + self.dt)
-        self.rho = integrator.y
+        self.rho = np.reshape(integrator.y, [2,2])
         if not integrator.successful():
             exit("Propagation of the electronic wavefunction failed!")
 
     def surface_hopping(self, elec_states):
         d01 = elec_states.compute_derivative_coupling(0, 1)
-        b01 = -2.0 * np.real(self.rho[0,1]) * self.velocity * d01
+        b01 = -2.0 * np.real(self.rho[0,1]) * np.dot(self.velocity, d01)
+        #print "b01 is %12.5f" % b01
         # probability of hopping out of current state
-        P = self.dt * b01 / self.rho[self.state, self.state]
+        P = self.dt * b01 / np.real(self.rho[self.state, self.state])
         zeta = np.random.uniform()
         if zeta < P: # do switch
             # beware, this will only work for a two-state model
             target_state = 1-self.state
             new_potential, old_potential = elec_states.energies[target_state], elec_states.energies[self.state]
             delV = new_potential - old_potential
-            component_kinetic = mode_kinetic_energy(np.ones([1]))
+            component_kinetic = self.mode_kinetic_energy(np.ones([1]))
             if delV <= component_kinetic:
+                print "hopping!"
                 self.state = target_state
-                rescale_component(np.ones([1]), delV)
+                self.rescale_component(np.ones([1]), delV)
 
     def simulate(self):
         electronics = ElectronicStates(model.V(self.position), model.Vgrad(self.position))
@@ -193,6 +193,8 @@ class Trajectory:
 
             # now propagate the electronic wavefunction to the new time
             self.propagate_rho(electronics, new_electronics)
+            self.surface_hopping(new_electronics)
+            electronics = new_electronics
 
     def outcome(self):
         # first bit is left (0) or right (1), second bit is electronic state
