@@ -126,8 +126,9 @@ class Trajectory:
 
     def compute_force(self, phi, Vgrad):
 
-    # the best way to do this would probably be linearly interpolating between the two electronics
-    # I'll use the average for now
+    ## Propagates \f$\rho(t)\f$ to \f$\rho(t + dt)\f$
+    # @param elec_states_0 ElectronicStates at \f$t\f$
+    # @param elec_states_1 ElectronicStates at \f$t + dt\f$
     def propagate_rho(self, elec_states_0, elec_states_1):
         def drho(time, y):
             H = 0.5 * (elec_states_0.V + elec_states_1.V)
