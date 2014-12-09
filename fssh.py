@@ -40,6 +40,9 @@ class TullyModel:
                          [v12, v22] ])
         return out
 
+    def dim(self):
+        return 2
+
 ## Wrapper around all the information computed for a set of electronics
 #  states at a given position: V, dV, eigenvectors, eigenvalues
 class ElectronicStates:
@@ -79,7 +82,6 @@ class ElectronicStates:
 ## Class to propagate a single FSSH Trajectory
 class Trajectory:
     def __init__(self, model, options):
-        # input explicitly
         self.model = model
         self.position = options["position"]
         self.velocity = options["velocity"]
@@ -135,19 +137,31 @@ class Trajectory:
                     + elec_states_1.compute_NAC_matrix(self.velocity))
         D[0,0] += energies[0]
         D[1,1] += energies[1]
-        def drho(time, y):
-            ymat = np.reshape(y, [2, 2])
-            tmp = np.dot(D, ymat)
-            dro = -1j * (tmp - np.conj(tmp.T))
-            return np.reshape(dro, [4])
 
-        rhovec = np.reshape(self.rho, [4])
-        integrator = scipy.integrate.complex_ode(drho).set_integrator('vode', method='bdf', with_jacobian=False)
-        integrator.set_initial_value(rhovec, self.time)
-        integrator.integrate(self.time + self.dt)
-        self.rho = np.reshape(integrator.y, [2,2])
-        if not integrator.successful():
-            exit("Propagation of the electronic wavefunction failed!")
+        diags, coeff = np.linalg.eigh(D)
+        cmat = np.matrix(coeff)
+        cmat_T = cmat.getH()
+        cconj = np.array(cmat_T)
+        tmp_rho = np.dot(cconj, np.dot(self.rho, coeff))
+        dim = model.dim()
+        for i in range(dim):
+            for j in range(dim):
+                tmp_rho[i,j] *= np.exp(-1j * (diags[i] - diags[j]) * self.dt)
+        self.rho[:] = np.dot(coeff, np.dot(tmp_rho, cconj))
+
+        #def drho(time, y):
+        #    ymat = np.reshape(y, [2, 2])
+        #    tmp = np.dot(D, ymat)
+        #    dro = -1j * (tmp - np.conj(tmp.T))
+        #    return np.reshape(dro, [4])
+
+        #rhovec = np.reshape(self.rho, [4])
+        #integrator = scipy.integrate.complex_ode(drho).set_integrator('vode', method='bdf', with_jacobian=False)
+        #integrator.set_initial_value(rhovec, self.time)
+        #integrator.integrate(self.time + self.dt)
+        #self.rho = np.reshape(integrator.y, [2,2])
+        #if not integrator.successful():
+        #    exit("Propagation of the electronic wavefunction failed!")
 
     ## Compute probability of hopping, generate random number, and perform hops
     def surface_hopping(self, elec_states):
@@ -238,11 +252,11 @@ class FSSH:
 if __name__ == "__main__":
     model = TullyModel()
 
-    nk = int(5)
+    nk = int(2)
     #max_k = float(30.0)
     #min_k = max_k / nk
-    min_k = 10.0
-    max_k = 15.0
+    min_k = 5.0
+    max_k = 10.0
     kpoints = np.linspace(min_k, max_k, nk)
     for k in kpoints:
         fssh = FSSH(model, momentum = k,
