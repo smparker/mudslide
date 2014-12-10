@@ -65,6 +65,9 @@ class ElectronicStates:
         force = - (np.dot(state_vec.T, np.dot(self.dV, state_vec)))
         return force
 
+    def compute_potential(self, state):
+        return self.energies[state]
+
     def compute_derivative_coupling(self, bra_state, ket_state):
         out = 0.0
         if (bra_state != ket_state):
@@ -105,6 +108,11 @@ class Trajectory:
     def kinetic_energy(self):
         return 0.5 * self.mass * np.dot(self.velocity, self.velocity)
 
+    def total_energy(self, elec_state):
+        potential = elec_state.compute_potential(self.state)
+        kinetic = self.kinetic_energy()
+        return potential + kinetic
+
     def mode_kinetic_energy(self, direction):
         component = np.dot(direction, self.velocity) / np.dot(direction, direction) * direction
         return 0.5 * self.mass * np.dot(component, component)
@@ -114,17 +122,14 @@ class Trajectory:
     # @param reduction scalar specifying how much kinetic energy should be damped
     def rescale_component(self, direction, reduction):
         # normalize
-        direction /= np.dot(direction, direction)
+        direction /= m.sqrt(np.dot(direction, direction))
         Md = self.mass * direction
         a = np.dot(Md, Md)
-        b = 2.0 * self.mass * np.dot(self.velocity, Md)
-        c = reduction
+        b = 2.0 * np.dot(self.mass * self.velocity, Md)
+        c = -2.0 * self.mass * reduction
         roots = np.roots([a, b, c])
         scal = min(roots, key=lambda x: abs(x))
         self.velocity += scal * direction
-
-    def step_forward(self):
-        self.position += self.velocity * self.dt + 0.5 * self.acceleration * self.dt * self.dt
 
     ## Propagates \f$\rho(t)\f$ to \f$\rho(t + dt)\f$
     # @param elec_states_0 ElectronicStates at \f$t\f$
@@ -179,7 +184,7 @@ class Trajectory:
             component_kinetic = self.mode_kinetic_energy(np.ones([1]))
             if delV <= component_kinetic:
                 self.state = target_state
-                self.rescale_component(np.ones([1]), delV)
+                self.rescale_component(np.ones([1]), -delV)
 
     ## run simulation
     def simulate(self):
@@ -187,6 +192,8 @@ class Trajectory:
         # start by taking half step in velocity
         initial_acc = electronics.compute_force(self.state) / self.mass
         self.velocity += 0.5 * initial_acc * self.dt
+        potential_energy = electronics.compute_potential(self.state)
+        energy_list = [ (potential_energy, self.total_energy(electronics)) ]
 
         # propagation
         for step in range(self.nsteps):
@@ -202,6 +209,8 @@ class Trajectory:
             self.surface_hopping(new_electronics)
             electronics = new_electronics
             self.time += self.dt
+            energy_list.append((electronics.compute_potential(self.state), self.total_energy(electronics)))
+        return energy_list
 
     ## Classifies end of simulation:
     #
@@ -242,28 +251,37 @@ class FSSH:
         # for now, define four possible outcomes of the simulation
         outcomes = np.zeros([4])
         nsamples = int(self.options["samples"])
+        energy_list = []
         for it in range(nsamples):
             traj = Trajectory(self.model, self.options)
-            traj.simulate()
+            energy_list.append(traj.simulate())
             outcomes[traj.outcome()] += 1
+
+        nsteps = len(energy_list[0])
+        t = self.options["initial_time"]
+        for i in range(nsteps):
+            out = "%12.6f" % t
+            for j in range(nsamples):
+                out += " %12.6f %12.6f" % energy_list[j][i]
+            print out
+            t += self.options["dt"]
         outcomes /= float(nsamples)
         return outcomes
 
 if __name__ == "__main__":
     model = TullyModel()
 
-    nk = int(2)
+    nk = int(1)
     #max_k = float(30.0)
     #min_k = max_k / nk
-    min_k = 5.0
-    max_k = 10.0
+    min_k = 20.0
+    max_k = 20.0
     kpoints = np.linspace(min_k, max_k, nk)
     for k in kpoints:
         fssh = FSSH(model, momentum = k,
                            position = -5.0,
                            mass = 2000.0,
-                           total_time = 10.0 / (k / 2000.0),
-                           dt = 50,
-                           samples = 2000)
+                           dt = 1,
+                           samples = 10)
         results = fssh.compute()
-        print "%12.6f %12.6f %12.6f %12.6f %12.6f" % (k, results[0], results[1], results[2], results[3])
+        #print "%12.6f %12.6f %12.6f %12.6f %12.6f" % (k, results[0], results[1], results[2], results[3])
