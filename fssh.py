@@ -275,6 +275,8 @@ class FSSH:
             for r in poolresult:
                 r.wait()
                 outcomes += r.get()
+            pool.close()
+            pool.join()
         else:
             for it in range(nsamples):
                 traj = Trajectory(self.model, self.options)
