@@ -241,7 +241,7 @@ class FSSH:
 
         # time parameters
         self.options["initial_time"]  = inp.get("initial_time", 0.0)
-        self.options["dt"]            = inp.get("dt", 0.1)
+        self.options["dt"]            = inp.get("dt", 0.01 / self.options["velocity"])
         self.options["total_time"]    = inp.get("total_time", 2.0 * abs(self.options["position"] / self.options["velocity"]))
 
         # statistical parameters
