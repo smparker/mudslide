@@ -3,6 +3,7 @@
 import numpy as np
 import scipy.integrate
 import math as m
+import multiprocessing as mp
 
 ## Tunneling through a single barrier model used in Tully's 1990 JCP
 #
@@ -246,42 +247,70 @@ class FSSH:
         # statistical parameters
         self.options["samples"]       = inp.get("samples", 2000)
 
+        # numerical parameters
+        self.options["nprocs"]        = inp.get("nprocs", mp.cpu_count())
+
+    def run_trajectories(self, n):
+        outcomes = np.zeros([4])
+        for it in range(n):
+            traj = Trajectory(self.model, self.options)
+            traj.simulate()
+            outcomes[traj.outcome()] += 1
+        return outcomes
+
     ## runs many trajectories and returns averaged results
     def compute(self):
         # for now, define four possible outcomes of the simulation
         outcomes = np.zeros([4])
         nsamples = int(self.options["samples"])
         energy_list = []
-        for it in range(nsamples):
-            traj = Trajectory(self.model, self.options)
-            energy_list.append(traj.simulate())
-            outcomes[traj.outcome()] += 1
+        nprocs = self.options["nprocs"]
+        if nprocs > 1:
+            pool = mp.Pool(nprocs)
+            chunksize = (nsamples - 1)/nprocs + 1
+            poolresult = []
+            for ip in range(nprocs):
+                batchsize = min(chunksize, nsamples - chunksize * ip)
+                poolresult.append(pool.apply_async(unwrapped_run_trajectories, (self, batchsize)))
+            for r in poolresult:
+                r.wait()
+                outcomes += r.get()
+        else:
+            for it in range(nsamples):
+                traj = Trajectory(self.model, self.options)
+                energy_list.append(traj.simulate())
+                outcomes[traj.outcome()] += 1
 
-        nsteps = len(energy_list[0])
-        t = self.options["initial_time"]
-        for i in range(nsteps):
-            out = "%12.6f" % t
-            for j in range(nsamples):
-                out += " %12.6f %12.6f" % energy_list[j][i]
-            print out
-            t += self.options["dt"]
+        #nsteps = len(energy_list[0])
+        #t = self.options["initial_time"]
+        #for i in range(nsteps):
+        #    out = "%12.6f" % t
+        #    for j in range(nsamples):
+        #        out += " %12.6f %12.6f" % energy_list[j][i]
+        #    print out
+        #    t += self.options["dt"]
+
         outcomes /= float(nsamples)
         return outcomes
+
+def unwrapped_run_trajectories(fssh, n):
+    return FSSH.run_trajectories(fssh, n)
 
 if __name__ == "__main__":
     model = TullyModel()
 
-    nk = int(1)
+    nk = int(20)
     #max_k = float(30.0)
     #min_k = max_k / nk
-    min_k = 20.0
-    max_k = 20.0
+    min_k = 4.0
+    max_k = 10.0
     kpoints = np.linspace(min_k, max_k, nk)
     for k in kpoints:
         fssh = FSSH(model, momentum = k,
                            position = -5.0,
                            mass = 2000.0,
-                           dt = 1,
-                           samples = 10)
+                           dt = 10,
+                           samples = 2000
+                   )
         results = fssh.compute()
-        #print "%12.6f %12.6f %12.6f %12.6f %12.6f" % (k, results[0], results[1], results[2], results[3])
+        print "%12.6f %12.6f %12.6f %12.6f %12.6f" % (k, results[0], results[1], results[2], results[3])
