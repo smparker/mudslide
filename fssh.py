@@ -113,6 +113,7 @@ class Trajectory:
         # read out of options
         self.dt = options["dt"]
         self.nsteps = int(options["total_time"] / self.dt)
+        self.outcome_type = options["outcome_type"]
 
         # propagator
         self.propagator = options["propagator"]
@@ -239,9 +240,17 @@ class Trajectory:
     #   2    | upper state on the left
     #   3    | upper state on the right
     def outcome(self):
-        # first bit is left (0) or right (1), second bit is electronic state
+        out = np.zeros([4])
         lr = 0 if self.position < 0.0 else 1
-        return 2*self.state + lr
+        if self.outcome_type == "populations":
+            out[lr] = np.real(self.rho[0,0])
+            out[2 + lr] = np.real(self.rho[1,1])
+        elif self.outcome_type == "state":
+            out[2*self.state + lr] = 1.0
+        else:
+            raise Exception("Unrecognized outcome recognition type")
+        return out
+        # first bit is left (0) or right (1), second bit is electronic state
 
 ## Class to manage many FSSH trajectories
 class FSSH:
@@ -269,13 +278,14 @@ class FSSH:
         if self.options["propagator"] not in ["exponential", "ode"]:
             raise Exception("Unrecognized electronic propagator!")
         self.options["nprocs"]        = inp.get("nprocs", mp.cpu_count())
+        self.options["outcome_type"]  = inp.get("outcome_type", "state")
 
     def run_trajectories(self, n):
         outcomes = np.zeros([4])
         for it in range(n):
             traj = Trajectory(self.model, self.options)
             traj.simulate()
-            outcomes[traj.outcome()] += 1
+            outcomes += traj.outcome()
         return outcomes
 
     ## runs many trajectories and returns averaged results
@@ -301,7 +311,7 @@ class FSSH:
             for it in range(nsamples):
                 traj = Trajectory(self.model, self.options)
                 energy_list.append(traj.simulate())
-                outcomes[traj.outcome()] += 1
+                outcomes += traj.outcome()
 
         #nsteps = len(energy_list[0])
         #t = self.options["initial_time"]
