@@ -12,6 +12,7 @@ class ElectronicStates:
     ## Constructor
     # @param V Hamiltonian/potential
     # @param Vgrad Gradient of Hamiltonian/potential
+    # @param ref_coeff [optional] set of coefficients (for example, from a previous step) used to keep the sign of eigenvectors consistent
     def __init__(self, V, Vgrad, ref_coeff = None):
         self.V = V
         self.dV = Vgrad
@@ -226,6 +227,21 @@ class Trajectory:
 class FSSH:
     ## Constructor requires model and options input as kwargs
     # @param model object used to describe the model system
+    #
+    # Accepted keyword arguments and their defaults:
+    # | key                |   default                  |
+    # ---------------------|----------------------------|
+    # | initial_state      | "ground"                   |
+    # | position           |    -5.0                    |
+    # | mass               | 2000.0                     |
+    # | momentum           | 2.0                        |
+    # | initial_time       | 0.0                        |
+    # | dt                 | 0.05 / velocity            |
+    # | total_time         | 2 * abs(position/velocity) |
+    # | samples            | 2000                       |
+    # | propagator         | "exponential"              |
+    # | nprocs             | MultiProcessing.cpu_count  |
+    # | outcome_type       | "state"                    |
     def __init__(self, model, **inp):
         self.model = model
         self.options = {}
@@ -255,11 +271,13 @@ class FSSH:
     # @param n number of trajectories to run
     def run_trajectories(self, n):
         outcomes = np.zeros([4])
+        en_list = []
         for it in range(n):
             traj = Trajectory(self.model, self.options)
-            traj.simulate()
+            potentials = traj.simulate()
+            en_list.append(potentials)
             outcomes += traj.outcome()
-        return outcomes
+        return (outcomes, energy_list)
 
     ## runs many trajectories and returns averaged results
     def compute(self):
@@ -268,23 +286,20 @@ class FSSH:
         nsamples = int(self.options["samples"])
         energy_list = []
         nprocs = self.options["nprocs"]
-        if nprocs > 1:
-            pool = mp.Pool(nprocs)
-            chunksize = (nsamples - 1)/nprocs + 1
-            poolresult = []
-            for ip in range(nprocs):
-                batchsize = min(chunksize, nsamples - chunksize * ip)
-                poolresult.append(pool.apply_async(unwrapped_run_trajectories, (self, batchsize)))
-            for r in poolresult:
-                r.wait()
-                outcomes += r.get(10)
-            pool.close()
-            pool.join()
-        else:
-            for it in range(nsamples):
-                traj = Trajectory(self.model, self.options)
-                energy_list.append(traj.simulate())
-                outcomes += traj.outcome()
+
+        pool = mp.Pool(nprocs)
+        chunksize = (nsamples - 1)/nprocs + 1
+        poolresult = []
+        for ip in range(nprocs):
+            batchsize = min(chunksize, nsamples - chunksize * ip)
+            poolresult.append(pool.apply_async(unwrapped_run_trajectories, (self, batchsize)))
+        for r in poolresult:
+            r.wait()
+            oc, en = r.get(100)
+            outcomes += oc
+            energy_list.extend(en)
+        pool.close()
+        pool.join()
 
         #nsteps = len(energy_list[0])
         #t = self.options["initial_time"]
