@@ -41,6 +41,9 @@ class TullyModel:
                          [v12, v22] ])
         return out
 
+    def electronics(self, R, ref_coeff = None):
+        return ElectronicStates(self.V(R), self.Vgrad(R), ref_coeff)
+
     def dim(self):
         return 2
 
@@ -50,10 +53,14 @@ class ElectronicStates:
     ## Constructor
     # @param V Hamiltonian/potential
     # @param Vgrad Gradient of Hamiltonian/potential
-    def __init__(self, V, Vgrad):
+    def __init__(self, V, Vgrad, ref_coeff = None):
         self.V = V
         self.dV = Vgrad
         self.energies, self.coeff = np.linalg.eigh(V)
+        if ref_coeff is not None:
+            for mo in range(self.dim()):
+                if (np.dot(self.coeff[:,mo], ref_coeff[:,mo]) < 0.0):
+                    self.coeff[:,mo] *= -1.0
 
     ## returns dimension of Hamiltonian
     def dim(self):
@@ -189,7 +196,7 @@ class Trajectory:
 
     ## run simulation
     def simulate(self):
-        electronics = ElectronicStates(model.V(self.position), model.Vgrad(self.position))
+        electronics = model.electronics(self.position)
         # start by taking half step in velocity
         initial_acc = electronics.compute_force(self.state) / self.mass
         self.velocity += 0.5 * initial_acc * self.dt
@@ -201,7 +208,7 @@ class Trajectory:
             # first update nuclear coordinates
             self.position += self.velocity * self.dt
             # calculate electronics at new position
-            new_electronics = ElectronicStates(model.V(self.position), model.Vgrad(self.position))
+            new_electronics = model.electronics(self.position, electronics.coeff)
             acceleration = new_electronics.compute_force(self.state) / self.mass
             self.velocity += acceleration * self.dt
 
