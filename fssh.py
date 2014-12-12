@@ -283,7 +283,7 @@ class FSSH:
                 poolresult.append(pool.apply_async(unwrapped_run_trajectories, (self, batchsize)))
             for r in poolresult:
                 r.wait()
-                outcomes += r.get()
+                outcomes += r.get(10)
             pool.close()
             pool.join()
         else:
