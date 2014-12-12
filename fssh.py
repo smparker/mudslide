@@ -114,6 +114,9 @@ class Trajectory:
         self.dt = options["dt"]
         self.nsteps = int(options["total_time"] / self.dt)
 
+        # propagator
+        self.propagator = options["propagator"]
+
     def kinetic_energy(self):
         return 0.5 * self.mass * np.dot(self.velocity, self.velocity)
 
@@ -143,39 +146,44 @@ class Trajectory:
     ## Propagates \f$\rho(t)\f$ to \f$\rho(t + dt)\f$
     # @param elec_states_0 ElectronicStates at \f$t\f$
     # @param elec_states_1 ElectronicStates at \f$t + dt\f$
+    #
+    # The propagation assumes the electronic energies and couplings are static throughout.
+    # This will only be true for fairly small time steps
     def propagate_rho(self, elec_states_0, elec_states_1):
-        H = 0.5 * (elec_states_0.V + elec_states_1.V)
-        energies, coeff = np.linalg.eigh(H)
+        D = elec_states_0.compute_NAC_matrix(self.velocity)
 
-        D = 0.5 * (elec_states_0.compute_NAC_matrix(self.velocity)
-                    + elec_states_1.compute_NAC_matrix(self.velocity))
-        D[0,0] += energies[0]
-        D[1,1] += energies[1]
+        G = np.zeros([2,2], dtype=np.complex64)
+        G[0,0] = elec_states_0.energies[0]
+        G[1,1] = elec_states_0.energies[1]
+        G += 1j * D
 
-        diags, coeff = np.linalg.eigh(D)
-        cmat = np.matrix(coeff)
-        cmat_T = cmat.getH()
-        cconj = np.array(cmat_T)
-        tmp_rho = np.dot(cconj, np.dot(self.rho, coeff))
-        dim = model.dim()
-        for i in range(dim):
-            for j in range(dim):
-                tmp_rho[i,j] *= np.exp(-1j * (diags[i] - diags[j]) * self.dt)
-        self.rho[:] = np.dot(coeff, np.dot(tmp_rho, cconj))
+        if self.propagator == "exponential":
+            diags, coeff = np.linalg.eigh(G)
+            cmat = np.matrix(coeff)
+            cmat_T = cmat.getH()
+            cconj = np.array(cmat_T)
+            tmp_rho = np.dot(cconj, np.dot(self.rho, coeff))
+            dim = model.dim()
+            for i in range(dim):
+                for j in range(dim):
+                    tmp_rho[i,j] *= np.exp(-1j * (diags[i] - diags[j]) * self.dt)
+            self.rho[:] = np.dot(coeff, np.dot(tmp_rho, cconj))
+        elif self.propagator == "ode":
+            G *= -1j
+            def drho(time, y):
+                ymat = np.reshape(y, [2, 2])
+                dro = np.dot(G, ymat) - np.dot(ymat, G)
+                return np.reshape(dro, [4])
 
-        #def drho(time, y):
-        #    ymat = np.reshape(y, [2, 2])
-        #    tmp = np.dot(D, ymat)
-        #    dro = -1j * (tmp - np.conj(tmp.T))
-        #    return np.reshape(dro, [4])
-
-        #rhovec = np.reshape(self.rho, [4])
-        #integrator = scipy.integrate.complex_ode(drho).set_integrator('vode', method='bdf', with_jacobian=False)
-        #integrator.set_initial_value(rhovec, self.time)
-        #integrator.integrate(self.time + self.dt)
-        #self.rho = np.reshape(integrator.y, [2,2])
-        #if not integrator.successful():
-        #    exit("Propagation of the electronic wavefunction failed!")
+            rhovec = np.reshape(self.rho, [4])
+            integrator = scipy.integrate.complex_ode(drho).set_integrator('vode', method='bdf', with_jacobian=False)
+            integrator.set_initial_value(rhovec, self.time)
+            integrator.integrate(self.time + self.dt)
+            self.rho = np.reshape(integrator.y, [2,2])
+            if not integrator.successful():
+                exit("Propagation of the electronic wavefunction failed!")
+        else:
+            raise Exception("Unrecognized method for propagation of electronic density matrix!")
 
     ## Compute probability of hopping, generate random number, and perform hops
     def surface_hopping(self, elec_states):
@@ -257,6 +265,9 @@ class FSSH:
         self.options["samples"]       = inp.get("samples", 2000)
 
         # numerical parameters
+        self.options["propagator"]    = inp.get("propagator", "exponential")
+        if self.options["propagator"] not in ["exponential", "ode"]:
+            raise Exception("Unrecognized electronic propagator!")
         self.options["nprocs"]        = inp.get("nprocs", mp.cpu_count())
 
     def run_trajectories(self, n):
