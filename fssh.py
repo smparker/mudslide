@@ -108,8 +108,6 @@ class Trajectory:
             raise Exception("Unrecognized initial state option")
 
         # fixed initial parameters
-        self.step = 0
-        self.acceleration = 0.0
         self.time = 0.0
 
         # read out of options
