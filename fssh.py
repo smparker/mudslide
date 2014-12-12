@@ -246,13 +246,13 @@ class FSSH:
 
         # system parameters
         self.options["initial_state"] = inp.get("initial_state", "ground")
-        self.options["position"]      = inp.get("position", -10.0)
+        self.options["position"]      = inp.get("position", -5.0)
         self.options["mass"]          = inp.get("mass", 2000.0)
         self.options["velocity"]      = inp.get("momentum", 2.0) / self.options["mass"]
 
         # time parameters
         self.options["initial_time"]  = inp.get("initial_time", 0.0)
-        self.options["dt"]            = inp.get("dt", 0.01 / self.options["velocity"])
+        self.options["dt"]            = inp.get("dt", 0.05 / self.options["velocity"])
         self.options["total_time"]    = inp.get("total_time", 2.0 * abs(self.options["position"] / self.options["velocity"]))
 
         # statistical parameters
