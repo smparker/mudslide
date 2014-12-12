@@ -84,10 +84,13 @@ class ElectronicStates:
         return out
 
     def compute_NAC_matrix(self, velocity):
-        out = np.zeros([self.dim(), self.dim()], dtype=np.complex64)
-        out[0,1] = self.compute_derivative_coupling(0, 1)
-        out[1,0] = - out[0,1]
-        out *= -1j * velocity
+        dim = self.dim()
+        out = np.zeros([dim, dim], dtype=np.complex64)
+        for i in range(dim):
+            for j in range(i):
+                out[i, j] = self.compute_derivative_coupling(i, j)
+                out[j, i] = - out[i, j]
+        out *= velocity
         return out
 
 ## Class to propagate a single FSSH Trajectory
@@ -178,15 +181,16 @@ class Trajectory:
 
     ## Compute probability of hopping, generate random number, and perform hops
     def surface_hopping(self, elec_states):
-        d01 = elec_states.compute_derivative_coupling(0, 1)
-        b01 = -2.0 * np.real(self.rho[0,1]) * np.dot(self.velocity, d01)
-        #print "b01 is %12.5f" % b01
+        # this trick is only valid for 2 state problem
+        target_state = 1-self.state
+        dij = elec_states.compute_derivative_coupling(self.state, target_state)
+        bij = -2.0 * np.real(self.rho[self.state, target_state]) * np.dot(self.velocity, dij)
+        #print "bij is %12.5f" % bij
         # probability of hopping out of current state
-        P = self.dt * b01 / np.real(self.rho[self.state, self.state])
+        P = self.dt * bij / np.real(self.rho[self.state, self.state])
         zeta = np.random.uniform()
         if zeta < P: # do switch
             # beware, this will only work for a two-state model
-            target_state = 1-self.state
             new_potential, old_potential = elec_states.energies[target_state], elec_states.energies[self.state]
             delV = new_potential - old_potential
             component_kinetic = self.mode_kinetic_energy(np.ones([1]))
