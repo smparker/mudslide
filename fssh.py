@@ -321,18 +321,18 @@ def unwrapped_run_trajectories(fssh, n):
 if __name__ == "__main__":
     model = TullyModel()
 
-    nk = int(20)
-    #max_k = float(30.0)
-    #min_k = max_k / nk
+    nk = int(100)
     min_k = 4.0
-    max_k = 10.0
+    max_k = 30.0
+
     kpoints = np.linspace(min_k, max_k, nk)
     for k in kpoints:
         fssh = FSSH(model, momentum = k,
                            position = -5.0,
                            mass = 2000.0,
-                           dt = 10,
-                           samples = 2000
+                           samples = 500,
+                           propagator = "exponential",
+                           nprocs = 4
                    )
         results = fssh.compute()
         print "%12.6f %12.6f %12.6f %12.6f %12.6f" % (k, results[0], results[1], results[2], results[3])
