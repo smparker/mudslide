@@ -1,51 +1,10 @@
-#!/usr/bin/env python
+## @package fssh
+#  Module responsible for propagating surface hopping trajectories
 
 import numpy as np
 import scipy.integrate
 import math as m
 import multiprocessing as mp
-
-## Tunneling through a single barrier model used in Tully's 1990 JCP
-#
-# \f[
-#   V_{11} = \left\{ \begin{array}{cr}
-#                   A (1 - e^{Bx}) & x < 0 \\
-#                  -A (1 - e^{-Bx}) & x > 0
-#                   \end{array} \right.
-# \f]
-# \f[ V_{22} = -V_{11} \f]
-# \f[ V_{12} = V_{21} = C e^{-D x^2} \f]
-class TullyModel:
-    ## Constructor that defaults to the values reported in Tully's 1990 JCP
-    def __init__(self, a = 0.01, b = 1.6, c = 0.005, d = 1.0):
-        self.A = a
-        self.B = b
-        self.C = c
-        self.D = d
-
-    ## \f$V(x)\f$
-    def V(self, x):
-        v11 = m.copysign(self.A, x) * ( 1.0 - m.exp(-self.B * abs(x)) )
-        v22 = -v11
-        v12 = self.C * m.exp(-self.D * x * x)
-        out = np.array([ [v11, v12],
-                         [v12, v22] ])
-        return out
-
-    ## \f$\nabla V(x)\f$
-    def Vgrad(self, R):
-        v11 = self.A * self.B * m.exp(-self.B * abs(R))
-        v22 = -v11
-        v12 = -2.0 * self.C * self.D * R * m.exp(-self.D * R * R)
-        out = np.array([ [v11, v12],
-                         [v12, v22] ])
-        return out
-
-    def electronics(self, R, ref_coeff = None):
-        return ElectronicStates(self.V(R), self.Vgrad(R), ref_coeff)
-
-    def dim(self):
-        return 2
 
 ## Wrapper around all the information computed for a set of electronics
 #  states at a given position: V, dV, eigenvectors, eigenvalues
@@ -67,15 +26,17 @@ class ElectronicStates:
         return self.V.shape[0]
 
     ## returns \f$-\langle \phi_{\mbox{state}} | \nabla H | \phi_{\mbox{state}} \rangle\f$ of Hamiltonian
-    # @param state state along which to get
+    # @param state state along which to compute force
     def compute_force(self, state):
         state_vec = self.coeff[:,state]
         force = - (np.dot(state_vec.T, np.dot(self.dV, state_vec)))
         return force
 
+    ## returns \f$\phi_{\mbox{state}} | H | \phi_{\mbox{state}} = \varepsilon_{\mbox{state}}\f$
     def compute_potential(self, state):
         return self.energies[state]
 
+    ## returns \f$\phi_{i} | \nabla_\alpha \phi_{j} = d^\alpha_{ij}\f$
     def compute_derivative_coupling(self, bra_state, ket_state):
         out = 0.0
         if (bra_state != ket_state):
@@ -83,6 +44,7 @@ class ElectronicStates:
             out /= self.energies[bra_state] - self.energies[ket_state]
         return out
 
+    ## returns \f$ \sum_\alpha v^\alpha D^\alpha \f$ where \f$ D^\alpha_{ij} = d^\alpha_{ij} \f$
     def compute_NAC_matrix(self, velocity):
         dim = self.dim()
         out = np.zeros([dim, dim], dtype=np.complex64)
@@ -205,9 +167,13 @@ class Trajectory:
                 self.state = target_state
                 self.rescale_component(np.ones([1]), -delV)
 
+    ## helper function to simplify the calculation of the electronic states at a given position
+    def compute_electronics(self, position, ref_coeff = None):
+        return ElectronicStates(model.V(position), model.Vgrad(position), ref_coeff)
+
     ## run simulation
     def simulate(self):
-        electronics = model.electronics(self.position)
+        electronics = self.compute_electronics(self.position)
         # start by taking half step in velocity
         initial_acc = electronics.compute_force(self.state) / self.mass
         self.velocity += 0.5 * initial_acc * self.dt
@@ -219,7 +185,7 @@ class Trajectory:
             # first update nuclear coordinates
             self.position += self.velocity * self.dt
             # calculate electronics at new position
-            new_electronics = model.electronics(self.position, electronics.coeff)
+            new_electronics = self.compute_electronics(self.position, electronics.coeff)
             acceleration = new_electronics.compute_force(self.state) / self.mass
             self.velocity += acceleration * self.dt
 
@@ -253,8 +219,13 @@ class Trajectory:
         # first bit is left (0) or right (1), second bit is electronic state
 
 ## Class to manage many FSSH trajectories
+#
+# Requires a model object which is a class that has functions V(x), Vgrad(x), and dim()
+# that return the Hamiltonian at position x, gradient of the Hamiltonian at position x
+# and number of electronic states, respectively.
 class FSSH:
     ## Constructor requires model and options input as kwargs
+    # @param model object used to describe the model system
     def __init__(self, model, **inp):
         self.model = model
         self.options = {}
@@ -280,6 +251,8 @@ class FSSH:
         self.options["nprocs"]        = inp.get("nprocs", mp.cpu_count())
         self.options["outcome_type"]  = inp.get("outcome_type", "state")
 
+    ## runs a set of trajectories and collects the results
+    # @param n number of trajectories to run
     def run_trajectories(self, n):
         outcomes = np.zeros([4])
         for it in range(n):
@@ -325,11 +298,14 @@ class FSSH:
         outcomes /= float(nsamples)
         return outcomes
 
+## global version of FSSH.run_trajectories that is necessary because of the stupid way threading pools work in python
 def unwrapped_run_trajectories(fssh, n):
     return FSSH.run_trajectories(fssh, n)
 
 if __name__ == "__main__":
-    model = TullyModel()
+    import tullymodels as tully
+
+    model = tully.TullySimpleAvoidedCrossing()
 
     nk = int(100)
     min_k = 4.0
