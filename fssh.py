@@ -277,7 +277,7 @@ class FSSH:
             potentials = traj.simulate()
             en_list.append(potentials)
             outcomes += traj.outcome()
-        return (outcomes, energy_list)
+        return (outcomes, en_list)
 
     ## runs many trajectories and returns averaged results
     def compute(self):
