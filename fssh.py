@@ -322,16 +322,16 @@ if __name__ == "__main__":
 
     model = tully.TullySimpleAvoidedCrossing()
 
-    nk = int(100)
-    min_k = 4.0
+    nk = int(20)
+    min_k = 0.1
     max_k = 30.0
 
     kpoints = np.linspace(min_k, max_k, nk)
     for k in kpoints:
         fssh = FSSH(model, momentum = k,
-                           position = -5.0,
+                           position = -10.0,
                            mass = 2000.0,
-                           samples = 500,
+                           samples = 2000,
                            propagator = "exponential",
                            nprocs = 4
                    )
