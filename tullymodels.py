@@ -104,7 +104,6 @@ class TullyExtendedCouplingReflection:
             v12 = self.B * v12
         else:
             v12 = self.B * (2.0 - v12)
-        v12 = self.C * m.exp(-self.D * x * x)
         out = np.array([ [v11, v12],
                          [v12, v22] ])
         return out
@@ -112,8 +111,8 @@ class TullyExtendedCouplingReflection:
     ## \f$\nabla V(x)\f$
     def Vgrad(self, x):
         v11 = 0.0
-        v22 = 2.0 * self.A * self.B * x
-        v12 = -2.0 * self.C * self.D * x * m.exp(-self.D * x * x)
+        v22 = 0.0
+        v12 = self.B * self.C * m.exp(-self.C * abs(x))
         out = np.array([ [v11, v12],
                          [v12, v22] ])
         return out
