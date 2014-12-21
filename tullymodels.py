@@ -69,7 +69,7 @@ class TullyDualAvoidedCrossing:
     ## \f$\nabla V(x)\f$
     def Vgrad(self, x):
         v11 = 0.0
-        v22 = 2.0 * self.A * self.B * x
+        v22 = 2.0 * self.A * self.B * x * m.exp(-self.B * x * x)
         v12 = -2.0 * self.C * self.D * x * m.exp(-self.D * x * x)
         out = np.array([ [v11, v12],
                          [v12, v22] ])
