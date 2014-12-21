@@ -42,7 +42,10 @@ class ElectronicStates:
         out = 0.0
         if (bra_state != ket_state):
             out = np.dot(self.coeff[:,bra_state].T, np.dot(self.dV, self.coeff[:,ket_state]))
-            out /= self.energies[bra_state] - self.energies[ket_state]
+            dE = self.energies[bra_state] - self.energies[ket_state]
+            if abs(dE) < 1.0e-14:
+                dE = m.copysign(1.0e-14, dE)
+            out /= dE
         return out
 
     ## returns \f$ \sum_\alpha v^\alpha D^\alpha \f$ where \f$ D^\alpha_{ij} = d^\alpha_{ij} \f$
