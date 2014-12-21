@@ -1,9 +1,9 @@
-#Fewest Switches Surface Hopping
+# Fewest Switches Surface Hopping
 Python implementation of Tully's Fewest Switches Surface Hopping (FSSH) for model problems including
 a propagator and an implementation of Tully's model problems described in Tully, J.C. _J. Chem. Phys._ (1990) **93** 1061.
 The current implementation is limited to one-dimensional potentials with two electronic states.
 
-##Contents
+## Contents
 * fssh.py --- FSSH implementation. The FSSH class within fssh.py should be used to run sets of scattering simulations using FSSH.
 * tullymodels.py --- Implementation of three models described in Tully's 1990 JCP: TullySimpleAvoidedCrossing, TullyDualAvoidedCrossing,
                       TullyExtendedCouplingReflection.
