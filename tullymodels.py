@@ -32,13 +32,13 @@ class TullySimpleAvoidedCrossing:
         return out
 
     ## \f$\nabla V(x)\f$
-    def Vgrad(self, x):
+    def dV(self, x):
         v11 = self.A * self.B * m.exp(-self.B * abs(x))
         v22 = -v11
         v12 = -2.0 * self.C * self.D * x * m.exp(-self.D * x * x)
         out = np.array([ [v11, v12],
                          [v12, v22] ])
-        return out
+        return out.reshape([2, 2, 1])
 
     def nstates(self):
         return 2
@@ -70,13 +70,13 @@ class TullyDualAvoidedCrossing:
         return out
 
     ## \f$\nabla V(x)\f$
-    def Vgrad(self, x):
+    def dV(self, x):
         v11 = 0.0
         v22 = 2.0 * self.A * self.B * x * m.exp(-self.B * x * x)
         v12 = -2.0 * self.C * self.D * x * m.exp(-self.D * x * x)
         out = np.array([ [v11, v12],
                          [v12, v22] ])
-        return out
+        return out.reshape([2, 2, 1])
 
     def nstates(self):
         return 2
@@ -115,13 +115,13 @@ class TullyExtendedCouplingReflection:
         return out
 
     ## \f$\nabla V(x)\f$
-    def Vgrad(self, x):
+    def dV(self, x):
         v11 = 0.0
         v22 = 0.0
         v12 = self.B * self.C * m.exp(-self.C * abs(x))
         out = np.array([ [v11, v12],
                          [v12, v22] ])
-        return out
+        return out.reshape([2, 2, 1])
 
     def nstates(self):
         return 2

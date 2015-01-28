@@ -13,27 +13,33 @@ import sys
 class ElectronicStates:
     ## Constructor
     # @param V Hamiltonian/potential
-    # @param Vgrad Gradient of Hamiltonian/potential
+    # @param dV Gradient of Hamiltonian/potential
     # @param ref_coeff [optional] set of coefficients (for example, from a previous step) used to keep the sign of eigenvectors consistent
-    def __init__(self, V, Vgrad, ref_coeff = None):
+    def __init__(self, V, dV, ref_coeff = None):
         self.V = V
-        self.dV = Vgrad
+        self.dV = dV
         self.energies, self.coeff = np.linalg.eigh(V)
         if ref_coeff is not None:
             for mo in range(self.nstates()):
                 if (np.dot(self.coeff[:,mo], ref_coeff[:,mo]) < 0.0):
                     self.coeff[:,mo] *= -1.0
 
-    ## returns dimension of Hamiltonian
+    ## returns dimension of (electronic) Hamiltonian
     def nstates(self):
         return self.V.shape[0]
+
+    ## returns dimensionality of model (nuclear coordinates)
+    def ndim(self):
+        return self.dV.shape[2]
 
     ## returns \f$-\langle \phi_{\mbox{state}} | \nabla H | \phi_{\mbox{state}} \rangle\f$ of Hamiltonian
     # @param state state along which to compute force
     def compute_force(self, state):
+        out = np.zeros(self.ndim())
         state_vec = self.coeff[:,state]
-        force = - (np.dot(state_vec.T, np.dot(self.dV, state_vec)))
-        return force
+        for d in range(self.ndim()):
+            out[d] = - (np.dot(state_vec.T, np.dot(self.dV[:,:,d], state_vec)))
+        return out
 
     ## returns \f$\phi_{\mbox{state}} | H | \phi_{\mbox{state}} = \varepsilon_{\mbox{state}}\f$
     def compute_potential(self, state):
@@ -41,13 +47,14 @@ class ElectronicStates:
 
     ## returns \f$\phi_{i} | \nabla_\alpha \phi_{j} = d^\alpha_{ij}\f$
     def compute_derivative_coupling(self, bra_state, ket_state):
-        out = 0.0
+        out = np.zeros(self.ndim())
         if (bra_state != ket_state):
-            out = np.dot(self.coeff[:,bra_state].T, np.dot(self.dV, self.coeff[:,ket_state]))
-            dE = self.energies[bra_state] - self.energies[ket_state]
-            if abs(dE) < 1.0e-14:
-                dE = m.copysign(1.0e-14, dE)
-            out /= dE
+            for d in range(self.ndim()):
+                dij = np.dot(self.coeff[:,bra_state].T, np.dot(self.dV[:,:,d], self.coeff[:,ket_state]))
+                dE = self.energies[bra_state] - self.energies[ket_state]
+                if abs(dE) < 1.0e-14:
+                    dE = m.copysign(1.0e-14, dE)
+                out[d] = dij / dE
         return out
 
     ## returns \f$ \sum_\alpha v^\alpha D^\alpha \f$ where \f$ D^\alpha_{ij} = d^\alpha_{ij} \f$
@@ -175,7 +182,7 @@ class Trajectory:
 
     ## helper function to simplify the calculation of the electronic states at a given position
     def compute_electronics(self, position, ref_coeff = None):
-        return ElectronicStates(model.V(position), model.Vgrad(position), ref_coeff)
+        return ElectronicStates(model.V(position), model.dV(position), ref_coeff)
 
     ## run simulation
     def simulate(self):
@@ -226,9 +233,9 @@ class Trajectory:
 
 ## Class to manage many FSSH trajectories
 #
-# Requires a model object which is a class that has functions V(x), Vgrad(x), and nstates()
+# Requires a model object which is a class that has functions V(x), dV(x), nstates(), and ndim()
 # that return the Hamiltonian at position x, gradient of the Hamiltonian at position x
-# and number of electronic states, respectively.
+# number of electronic states, and dimension of nuclear space, respectively.
 class FSSH:
     ## Constructor requires model and options input as kwargs
     # @param model object used to describe the model system
