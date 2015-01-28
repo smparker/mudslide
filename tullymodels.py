@@ -40,8 +40,11 @@ class TullySimpleAvoidedCrossing:
                          [v12, v22] ])
         return out
 
-    def dim(self):
+    def nstates(self):
         return 2
+
+    def ndim(self):
+        return 1
 
 ## Tunneling through a double avoided crossing used in Tully's 1990 JCP
 #
@@ -75,8 +78,11 @@ class TullyDualAvoidedCrossing:
                          [v12, v22] ])
         return out
 
-    def dim(self):
+    def nstates(self):
         return 2
+
+    def ndim(self):
+        return 1
 
 ## Model with extended coupling and the possibility of reflection. The most challenging of the
 #  models used in Tully's 1990 JCP
@@ -117,5 +123,8 @@ class TullyExtendedCouplingReflection:
                          [v12, v22] ])
         return out
 
-    def dim(self):
+    def nstates(self):
         return 2
+
+    def ndim(self):
+        return 1

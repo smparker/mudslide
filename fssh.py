@@ -18,12 +18,12 @@ class ElectronicStates:
         self.dV = Vgrad
         self.energies, self.coeff = np.linalg.eigh(V)
         if ref_coeff is not None:
-            for mo in range(self.dim()):
+            for mo in range(self.nstates()):
                 if (np.dot(self.coeff[:,mo], ref_coeff[:,mo]) < 0.0):
                     self.coeff[:,mo] *= -1.0
 
     ## returns dimension of Hamiltonian
-    def dim(self):
+    def nstates(self):
         return self.V.shape[0]
 
     ## returns \f$-\langle \phi_{\mbox{state}} | \nabla H | \phi_{\mbox{state}} \rangle\f$ of Hamiltonian
@@ -50,9 +50,9 @@ class ElectronicStates:
 
     ## returns \f$ \sum_\alpha v^\alpha D^\alpha \f$ where \f$ D^\alpha_{ij} = d^\alpha_{ij} \f$
     def compute_NAC_matrix(self, velocity):
-        dim = self.dim()
-        out = np.zeros([dim, dim], dtype=np.complex64)
-        for i in range(dim):
+        nstates = self.nstates()
+        out = np.zeros([nstates, nstates], dtype=np.complex64)
+        for i in range(nstates):
             for j in range(i):
                 out[i, j] = self.compute_derivative_coupling(i, j)
                 out[j, i] = - out[i, j]
@@ -130,9 +130,9 @@ class Trajectory:
             cmat_T = cmat.getH()
             cconj = np.array(cmat_T)
             tmp_rho = np.dot(cconj, np.dot(self.rho, coeff))
-            dim = model.dim()
-            for i in range(dim):
-                for j in range(dim):
+            nstates = model.nstates()
+            for i in range(nstates):
+                for j in range(nstates):
                     tmp_rho[i,j] *= np.exp(-1j * (diags[i] - diags[j]) * self.dt)
             self.rho[:] = np.dot(coeff, np.dot(tmp_rho, cconj))
         elif self.propagator == "ode":
@@ -224,7 +224,7 @@ class Trajectory:
 
 ## Class to manage many FSSH trajectories
 #
-# Requires a model object which is a class that has functions V(x), Vgrad(x), and dim()
+# Requires a model object which is a class that has functions V(x), Vgrad(x), and nstates()
 # that return the Hamiltonian at position x, gradient of the Hamiltonian at position x
 # and number of electronic states, respectively.
 class FSSH:
