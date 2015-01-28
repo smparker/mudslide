@@ -6,6 +6,8 @@ import scipy.integrate
 import math as m
 import multiprocessing as mp
 
+import sys
+
 ## Wrapper around all the information computed for a set of electronics
 #  states at a given position: V, dV, eigenvectors, eigenvalues
 class ElectronicStates:
@@ -275,12 +277,15 @@ class FSSH:
     def run_trajectories(self, n):
         outcomes = np.zeros([4])
         en_list = []
-        for it in range(n):
-            traj = Trajectory(self.model, self.options)
-            potentials = traj.simulate()
-            en_list.append(potentials)
-            outcomes += traj.outcome()
-        return (outcomes, en_list)
+        try:
+            for it in range(n):
+                traj = Trajectory(self.model, self.options)
+                potentials = traj.simulate()
+                en_list.append(potentials)
+                outcomes += traj.outcome()
+            return (outcomes, en_list)
+        except KeyboardInterrupt:
+            pass
 
     ## runs many trajectories and returns averaged results
     def compute(self):
@@ -296,11 +301,13 @@ class FSSH:
         for ip in range(nprocs):
             batchsize = min(chunksize, nsamples - chunksize * ip)
             poolresult.append(pool.apply_async(unwrapped_run_trajectories, (self, batchsize)))
-        for r in poolresult:
-            r.wait()
-            oc, en = r.get(100)
-            outcomes += oc
-            energy_list.extend(en)
+        try:
+            for r in poolresult:
+                oc, en = r.get(100)
+                outcomes += oc
+                energy_list.extend(en)
+        except KeyboardInterrupt:
+                exit(" Aborting!")
         pool.close()
         pool.join()
 
