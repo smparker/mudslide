@@ -9,6 +9,10 @@ The current implementation is limited to one-dimensional potentials with two ele
                       TullyExtendedCouplingReflection.
 * surfaces.py --- script to print potential energy surfaces of the models
 
+## Requirements
+* numpy
+* scipy
+
 ## FSSH
 Sets of simulations are run using the FSSH class. A FSSH object must be instantiated by passing a model object. All
 other options are passed as keyword arguments to the constructor. For example:
@@ -25,7 +29,7 @@ other options are passed as keyword arguments to the constructor. For example:
     print "Probability of reflection on the excited state: %12.f" % results[2]
     print "Probability of transmission on the excited state: %12.f" % results[3]
 
-will run a series of scattering simulations with a particle starting at -5.0 a.u. and travelling with an initial momentum of 2.0 a.u.
+will run a series of scattering simulations in parallel with a particle starting at -5.0 a.u. and travelling with an initial momentum of 2.0 a.u.
 
 #### Options
 * `initial_state` - specify how the initial electronic state is chosen
@@ -48,9 +52,11 @@ will run a series of scattering simulations with a particle starting at -5.0 a.u
 ## Models
 The model provided to the FSSH class needs to have three functions implemented:
 
-* `V(self, x)` --- returns the Hamiltonian matrix at position `x`
-* `Vgrad(self, x)` --- returns the gradient of the Hamiltonian matrix at position `x`
+* `V(self, x)` --- returns (ndim,ndim)-shaped numpy array containing the Hamiltonian matrix at position `x`
+* `dV(self, x)` --- returns (ndim,ndim,1)-shaped numpy array containing the gradient of the Hamiltonian matrix at position `x`
 * `dim(self)` --- returns the number of states in the model (only 2 is supported)
+
+In all cases, the input `x` ought to be a numpy array with 1 element.
 
 The file tullymodels.py implements the three models in Tully's original paper. They are:
 
