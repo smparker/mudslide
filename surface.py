@@ -27,7 +27,7 @@ if __name__ == "__main__":
     last_coeff = np.array([[1.0, 0.0], [0.0, 1.0]])
     print "#%12s %12s %12s %12s %12s %12s" % ("x", "E_0", "E_1", "d_01", "dE_0", "dE_1")
     for x in xr:
-        elec = fssh.ElectronicStates(model.V(x), model.Vgrad(x), last_coeff)
+        elec = fssh.ElectronicStates(model.V(x), model.dV(x), last_coeff)
         print "%12.6f %12.6f %12.6f %12.6f %12.6f %12.6f" % (x, elec.energies[0], elec.energies[1], elec.compute_derivative_coupling(0,1),
                                                                -elec.compute_force(0), -elec.compute_force(1))
         last_coeff = elec.coeff

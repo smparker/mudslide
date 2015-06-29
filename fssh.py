@@ -61,11 +61,13 @@ class ElectronicStates:
     def compute_NAC_matrix(self, velocity):
         nstates = self.nstates()
         out = np.zeros([nstates, nstates], dtype=np.complex64)
+        ndim = self.ndim()
+        assert(ndim == velocity.shape[0])
         for i in range(nstates):
             for j in range(i):
-                out[i, j] = self.compute_derivative_coupling(i, j)
+                dij = self.compute_derivative_coupling(i,j)
+                out[i, j] = np.dot(velocity, dij)
                 out[j, i] = - out[i, j]
-        out *= velocity
         return out
 
 ## Class to propagate a single FSSH Trajectory
@@ -167,7 +169,6 @@ class Trajectory:
         target_state = 1-self.state
         dij = elec_states.compute_derivative_coupling(self.state, target_state)
         bij = -2.0 * np.real(self.rho[self.state, target_state]) * np.dot(self.velocity, dij)
-        #print "bij is %12.5f" % bij
         # probability of hopping out of current state
         P = self.dt * bij / np.real(self.rho[self.state, self.state])
         zeta = np.random.uniform()
