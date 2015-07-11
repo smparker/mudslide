@@ -51,7 +51,7 @@ class ElectronicStates:
         if (bra_state != ket_state):
             for d in range(self.ndim()):
                 dij = np.dot(self.coeff[:,bra_state].T, np.dot(self.dV[:,:,d], self.coeff[:,ket_state]))
-                dE = self.energies[bra_state] - self.energies[ket_state]
+                dE = self.energies[ket_state] - self.energies[bra_state]
                 if abs(dE) < 1.0e-14:
                     dE = m.copysign(1.0e-14, dE)
                 out[d] = dij / dE
@@ -133,7 +133,7 @@ class Trajectory:
         G = np.zeros([2,2], dtype=np.complex64)
         G[0,0] = elec_states_0.energies[0]
         G[1,1] = elec_states_0.energies[1]
-        G += 1j * D
+        G -= 1j * D
 
         if self.propagator == "exponential":
             diags, coeff = np.linalg.eigh(G)
@@ -167,7 +167,7 @@ class Trajectory:
     def surface_hopping(self, elec_states):
         # this trick is only valid for 2 state problem
         target_state = 1-self.state
-        dij = elec_states.compute_derivative_coupling(self.state, target_state)
+        dij = elec_states.compute_derivative_coupling(target_state, self.state)
         bij = -2.0 * np.real(self.rho[self.state, target_state]) * np.dot(self.velocity, dij)
         # probability of hopping out of current state
         P = self.dt * bij / np.real(self.rho[self.state, self.state])
