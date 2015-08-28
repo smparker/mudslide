@@ -5,6 +5,7 @@ import numpy as np
 import scipy.integrate
 import math as m
 import multiprocessing as mp
+import collections
 
 import sys
 
@@ -72,8 +73,9 @@ class ElectronicStates:
 
 ## Class to propagate a single FSSH Trajectory
 class Trajectory:
-    def __init__(self, model, options):
+    def __init__(self, model, tracer, options):
         self.model = model
+        self.tracer = tracer
         self.position = options["position"]
         self.velocity = options["velocity"]
         self.mass = options["mass"]
@@ -94,6 +96,9 @@ class Trajectory:
 
         # propagator
         self.propagator = options["propagator"]
+
+    def trace(self, electronics, prob):
+        self.tracer.collect(self.time, np.copy(self.position), self.mass*np.copy(self.velocity), np.copy(self.rho), self.state, electronics, prob)
 
     def kinetic_energy(self):
         return 0.5 * self.mass * np.dot(self.velocity, self.velocity)
@@ -180,6 +185,8 @@ class Trajectory:
             if delV <= component_kinetic:
                 self.state = target_state
                 self.rescale_component(np.ones([1]), -delV)
+                self.tracer.hops += 1
+        return P
 
     ## helper function to simplify the calculation of the electronic states at a given position
     def compute_electronics(self, position, ref_coeff = None):
@@ -192,7 +199,8 @@ class Trajectory:
         initial_acc = electronics.compute_force(self.state) / self.mass
         self.velocity += 0.5 * initial_acc * self.dt
         potential_energy = electronics.compute_potential(self.state)
-        energy_list = [ (potential_energy, self.total_energy(electronics)) ]
+
+        self.trace(electronics, 0.0)
 
         # propagation
         for step in range(self.nsteps):
@@ -205,11 +213,13 @@ class Trajectory:
 
             # now propagate the electronic wavefunction to the new time
             self.propagate_rho(electronics, new_electronics)
-            self.surface_hopping(new_electronics)
+            prob = self.surface_hopping(new_electronics)
             electronics = new_electronics
             self.time += self.dt
-            energy_list.append((electronics.compute_potential(self.state), self.total_energy(electronics)))
-        return energy_list
+
+            self.trace(electronics, prob)
+
+        return self.tracer
 
     ## Classifies end of simulation:
     #
@@ -231,6 +241,37 @@ class Trajectory:
             raise Exception("Unrecognized outcome recognition type")
         return out
         # first bit is left (0) or right (1), second bit is electronic state
+
+## Class to collect observables for a given trajectory
+TraceData = collections.namedtuple('TraceData', 'time position momentum rho activestate electronics hopping')
+
+class Trace:
+    def __init__(self):
+        self.data = []
+        self.hops = 0
+
+    ## collect and optionally process data
+    def collect(self, time, position, momentum, rho, activestate, electronics, prob):
+        self.data.append(TraceData(time=time, position=position, momentum=momentum,
+                                rho=rho, activestate=activestate, electronics=electronics, hopping=prob))
+
+## Class to manage the collection of observables from a set of trajectories
+class TraceManager:
+    def __init__(self):
+        self.traces = []
+
+    ## returns a Tracer object that will collect all of the observables for a given
+    #  trajectory
+    def spawn_tracer(self):
+        return Trace()
+
+    ## accepts a Tracer object and adds it to list of traces
+    def merge_tracer(self, tracer):
+        self.traces.append(tracer.data)
+
+    ## merge other manager into self
+    def add_batch(self, traces):
+        self.traces.extend(traces)
 
 ## Class to manage many FSSH trajectories
 #
@@ -255,8 +296,9 @@ class FSSH:
     # | propagator         | "exponential"              |
     # | nprocs             | MultiProcessing.cpu_count  |
     # | outcome_type       | "state"                    |
-    def __init__(self, model, **inp):
+    def __init__(self, model, tracemanager = TraceManager(), **inp):
         self.model = model
+        self.tracemanager = tracemanager
         self.options = {}
 
         # system parameters
@@ -284,14 +326,14 @@ class FSSH:
     # @param n number of trajectories to run
     def run_trajectories(self, n):
         outcomes = np.zeros([4])
-        en_list = []
+        traces = []
         try:
             for it in range(n):
-                traj = Trajectory(self.model, self.options)
-                potentials = traj.simulate()
-                en_list.append(potentials)
+                traj = Trajectory(self.model, self.tracemanager.spawn_tracer(), self.options)
+                trace = traj.simulate()
+                traces.append(trace)
                 outcomes += traj.outcome()
-            return (outcomes, en_list)
+            return (outcomes, traces)
         except KeyboardInterrupt:
             pass
 
@@ -311,25 +353,17 @@ class FSSH:
             poolresult.append(pool.apply_async(unwrapped_run_trajectories, (self, batchsize)))
         try:
             for r in poolresult:
-                oc, en = r.get(100)
+                oc, tr = r.get(100)
                 outcomes += oc
-                energy_list.extend(en)
+                self.tracemanager.add_batch(tr)
         except KeyboardInterrupt:
                 exit(" Aborting!")
         pool.close()
         pool.join()
 
-        #nsteps = len(energy_list[0])
-        #t = self.options["initial_time"]
-        #for i in range(nsteps):
-        #    out = "%12.6f" % t
-        #    for j in range(nsamples):
-        #        out += " %12.6f %12.6f" % energy_list[j][i]
-        #    print out
-        #    t += self.options["dt"]
-
         outcomes /= float(nsamples)
-        return outcomes
+        self.tracemanager.outcomes = outcomes
+        return self.tracemanager
 
 ## global version of FSSH.run_trajectories that is necessary because of the stupid way threading pools work in python
 def unwrapped_run_trajectories(fssh, n):
@@ -354,4 +388,8 @@ if __name__ == "__main__":
                            nprocs = 4
                    )
         results = fssh.compute()
-        print "%12.6f %12.6f %12.6f %12.6f %12.6f" % (k, results[0], results[1], results[2], results[3])
+        outcomes = results.outcomes
+        #print "%12.6f %12.6f %12.6f %12.6f %12.6f" % (k, outcomes[0], outcomes[1], outcomes[2], outcomes[3])
+        with_hops = [ x for x in results.traces if x.hops > 0 ]
+        for i in with_hops[0].data:
+                print "%12.6f %12.6f %12.6f %6d" % (i.time, i.position, i.momentum, i.activestate)
