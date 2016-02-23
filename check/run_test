@@ -1,0 +1,18 @@
+#!/bin/bash
+
+let failures=0
+
+python ../fssh.py -s 1 -k 20 20 -n 1 -z 200 -o "single" > k20/k20.out
+
+k20test=$(python check_trace.py k20/k20.out k20/k20.ref)
+
+if [ "$k20test" != "" ]; then
+    echo "Test with input momentum = 20.0 au failed!"
+    let failures+=1
+fi
+
+if [ $failures -eq 0 ]; then
+  echo "All tests passed!"
+else
+  echo "Tests finished with failures"
+fi
