@@ -362,21 +362,29 @@ class FSSH:
         energy_list = []
         nprocs = self.options["nprocs"]
 
-        pool = mp.Pool(nprocs)
-        chunksize = (nsamples - 1)/nprocs + 1
-        poolresult = []
-        for ip in range(nprocs):
-            batchsize = min(chunksize, nsamples - chunksize * ip)
-            poolresult.append(pool.apply_async(unwrapped_run_trajectories, (self, batchsize)))
-        try:
-            for r in poolresult:
-                oc, tr = r.get(100)
+        if nprocs > 1:
+            pool = mp.Pool(nprocs)
+            chunksize = (nsamples - 1)/nprocs + 1
+            poolresult = []
+            for ip in range(nprocs):
+                batchsize = min(chunksize, nsamples - chunksize * ip)
+                poolresult.append(pool.apply_async(unwrapped_run_trajectories, (self, batchsize)))
+            try:
+                for r in poolresult:
+                    oc, tr = r.get(100)
+                    outcomes += oc
+                    self.tracemanager.add_batch(tr)
+            except KeyboardInterrupt:
+                    exit(" Aborting!")
+            pool.close()
+            pool.join()
+        else:
+            try:
+                oc, tr = unwrapped_run_trajectories(self, nsamples)
                 outcomes += oc
                 self.tracemanager.add_batch(tr)
-        except KeyboardInterrupt:
+            except KeyboardInterrupt:
                 exit(" Aborting!")
-        pool.close()
-        pool.join()
 
         outcomes /= float(nsamples)
         self.tracemanager.outcomes = outcomes
