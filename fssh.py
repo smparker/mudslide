@@ -96,6 +96,8 @@ class Trajectory:
         # propagator
         self.propagator = options["propagator"]
 
+        self.random = np.random.RandomState(options["seed"])
+
     def trace(self, electronics, prob, call):
         if call == "collect":
             func = self.tracer.collect
@@ -180,7 +182,7 @@ class Trajectory:
         bij = -2.0 * np.real(self.rho[self.state, target_state]) * np.dot(self.velocity, dij)
         # probability of hopping out of current state
         P = self.dt * bij / np.real(self.rho[self.state, self.state])
-        zeta = np.random.uniform()
+        zeta = self.random.uniform()
         if zeta < P: # do switch
             # beware, this will only work for a two-state model
             new_potential, old_potential = elec_states.energies[target_state], elec_states.energies[self.state]
@@ -204,7 +206,9 @@ class Trajectory:
         self.velocity += 0.5 * initial_acc * self.dt
         potential_energy = electronics.compute_potential(self.state)
 
-        self.trace(electronics, 0.0, "collect")
+        prob = 0.0
+
+        self.trace(electronics, prob, "collect")
 
         # propagation
         for step in range(self.nsteps):
@@ -325,6 +329,9 @@ class FSSH:
         # statistical parameters
         self.options["samples"]       = inp.get("samples", 2000)
 
+        # random seed
+        self.options["seed"]          = inp.get("seed", None)
+
         # numerical parameters
         self.options["propagator"]    = inp.get("propagator", "exponential")
         if self.options["propagator"] not in ["exponential", "ode"]:
@@ -396,25 +403,56 @@ def unwrapped_run_trajectories(fssh, n):
 
 if __name__ == "__main__":
     import tullymodels as tully
+    import argparse as ap
 
-    model = tully.TullySimpleAvoidedCrossing()
+    parser = ap.ArgumentParser(description="Example driver for FSSH")
 
-    nk = int(20)
-    min_k = 0.1
-    max_k = 30.0
+    parser.add_argument('-m', '--model', default='simple', choices=('simple', 'dual', 'extended'), type=str, help="Tully model to plot (%(default)s)")
+    parser.add_argument('-k', '--krange', default=(0.1,30.0), nargs=2, type=float, help="range of momenta to consider (%(default)s)")
+    parser.add_argument('-n', '--nk', default=20, type=int, help="number of momenta to compute (%(default)d)")
+    parser.add_argument('-s', '--samples', default=200, type=int, help="number of samples (%(default)d)")
+    parser.add_argument('-j', '--nprocs', default=2, type=int, help="number of processors (%(default)d)")
+    parser.add_argument('-p', '--propagator', default="exponential", choices=('exponential', 'ode'), type=str, help="propagator (%(default)s)")
+    parser.add_argument('-M', '--mass', default=2000.0, type=float, help="particle mass (%(default)s)")
+    parser.add_argument('-x', '--position', default=-10.0, type=float, help="starting position (%(default)s)")
+    parser.add_argument('-o', '--output', default="averaged", type=str, help="what to print as output (%(default)s)")
+    parser.add_argument('-z', '--seed', default=None, type=int, help="random seed (current date)")
+
+    args = parser.parse_args()
+
+    if args.model == "simple":
+        model = tully.TullySimpleAvoidedCrossing()
+    elif args.model == "dual":
+        model = tully.TullyDualAvoidedCrossing()
+    elif args.model == "extended":
+        model = tully.TullyExtendedCouplingReflection()
+    else:
+        raise Exception("Unknown model chosen") # the argument parser should prevent this throw from being possible
+
+    if (args.seed is not None):
+        np.random.seed(args.seed)
+
+    nk = args.nk
+    min_k, max_k = args.krange
 
     kpoints = np.linspace(min_k, max_k, nk)
     for k in kpoints:
         fssh = FSSH(model, momentum = k,
-                           position = -10.0,
-                           mass = 2000.0,
-                           samples = 2000,
-                           propagator = "exponential",
-                           nprocs = 4
+                           position = args.position,
+                           mass = args.mass,
+                           samples = args.samples,
+                           propagator = args.propagator,
+                           nprocs = args.nprocs,
+                           seed = args.seed
                    )
         results = fssh.compute()
         outcomes = results.outcomes
-        #print "%12.6f %12.6f %12.6f %12.6f %12.6f" % (k, outcomes[0], outcomes[1], outcomes[2], outcomes[3])
-        with_hops = [ x for x in results.traces if x.hops > 0 ]
-        for i in with_hops[0].data:
-                print "%12.6f %12.6f %12.6f %6d" % (i.time, i.position, i.momentum, i.activestate)
+
+        if (args.output == "averaged"):
+            print "%12.6f %12.6f %12.6f %12.6f %12.6f" % (k, outcomes[0], outcomes[1], outcomes[2], outcomes[3])
+        elif (args.output == "single"):
+            with_hops = [ x for x in results.traces if x.hops > 0 ]
+            for i in with_hops[0].data:
+                    print "%12.6f %12.6f %12.6f %6d" % (i.time, i.position, i.momentum, i.activestate)
+        else:
+            print "Not printing results. This is probably not what you wanted!"
