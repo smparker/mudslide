@@ -2,7 +2,6 @@
 #  Module responsible for propagating surface hopping trajectories
 
 import numpy as np
-import scipy.integrate
 import math as m
 import multiprocessing as mp
 import collections
@@ -97,8 +96,13 @@ class Trajectory:
         # propagator
         self.propagator = options["propagator"]
 
-    def trace(self, electronics, prob):
-        self.tracer.collect(self.time, np.copy(self.position), self.mass*np.copy(self.velocity), np.copy(self.rho), self.state, electronics, prob)
+    def trace(self, electronics, prob, call):
+        if call == "collect":
+            func = self.tracer.collect
+        elif call == "finalize":
+            func = self.tracer.finalize
+
+        func(self.time, np.copy(self.position), self.mass*np.copy(self.velocity), np.copy(self.rho), self.state, electronics, prob)
 
     def kinetic_energy(self):
         return 0.5 * self.mass * np.dot(self.velocity, self.velocity)
@@ -200,7 +204,7 @@ class Trajectory:
         self.velocity += 0.5 * initial_acc * self.dt
         potential_energy = electronics.compute_potential(self.state)
 
-        self.trace(electronics, 0.0)
+        self.trace(electronics, 0.0, "collect")
 
         # propagation
         for step in range(self.nsteps):
@@ -217,7 +221,9 @@ class Trajectory:
             electronics = new_electronics
             self.time += self.dt
 
-            self.trace(electronics, prob)
+            self.trace(electronics, prob, "collect")
+
+        self.trace(electronics, prob, "finalize")
 
         return self.tracer
 
@@ -254,6 +260,10 @@ class Trace:
     def collect(self, time, position, momentum, rho, activestate, electronics, prob):
         self.data.append(TraceData(time=time, position=position, momentum=momentum,
                                 rho=rho, activestate=activestate, electronics=electronics, hopping=prob))
+
+    ## finalize an individual trajectory
+    def finalize(self, time, position, momentum, rho, activestate, electronics, prob):
+        self.collect(time, position, momentum, rho, activestate, electronics, prob)
 
 ## Class to manage the collection of observables from a set of trajectories
 class TraceManager:
@@ -319,6 +329,13 @@ class FSSH:
         self.options["propagator"]    = inp.get("propagator", "exponential")
         if self.options["propagator"] not in ["exponential", "ode"]:
             raise Exception("Unrecognized electronic propagator!")
+        elif self.options["propagator"] == "ode":
+            try:
+                import scipy.integrate
+            except ImportError:
+                print "Error: scipy is required for the ode propagator!"
+                quit()
+
         self.options["nprocs"]        = inp.get("nprocs", mp.cpu_count())
         self.options["outcome_type"]  = inp.get("outcome_type", "state")
 
