@@ -52,3 +52,15 @@ if __name__ == "__main__":
 
         if (len(problems) > 0):
             print_diff(problems, l1, l2)
+
+    try:
+        f1.next()
+        print "file1 is longer than file2"
+    except Exception:
+        pass
+
+    try:
+        f2.next()
+        print "file2 is longer than file1"
+    except Exception:
+        pass

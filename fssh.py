@@ -77,6 +77,7 @@ class Trajectory:
         self.tracer = tracer
         self.position = options["position"]
         self.velocity = options["velocity"]
+        self.last_velocity = 0.0
         self.mass = options["mass"]
         if options["initial_state"] == "ground":
             self.rho = np.zeros([2,2], dtype = np.complex64)
@@ -133,17 +134,20 @@ class Trajectory:
         self.velocity += scal * direction
 
     ## Propagates \f$\rho(t)\f$ to \f$\rho(t + dt)\f$
-    # @param elec_states_0 ElectronicStates at \f$t\f$
-    # @param elec_states_1 ElectronicStates at \f$t + dt\f$
+    # @param elec_states ElectronicStates at \f$t\f$
     #
     # The propagation assumes the electronic energies and couplings are static throughout.
     # This will only be true for fairly small time steps
-    def propagate_rho(self, elec_states_0, elec_states_1):
-        D = elec_states_0.compute_NAC_matrix(self.velocity)
+    def propagate_rho(self, elec_states, dt):
+        velo = 0.5 * (self.last_velocity + self.velocity)
+        D = elec_states.compute_NAC_matrix(velo)
 
-        G = np.zeros([2,2], dtype=np.complex64)
-        G[0,0] = elec_states_0.energies[0]
-        G[1,1] = elec_states_0.energies[1]
+        nstates = self.model.nstates()
+
+        G = np.zeros([nstates,nstates], dtype=np.complex64)
+        for i in range(nstates):
+            G[i,i] = elec_states.energies[i]
+
         G -= 1j * D
 
         if self.propagator == "exponential":
@@ -155,7 +159,7 @@ class Trajectory:
             nstates = model.nstates()
             for i in range(nstates):
                 for j in range(nstates):
-                    tmp_rho[i,j] *= np.exp(-1j * (diags[i] - diags[j]) * self.dt)
+                    tmp_rho[i,j] *= np.exp(-1j * (diags[i] - diags[j]) * dt)
             self.rho[:] = np.dot(coeff, np.dot(tmp_rho, cconj))
         elif self.propagator == "ode":
             G *= -1j
@@ -164,11 +168,11 @@ class Trajectory:
                 dro = np.dot(G, ymat) - np.dot(ymat, G)
                 return np.reshape(dro, [4])
 
-            rhovec = np.reshape(self.rho, [4])
+            rhovec = np.reshape(self.rho, [nstates*nstates])
             integrator = scipy.integrate.complex_ode(drho).set_integrator('vode', method='bdf', with_jacobian=False)
             integrator.set_initial_value(rhovec, self.time)
-            integrator.integrate(self.time + self.dt)
-            self.rho = np.reshape(integrator.y, [2,2])
+            integrator.integrate(self.time + dt)
+            self.rho = np.reshape(integrator.y, [nstates,nstates])
             if not integrator.successful():
                 exit("Propagation of the electronic wavefunction failed!")
         else:
@@ -176,22 +180,40 @@ class Trajectory:
 
     ## Compute probability of hopping, generate random number, and perform hops
     def surface_hopping(self, elec_states):
-        # this trick is only valid for 2 state problem
-        target_state = 1-self.state
-        dij = elec_states.compute_derivative_coupling(target_state, self.state)
-        bij = -2.0 * np.real(self.rho[self.state, target_state]) * np.dot(self.velocity, dij)
-        # probability of hopping out of current state
-        P = self.dt * bij / np.real(self.rho[self.state, self.state])
+        nstates = self.model.nstates()
+
+        velo = 0.5 * (self.last_velocity + self.velocity) # interpolate velocities to get value at integer step
+        W = elec_states.compute_NAC_matrix(velo)
+
+        probs = []
+
+        for target in range(nstates):
+            if (target == self.state):
+                probs.append(0.0)
+            else:
+                bij = -2.0 * np.real(self.rho[self.state, target]) * W[target, self.state]
+
+                # probability of hopping out of current state
+                probs.append(self.dt * bij / np.real(self.rho[self.state, self.state]))
+
+        P = sum(probs)
+        accumulated_P = 0.0
         zeta = self.random.uniform()
         if zeta < P: # do switch
-            # beware, this will only work for a two-state model
-            new_potential, old_potential = elec_states.energies[target_state], elec_states.energies[self.state]
-            delV = new_potential - old_potential
-            component_kinetic = self.mode_kinetic_energy(np.ones([1]))
-            if delV <= component_kinetic:
-                self.state = target_state
-                self.rescale_component(np.ones([1]), -delV)
-                self.tracer.hops += 1
+            for target in range(nstates):
+                if (target == self.state): continue
+
+                accumulated_P += probs[target]
+                if (zeta < accumulated_P):
+                    new_potential, old_potential = elec_states.energies[target], elec_states.energies[self.state]
+                    delV = new_potential - old_potential
+                    derivative_coupling = elec_states.compute_derivative_coupling(target, self.state)
+                    component_kinetic = self.mode_kinetic_energy(derivative_coupling)
+                    if delV <= component_kinetic:
+                        self.state = target
+                        self.rescale_component(derivative_coupling, -delV)
+                        self.tracer.hops += 1
+                break
         return P
 
     ## helper function to simplify the calculation of the electronic states at a given position
@@ -200,10 +222,17 @@ class Trajectory:
 
     ## run simulation
     def simulate(self):
+        last_electronics = None
         electronics = self.compute_electronics(self.position)
+
         # start by taking half step in velocity
         initial_acc = electronics.compute_force(self.state) / self.mass
-        self.velocity += 0.5 * initial_acc * self.dt
+        veloc = self.velocity
+        dv = 0.5 * initial_acc * self.dt
+        self.last_velocity, self.velocity = veloc - dv, veloc + dv
+
+        # propagate wavefunction a half-step forward to match velocity
+        self.propagate_rho(electronics, 0.5*self.dt)
         potential_energy = electronics.compute_potential(self.state)
 
         prob = 0.0
@@ -214,15 +243,15 @@ class Trajectory:
         for step in range(self.nsteps):
             # first update nuclear coordinates
             self.position += self.velocity * self.dt
+
             # calculate electronics at new position
-            new_electronics = self.compute_electronics(self.position, electronics.coeff)
-            acceleration = new_electronics.compute_force(self.state) / self.mass
-            self.velocity += acceleration * self.dt
+            last_electronics, electronics = electronics, self.compute_electronics(self.position, electronics.coeff)
+            acceleration = electronics.compute_force(self.state) / self.mass
+            self.last_velocity, self.velocity = self.velocity, self.velocity + acceleration * self.dt
 
             # now propagate the electronic wavefunction to the new time
-            self.propagate_rho(electronics, new_electronics)
-            prob = self.surface_hopping(new_electronics)
-            electronics = new_electronics
+            self.propagate_rho(electronics, self.dt)
+            prob = self.surface_hopping(electronics)
             self.time += self.dt
 
             self.trace(electronics, prob, "collect")
