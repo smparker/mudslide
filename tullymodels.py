@@ -128,3 +128,42 @@ class TullyExtendedCouplingReflection:
 
     def ndim(self):
         return 1
+
+class SuperExchange:
+    ## Constructor defaults to Prezhdo paper on GFSH
+    def __init__(self, v11 = 0.0, v22 = 0.01, v33 = 0.005, v12 = 0.001, v23 = 0.01):
+        self.v11 = v11
+        self.v22 = v22
+        self.v33 = v33
+        self.v12 = v12
+        self.v23 = v23
+
+    ## \f$V(x)\f$
+    def V(self, x):
+        v12 = self.v12 * m.exp(-0.5*x*x)
+        v23 = self.v23 * m.exp(-0.5*x*x)
+
+        return np.array([ [self.v11, v12, 0.0],
+                          [v12, self.v22, v23],
+                          [0.0, v23, self.v33] ])
+
+    ## \f$ \nabla V(x)\f$
+    def dV(self, x):
+        v12 = -x * self.v12 * m.exp(-0.5*x*x)
+        v23 = -x * self.v23 * m.exp(-0.5*x*x)
+        out = np.array([ [0.0, v12, 0.0],
+                         [v12, 0.0, v23],
+                         [0.0, v23, 0.0] ])
+
+        return out.reshape([3, 3, 1])
+
+    def nstates(self):
+        return 3
+
+    def ndim(self):
+        return 1
+
+modeldict = { "simple" : TullySimpleAvoidedCrossing,
+              "dual"   : TullyDualAvoidedCrossing,
+              "extended" : TullyExtendedCouplingReflection,
+              "super"  : SuperExchange }

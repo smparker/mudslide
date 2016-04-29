@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 ## @package fssh
 #  Module responsible for propagating surface hopping trajectories
 
@@ -80,7 +82,7 @@ class Trajectory:
         self.last_velocity = 0.0
         self.mass = options["mass"]
         if options["initial_state"] == "ground":
-            self.rho = np.zeros([2,2], dtype = np.complex64)
+            self.rho = np.zeros([model.nstates(),model.nstates()], dtype = np.complex64)
             self.rho[0,0] = 1.0
             self.state = 0
         else:
@@ -164,9 +166,9 @@ class Trajectory:
         elif self.propagator == "ode":
             G *= -1j
             def drho(time, y):
-                ymat = np.reshape(y, [2, 2])
+                ymat = np.reshape(y, [nstates, nstates])
                 dro = np.dot(G, ymat) - np.dot(ymat, G)
-                return np.reshape(dro, [4])
+                return np.reshape(dro, [nstates*nstates])
 
             rhovec = np.reshape(self.rho, [nstates*nstates])
             integrator = scipy.integrate.complex_ode(drho).set_integrator('vode', method='bdf', with_jacobian=False)
@@ -262,20 +264,15 @@ class Trajectory:
 
     ## Classifies end of simulation:
     #
-    # result | classification
-    # -------|---------------
-    #   0    | lower state on the left
-    #   1    | lower state on the right
-    #   2    | upper state on the left
-    #   3    | upper state on the right
+    #  2*state + [0 for left, 1 for right]
     def outcome(self):
-        out = np.zeros([4])
+        out = np.zeros([2, self.model.nstates()])
         lr = 0 if self.position < 0.0 else 1
         if self.outcome_type == "populations":
-            out[lr] = np.real(self.rho[0,0])
-            out[2 + lr] = np.real(self.rho[1,1])
+            for ist in range(nstates):
+                out[lr,ist] = np.real(self.rho[ist,ist])
         elif self.outcome_type == "state":
-            out[2*self.state + lr] = 1.0
+            out[lr,self.state] = 1.0
         else:
             raise Exception("Unrecognized outcome recognition type")
         return out
@@ -333,7 +330,7 @@ class FSSH:
     # | mass               | 2000.0                     |
     # | momentum           | 2.0                        |
     # | initial_time       | 0.0                        |
-    # | dt                 | 0.05 / velocity            |
+    # | dt                 | 0.1 / velocity            |
     # | total_time         | 2 * abs(position/velocity) |
     # | samples            | 2000                       |
     # | propagator         | "exponential"              |
@@ -352,7 +349,7 @@ class FSSH:
 
         # time parameters
         self.options["initial_time"]  = inp.get("initial_time", 0.0)
-        self.options["dt"]            = inp.get("dt", 0.05 / self.options["velocity"])
+        self.options["dt"]            = inp.get("dt", 0.10 / self.options["velocity"])
         self.options["total_time"]    = inp.get("total_time", 2.0 * abs(self.options["position"] / self.options["velocity"]))
 
         # statistical parameters
@@ -378,7 +375,7 @@ class FSSH:
     ## runs a set of trajectories and collects the results
     # @param n number of trajectories to run
     def run_trajectories(self, n):
-        outcomes = np.zeros([4])
+        outcomes = np.zeros([2,self.model.nstates()])
         traces = []
         try:
             for it in range(n):
@@ -393,7 +390,7 @@ class FSSH:
     ## runs many trajectories and returns averaged results
     def compute(self):
         # for now, define four possible outcomes of the simulation
-        outcomes = np.zeros([4])
+        outcomes = np.zeros([2,self.model.nstates()])
         nsamples = int(self.options["samples"])
         energy_list = []
         nprocs = self.options["nprocs"]
@@ -436,25 +433,21 @@ if __name__ == "__main__":
 
     parser = ap.ArgumentParser(description="Example driver for FSSH")
 
-    parser.add_argument('-m', '--model', default='simple', choices=('simple', 'dual', 'extended'), type=str, help="Tully model to plot (%(default)s)")
+    parser.add_argument('-m', '--model', default='simple', choices=[m for m in tm.modeldict], type=str, help="Tully model to plot (%(default)s)")
     parser.add_argument('-k', '--krange', default=(0.1,30.0), nargs=2, type=float, help="range of momenta to consider (%(default)s)")
     parser.add_argument('-n', '--nk', default=20, type=int, help="number of momenta to compute (%(default)d)")
     parser.add_argument('-s', '--samples', default=200, type=int, help="number of samples (%(default)d)")
     parser.add_argument('-j', '--nprocs', default=2, type=int, help="number of processors (%(default)d)")
     parser.add_argument('-p', '--propagator', default="exponential", choices=('exponential', 'ode'), type=str, help="propagator (%(default)s)")
     parser.add_argument('-M', '--mass', default=2000.0, type=float, help="particle mass (%(default)s)")
-    parser.add_argument('-x', '--position', default=-10.0, type=float, help="starting position (%(default)s)")
+    parser.add_argument('-x', '--position', default=-5.0, type=float, help="starting position (%(default)s)")
     parser.add_argument('-o', '--output', default="averaged", type=str, help="what to print as output (%(default)s)")
     parser.add_argument('-z', '--seed', default=None, type=int, help="random seed (current date)")
 
     args = parser.parse_args()
 
-    if args.model == "simple":
-        model = tully.TullySimpleAvoidedCrossing()
-    elif args.model == "dual":
-        model = tully.TullyDualAvoidedCrossing()
-    elif args.model == "extended":
-        model = tully.TullyExtendedCouplingReflection()
+    if args.model in tm.modeldict:
+        model = tm.modeldict[args.model]()
     else:
         raise Exception("Unknown model chosen") # the argument parser should prevent this throw from being possible
 
@@ -478,10 +471,9 @@ if __name__ == "__main__":
         outcomes = results.outcomes
 
         if (args.output == "averaged"):
-            print "%12.6f %12.6f %12.6f %12.6f %12.6f" % (k, outcomes[0], outcomes[1], outcomes[2], outcomes[3])
+            print "%12.6f %s" % (k, " ".join(["%12.6f" % x for x in np.nditer(outcomes, order='F')]))
         elif (args.output == "single"):
-            with_hops = [ x for x in results.traces if x.hops > 0 ]
-            for i in with_hops[0].data:
-                    print "%12.6f %12.6f %12.6f %6d" % (i.time, i.position, i.momentum, i.activestate)
+            for i in results.traces.data:
+                print "%12.6f %12.6f %12.6f %6d" % (i.time, i.position, i.momentum, i.activestate)
         else:
             print "Not printing results. This is probably not what you wanted!"
