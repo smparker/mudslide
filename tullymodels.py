@@ -38,7 +38,7 @@ class TullySimpleAvoidedCrossing:
         v12 = -2.0 * self.C * self.D * x * m.exp(-self.D * x * x)
         out = np.array([ [v11, v12],
                          [v12, v22] ])
-        return out.reshape([2, 2, 1])
+        return out.reshape([1, 2, 2])
 
     def nstates(self):
         return 2
@@ -76,7 +76,7 @@ class TullyDualAvoidedCrossing:
         v12 = -2.0 * self.C * self.D * x * m.exp(-self.D * x * x)
         out = np.array([ [v11, v12],
                          [v12, v22] ])
-        return out.reshape([2, 2, 1])
+        return out.reshape([1, 2, 2])
 
     def nstates(self):
         return 2
@@ -121,7 +121,7 @@ class TullyExtendedCouplingReflection:
         v12 = self.B * self.C * m.exp(-self.C * abs(x))
         out = np.array([ [v11, v12],
                          [v12, v22] ])
-        return out.reshape([2, 2, 1])
+        return out.reshape([1, 2, 2])
 
     def nstates(self):
         return 2
@@ -155,7 +155,7 @@ class SuperExchange:
                          [v12, 0.0, v23],
                          [0.0, v23, 0.0] ])
 
-        return out.reshape([3, 3, 1])
+        return out.reshape([1, 3, 3])
 
     def nstates(self):
         return 3

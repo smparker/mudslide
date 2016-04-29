@@ -28,11 +28,11 @@ class ElectronicStates:
 
     ## returns dimension of (electronic) Hamiltonian
     def nstates(self):
-        return self.V.shape[0]
+        return self.V.shape[1]
 
     ## returns dimensionality of model (nuclear coordinates)
     def ndim(self):
-        return self.dV.shape[2]
+        return self.dV.shape[0]
 
     ## returns \f$-\langle \phi_{\mbox{state}} | \nabla H | \phi_{\mbox{state}} \rangle\f$ of Hamiltonian
     # @param state state along which to compute force
@@ -40,7 +40,7 @@ class ElectronicStates:
         out = np.zeros(self.ndim())
         state_vec = self.coeff[:,state]
         for d in range(self.ndim()):
-            out[d] = - (np.dot(state_vec.T, np.dot(self.dV[:,:,d], state_vec)))
+            out[d] = - (np.dot(state_vec.T, np.dot(self.dV[d,:,:], state_vec)))
         return out
 
     ## returns \f$\phi_{\mbox{state}} | H | \phi_{\mbox{state}} = \varepsilon_{\mbox{state}}\f$
@@ -51,13 +51,13 @@ class ElectronicStates:
     def compute_derivative_coupling(self, bra_state, ket_state):
         out = np.zeros(self.ndim())
         if (bra_state != ket_state):
+            dE = self.energies[ket_state] - self.energies[bra_state]
+            if abs(dE) < 1.0e-14:
+                dE = m.copysign(1.0e-14, dE)
+
             for d in range(self.ndim()):
-                dij = np.dot(self.coeff[:,bra_state].T, np.dot(self.dV[:,:,d], self.coeff[:,ket_state]))
-                dE = self.energies[ket_state] - self.energies[bra_state]
-                if abs(dE) < 1.0e-14:
-                    dE = m.copysign(1.0e-14, dE)
-                out[d] = dij / dE
-        return out
+                out[d] = np.dot(self.coeff[:,bra_state].T, np.dot(self.dV[d,:,:], self.coeff[:,ket_state]))
+        return out / dE
 
     ## returns \f$ \sum_\alpha v^\alpha D^\alpha \f$ where \f$ D^\alpha_{ij} = d^\alpha_{ij} \f$
     def compute_NAC_matrix(self, velocity):
@@ -126,7 +126,7 @@ class Trajectory:
     # @param reduction scalar specifying how much kinetic energy should be damped
     def rescale_component(self, direction, reduction):
         # normalize
-        direction /= m.sqrt(np.dot(direction, direction))
+        direction /= np.sqrt(np.dot(direction, direction))
         Md = self.mass * direction
         a = np.dot(Md, Md)
         b = 2.0 * np.dot(self.mass * self.velocity, Md)
@@ -160,8 +160,7 @@ class Trajectory:
             tmp_rho = np.dot(cconj, np.dot(self.rho, coeff))
             nstates = model.nstates()
             for i in range(nstates):
-                for j in range(nstates):
-                    tmp_rho[i,j] *= np.exp(-1j * (diags[i] - diags[j]) * dt)
+                tmp_rho[i,:] *= np.exp(-1j * (diags[i] - diags[:]) * dt)
             self.rho[:] = np.dot(coeff, np.dot(tmp_rho, cconj))
         elif self.propagator == "ode":
             G *= -1j
@@ -295,6 +294,9 @@ class Trace:
     def finalize(self, time, position, momentum, rho, activestate, electronics, prob):
         self.collect(time, position, momentum, rho, activestate, electronics, prob)
 
+    def __iter__(self):
+        return self.data.__iter__()
+
 ## Class to manage the collection of observables from a set of trajectories
 class TraceManager:
     def __init__(self):
@@ -312,6 +314,9 @@ class TraceManager:
     ## merge other manager into self
     def add_batch(self, traces):
         self.traces.extend(traces)
+
+    def __iter__(self):
+        return self.traces.__iter__()
 
 ## Class to manage many FSSH trajectories
 #
@@ -428,7 +433,7 @@ def unwrapped_run_trajectories(fssh, n):
     return FSSH.run_trajectories(fssh, n)
 
 if __name__ == "__main__":
-    import tullymodels as tully
+    import tullymodels as tm
     import argparse as ap
 
     parser = ap.ArgumentParser(description="Example driver for FSSH")
@@ -440,6 +445,7 @@ if __name__ == "__main__":
     parser.add_argument('-j', '--nprocs', default=2, type=int, help="number of processors (%(default)d)")
     parser.add_argument('-p', '--propagator', default="exponential", choices=('exponential', 'ode'), type=str, help="propagator (%(default)s)")
     parser.add_argument('-M', '--mass', default=2000.0, type=float, help="particle mass (%(default)s)")
+    parser.add_argument('-t', '--dt', default=None, type=float, help="time step (%(default)s)")
     parser.add_argument('-x', '--position', default=-5.0, type=float, help="starting position (%(default)s)")
     parser.add_argument('-o', '--output', default="averaged", type=str, help="what to print as output (%(default)s)")
     parser.add_argument('-z', '--seed', default=None, type=int, help="random seed (current date)")
@@ -465,6 +471,7 @@ if __name__ == "__main__":
                            samples = args.samples,
                            propagator = args.propagator,
                            nprocs = args.nprocs,
+                           dt = args.dt,
                            seed = args.seed
                    )
         results = fssh.compute()
@@ -473,7 +480,7 @@ if __name__ == "__main__":
         if (args.output == "averaged"):
             print "%12.6f %s" % (k, " ".join(["%12.6f" % x for x in np.nditer(outcomes, order='F')]))
         elif (args.output == "single"):
-            for i in results.traces.data:
+            for i in results.traces[0]:
                 print "%12.6f %12.6f %12.6f %6d" % (i.time, i.position, i.momentum, i.activestate)
         else:
             print "Not printing results. This is probably not what you wanted!"
