@@ -463,7 +463,7 @@ if __name__ == "__main__":
     parser.add_argument('-m', '--model', default='simple', choices=[m for m in tm.modeldict], type=str, help="Tully model to plot (%(default)s)")
     parser.add_argument('-k', '--krange', default=(0.1,30.0), nargs=2, type=float, help="range of momenta to consider (%(default)s)")
     parser.add_argument('-n', '--nk', default=20, type=int, help="number of momenta to compute (%(default)d)")
-    parser.add_argument('-l', '--kspacing', default="linear", type=str, choices=('linear', 'log'), help="number of momenta to compute (%(default)d)")
+    parser.add_argument('-l', '--kspacing', default="linear", type=str, choices=('linear', 'log'), help="number of momenta to compute (%(default)s)")
     parser.add_argument('-s', '--samples', default=200, type=int, help="number of samples (%(default)d)")
     parser.add_argument('-j', '--nprocs', default=2, type=int, help="number of processors (%(default)d)")
     parser.add_argument('-p', '--propagator', default="exponential", choices=('exponential', 'ode'), type=str, help="propagator (%(default)s)")
