@@ -463,6 +463,7 @@ if __name__ == "__main__":
     parser.add_argument('-m', '--model', default='simple', choices=[m for m in tm.modeldict], type=str, help="Tully model to plot (%(default)s)")
     parser.add_argument('-k', '--krange', default=(0.1,30.0), nargs=2, type=float, help="range of momenta to consider (%(default)s)")
     parser.add_argument('-n', '--nk', default=20, type=int, help="number of momenta to compute (%(default)d)")
+    parser.add_argument('-l', '--kspacing', default="linear", type=str, choices=('linear', 'log'), help="number of momenta to compute (%(default)d)")
     parser.add_argument('-s', '--samples', default=200, type=int, help="number of samples (%(default)d)")
     parser.add_argument('-j', '--nprocs', default=2, type=int, help="number of processors (%(default)d)")
     parser.add_argument('-p', '--propagator', default="exponential", choices=('exponential', 'ode'), type=str, help="propagator (%(default)s)")
@@ -485,7 +486,14 @@ if __name__ == "__main__":
     nk = args.nk
     min_k, max_k = args.krange
 
-    kpoints = np.linspace(min_k, max_k, nk)
+    kpoints = []
+    if args.kspacing == "linear":
+        kpoints = np.linspace(min_k, max_k, nk)
+    elif args.kspacing == "log":
+        kpoints = np.logspace(min_k, max_k, nk)
+    else:
+        raise Exception("Unrecognized type of spacing")
+
     for k in kpoints:
         fssh = FSSH(model, momentum = k,
                            position = args.position,
