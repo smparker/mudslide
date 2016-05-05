@@ -57,19 +57,56 @@ class ElectronicStates:
 
             for d in range(self.ndim()):
                 out[d] = np.dot(self.coeff[:,bra_state].T, np.dot(self.dV[d,:,:], self.coeff[:,ket_state]))
-        return out / dE
+
+            out /= dE
+        return out
 
     ## returns \f$ \sum_\alpha v^\alpha D^\alpha \f$ where \f$ D^\alpha_{ij} = d^\alpha_{ij} \f$
     def compute_NAC_matrix(self, velocity):
         nstates = self.nstates()
-        out = np.zeros([nstates, nstates], dtype=np.complex64)
         ndim = self.ndim()
         assert(ndim == velocity.shape[0])
+
+        # first build a contraction of dV with the velocity
+        dV = np.dot(self.dV.reshape([ndim, nstates*nstates]).T, velocity).reshape([nstates,nstates])
+
+        # transform to eigenbasis
+        out = np.dot(self.coeff.T, np.dot(dV, self.coeff))
+
         for i in range(nstates):
             for j in range(i):
-                dij = self.compute_derivative_coupling(i,j)
-                out[i, j] = np.dot(velocity, dij)
-                out[j, i] = - out[i, j]
+                dE = self.energies[j] - self.energies[i]
+                if abs(dE) < 1.0e-14:
+                    dE = m.copysign(1.0e-14, dE)
+
+                out[i, j] /= dE
+                out[j, i] = -out[i,j]
+            out[i,i] = 0.0
+        return out
+
+    ## returns a single column of \f$ \sum_\alpha v^\alpha D^\alpha \f$ where \f$ D^\alpha_{ij} = d^\alpha_{ij} \f$
+    ## and \f$i\f$ is specified
+    def compute_NAC_column(self, velocity, i):
+        nstates = self.nstates()
+        ndim = self.ndim()
+        assert(ndim == velocity.shape[0])
+
+        # first build a contraction of dV with the velocity
+        dV = np.dot(self.dV.reshape([ndim, nstates*nstates]).T, velocity).reshape([nstates,nstates])
+
+        # transform to eigenbasis in [i,:] type form
+        out = np.dot(self.coeff[:,i].T, np.dot(dV, self.coeff))
+
+        for j in range(nstates):
+            if (i == j):
+                out[j] = 0.0
+            else:
+                dE = self.energies[j] - self.energies[i]
+                if abs(dE) < 1.0e-14:
+                    dE = m.copysign(1.0e-14, dE)
+
+                out[j] /= dE
+
         return out
 
 ## Class to propagate a single FSSH Trajectory
@@ -79,10 +116,10 @@ class Trajectory:
         self.tracer = tracer
         self.position = options["position"]
         self.velocity = options["velocity"]
-        self.last_velocity = 0.0
+        self.last_velocity = np.zeros([model.ndim()])
         self.mass = options["mass"]
         if options["initial_state"] == "ground":
-            self.rho = np.zeros([model.nstates(),model.nstates()], dtype = np.complex64)
+            self.rho = np.zeros([model.nstates(),model.nstates()], dtype=np.complex128)
             self.rho[0,0] = 1.0
             self.state = 0
         else:
@@ -142,27 +179,17 @@ class Trajectory:
     # This will only be true for fairly small time steps
     def propagate_rho(self, elec_states, dt):
         velo = 0.5 * (self.last_velocity + self.velocity)
-        D = elec_states.compute_NAC_matrix(velo)
 
-        nstates = self.model.nstates()
-
-        G = np.zeros([nstates,nstates], dtype=np.complex64)
-        for i in range(nstates):
-            G[i,i] = elec_states.energies[i]
-
-        G -= 1j * D
+        W = np.diag(elec_states.energies) - 1j * elec_states.compute_NAC_matrix(velo)
 
         if self.propagator == "exponential":
-            diags, coeff = np.linalg.eigh(G)
-            cmat = np.matrix(coeff)
-            cmat_T = cmat.getH()
-            cconj = np.array(cmat_T)
-            tmp_rho = np.dot(cconj, np.dot(self.rho, coeff))
-            nstates = model.nstates()
-            for i in range(nstates):
-                tmp_rho[i,:] *= np.exp(-1j * (diags[i] - diags[:]) * dt)
-            self.rho[:] = np.dot(coeff, np.dot(tmp_rho, cconj))
+            diags, coeff = np.linalg.eigh(W)
+
+            # use W as temporary storage
+            U = np.dot(coeff, np.dot(np.diag(np.exp(-1j * diags * dt)), coeff.T.conj(), out=W))
+            np.dot(U, np.dot(self.rho, U.T.conj(), out=W), out=self.rho)
         elif self.propagator == "ode":
+            nstates = self.model.nstates()
             G *= -1j
             def drho(time, y):
                 ymat = np.reshape(y, [nstates, nstates])
@@ -184,18 +211,12 @@ class Trajectory:
         nstates = self.model.nstates()
 
         velo = 0.5 * (self.last_velocity + self.velocity) # interpolate velocities to get value at integer step
-        W = elec_states.compute_NAC_matrix(velo)
+        W = elec_states.compute_NAC_column(velo, self.state)
 
-        probs = []
+        probs = 2.0 * np.real(self.rho[self.state,:]) * W[:] * self.dt / np.real(self.rho[self.state,self.state])
 
-        for target in range(nstates):
-            if (target == self.state):
-                probs.append(0.0)
-            else:
-                bij = -2.0 * np.real(self.rho[self.state, target]) * W[target, self.state]
-
-                # probability of hopping out of current state
-                probs.append(self.dt * bij / np.real(self.rho[self.state, self.state]))
+        # zero out 'self-hop' for good measure (numerical safety)
+        probs[self.state] = 0.0
 
         P = sum(probs)
         accumulated_P = 0.0
