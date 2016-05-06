@@ -2,7 +2,7 @@
 
 let failures=0
 
-python ../fssh.py -s 1 -k 20 20 -x -10 --dt 5 -n 1 -z 200 -o "single" > k20/k20.out
+python ../fssh.py -s 1 -k 20 20 -x -10 --dt 5 -n 1 -z 200 -o "single" -j 1 > k20/k20.out
 
 k20test=$(python check_trace.py k20/k20.out k20/k20.ref)
 

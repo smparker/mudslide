@@ -460,7 +460,7 @@ if __name__ == "__main__":
 
     parser = ap.ArgumentParser(description="Example driver for FSSH")
 
-    parser.add_argument('-m', '--model', default='simple', choices=[m for m in tm.modeldict], type=str, help="Tully model to plot (%(default)s)")
+    parser.add_argument('-m', '--model', default='simple', choices=[x for x in tm.modeldict], type=str, help="Tully model to plot (%(default)s)")
     parser.add_argument('-k', '--krange', default=(0.1,30.0), nargs=2, type=float, help="range of momenta to consider (%(default)s)")
     parser.add_argument('-n', '--nk', default=20, type=int, help="number of momenta to compute (%(default)d)")
     parser.add_argument('-l', '--kspacing', default="linear", type=str, choices=('linear', 'log'), help="linear or log spacing for momenta (%(default)s)")
@@ -472,6 +472,7 @@ if __name__ == "__main__":
     parser.add_argument('-x', '--position', default=-5.0, type=float, help="starting position (%(default)s)")
     parser.add_argument('-o', '--output', default="averaged", type=str, help="what to print as output (%(default)s)")
     parser.add_argument('-z', '--seed', default=None, type=int, help="random seed (current date)")
+    parser.add_argument('--published', dest="published", action="store_true", help="override ranges to use those found in relevant papers (%(default)s)")
 
     args = parser.parse_args()
 
@@ -485,6 +486,18 @@ if __name__ == "__main__":
 
     nk = args.nk
     min_k, max_k = args.krange
+
+    if (args.published): # hack spacing to resemble Tully's
+        if (args.model == "simple"):
+            min_k, max_k = 1.0, 35.0
+        elif (args.model == "dual"):
+            min_k, max_k = m.log10(m.sqrt(2.0 * args.mass * m.exp(-4.0))), m.log10(m.sqrt(2.0 * args.mass * m.exp(1.0)))
+        elif (args.model == "extended"):
+            min_k, max_k = 1.0, 35.0
+        elif (args.model == "super"):
+            min_k, max_k = 1.0, 35.0
+        else:
+            print "Warning! published option chosen but no available bounds! Using inputs."
 
     kpoints = []
     if args.kspacing == "linear":
