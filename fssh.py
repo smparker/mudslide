@@ -51,13 +51,12 @@ class ElectronicStates:
     def compute_derivative_coupling(self, bra_state, ket_state):
         out = np.zeros(self.ndim())
         if (bra_state != ket_state):
-            dE = self.energies[ket_state] - self.energies[bra_state]
-            if abs(dE) < 1.0e-14:
-                dE = m.copysign(1.0e-14, dE)
-
             for d in range(self.ndim()):
                 out[d] = np.dot(self.coeff[:,bra_state].T, np.dot(self.dV[d,:,:], self.coeff[:,ket_state]))
 
+            dE = self.energies[ket_state] - self.energies[bra_state]
+            if abs(dE) < 1.0e-14:
+                dE = m.copysign(1.0e-14, dE)
             out /= dE
         return out
 
@@ -74,13 +73,17 @@ class ElectronicStates:
         out = np.dot(self.coeff.T, np.dot(dV, self.coeff))
 
         for i in range(nstates):
-            for j in range(i):
-                dE = self.energies[j] - self.energies[i]
-                if abs(dE) < 1.0e-14:
-                    dE = m.copysign(1.0e-14, dE)
+            # build dE inverse all at once
+            dE = self.energies[0:i] - self.energies[i]
+            # replace exact zeros
+            dE[dE==0.0] = 1.0e-30
 
-                out[i, j] /= dE
-                out[j, i] = -out[i,j]
+            # still use clip to keep results in reasonable window
+            dE = np.reciprocal(dE).clip(-1.0e14, 1.0e14)
+
+            out[i,0:i] *= dE
+            out[0:i,i] = -out[i,0:i]
+
             out[i,i] = 0.0
         return out
 
@@ -97,15 +100,15 @@ class ElectronicStates:
         # transform to eigenbasis in [i,:] type form
         out = np.dot(self.coeff[:,i].T, np.dot(dV, self.coeff))
 
-        for j in range(nstates):
-            if (i == j):
-                out[j] = 0.0
-            else:
-                dE = self.energies[j] - self.energies[i]
-                if abs(dE) < 1.0e-14:
-                    dE = m.copysign(1.0e-14, dE)
+        dE = self.energies[:] - self.energies[i]
+        # replace exact zeros with small number
+        dE[dE==0.0] = 1.0e-30
 
-                out[j] /= dE
+        # divide by reciprocal clip
+        out *= np.reciprocal(dE).clip(-1.0e14,1.0e14)
+
+        # but now fix diagonal
+        out[i] = 0.0
 
         return out
 
