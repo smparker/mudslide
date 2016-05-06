@@ -16,8 +16,12 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    f1 = open(args.file1)
-    f2 = open(args.file2)
+    try:
+        f1 = open(args.file1)
+        f2 = open(args.file2)
+    except IOError:
+        print "One or both files could not be opened!"
+        raise
 
     tol = args.tol
 
