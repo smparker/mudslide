@@ -289,13 +289,12 @@ class Trajectory:
     #
     #  2*state + [0 for left, 1 for right]
     def outcome(self):
-        out = np.zeros([2, self.model.nstates()])
+        out = np.zeros([self.model.nstates(), 2])
         lr = 0 if self.position < 0.0 else 1
         if self.outcome_type == "populations":
-            for ist in range(nstates):
-                out[lr,ist] = np.real(self.rho[ist,ist])
+            out[:,lr] = np.real(self.rho).diag()[:]
         elif self.outcome_type == "state":
-            out[lr,self.state] = 1.0
+            out[self.state,lr] = 1.0
         else:
             raise Exception("Unrecognized outcome recognition type")
         return out
@@ -405,7 +404,7 @@ class FSSH:
     ## runs a set of trajectories and collects the results
     # @param n number of trajectories to run
     def run_trajectories(self, n):
-        outcomes = np.zeros([2,self.model.nstates()])
+        outcomes = np.zeros([self.model.nstates(),2])
         traces = []
         try:
             for it in range(n):
@@ -420,7 +419,7 @@ class FSSH:
     ## runs many trajectories and returns averaged results
     def compute(self):
         # for now, define four possible outcomes of the simulation
-        outcomes = np.zeros([2,self.model.nstates()])
+        outcomes = np.zeros([self.model.nstates(),2])
         nsamples = int(self.options["samples"])
         energy_list = []
         nprocs = self.options["nprocs"]
@@ -524,7 +523,7 @@ if __name__ == "__main__":
         outcomes = results.outcomes
 
         if (args.output == "averaged"):
-            print "%12.6f %s" % (k, " ".join(["%12.6f" % x for x in np.nditer(outcomes, order='F')]))
+            print "%12.6f %s" % (k, " ".join(["%12.6f" % x for x in np.nditer(outcomes)]))
         elif (args.output == "single"):
             for i in results.traces[0]:
                 print "%12.6f %12.6f %12.6f %6d" % (i.time, i.position, i.momentum, i.activestate)
