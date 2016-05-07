@@ -4,6 +4,49 @@
 import numpy as np
 import math as m
 
+# Here are some helper functions that pad the model problems with fake electronic states.
+# Useful for debugging, so keeping it around
+'''
+def pad_model(nstates, diags):
+    def V_decorator(func):
+        def wrapper(*args, **kwargs):
+            out = func(*args, **kwargs)
+            oldnstates = out.shape[0]
+            out = np.pad(out, (0,nstates), 'constant')
+            if nstates > 1:
+                for i in range(nstates):
+                    out[oldnstates+i,oldnstates+i] = diags[i]
+            else:
+                out[-1,-1] = diags
+            return out
+        return wrapper
+
+    def dV_decorator(func):
+        def wrapper(*args, **kwargs):
+            out = func(*args, **kwargs)
+            nout = np.zeros([out.shape[0], out.shape[1]+nstates, out.shape[2]+nstates])
+            nout[:,0:out.shape[1],0:out.shape[2]] += out[:,:,:]
+            return nout
+        return wrapper
+
+    def nstates_decorator(func):
+        def wrapper(*args, **kwargs):
+            return func(*args, **kwargs) + nstates
+        return wrapper
+
+    def class_decorator(cls):
+        class padded_model(cls):
+            def __init__(self, *args, **kwargs):
+                cls.__init__(self, *args, **kwargs)
+
+                self.V = V_decorator(self.V)
+                self.dV = dV_decorator(self.dV)
+                self.nstates = nstates_decorator(self.nstates)
+
+        return padded_model
+    return class_decorator
+'''
+
 ## Tunneling through a single barrier model used in Tully's 1990 JCP
 #
 # \f[
@@ -14,7 +57,7 @@ import math as m
 # \f]
 # \f[ V_{22} = -V_{11} \f]
 # \f[ V_{12} = V_{21} = C e^{-D x^2} \f]
-class TullySimpleAvoidedCrossing:
+class TullySimpleAvoidedCrossing(object):
     ## Constructor that defaults to the values reported in Tully's 1990 JCP
     def __init__(self, a = 0.01, b = 1.6, c = 0.005, d = 1.0):
         self.A = a
@@ -51,7 +94,7 @@ class TullySimpleAvoidedCrossing:
 # \f[ V_{11} = 0 \f]
 # \f[ V_{22} = -A e^{-Bx^2} + E_0 \f]
 # \f[ V_{12} = V_{21} = C e^{-D x^2} \f]
-class TullyDualAvoidedCrossing:
+class TullyDualAvoidedCrossing(object):
     ## Constructor that defaults to the values reported in Tully's 1990 JCP
     def __init__(self, a = 0.1, b = 0.28, c = 0.015, d = 0.06, e = 0.05):
         self.A = a
@@ -94,7 +137,7 @@ class TullyDualAvoidedCrossing:
 #                   B \left( 2 - e^{-Cx} \right) & x > 0
 #                   \end{array} \right.
 # \f]
-class TullyExtendedCouplingReflection:
+class TullyExtendedCouplingReflection(object):
     ## Constructor that defaults to the values reported in Tully's 1990 JCP
     def __init__(self, a = 0.0006, b = 0.10, c = 0.90):
         self.A = a
@@ -129,7 +172,7 @@ class TullyExtendedCouplingReflection:
     def ndim(self):
         return 1
 
-class SuperExchange:
+class SuperExchange(object):
     ## Constructor defaults to Prezhdo paper on GFSH
     def __init__(self, v11 = 0.0, v22 = 0.01, v33 = 0.005, v12 = 0.001, v23 = 0.01):
         self.v11 = v11
