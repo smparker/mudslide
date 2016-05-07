@@ -221,25 +221,26 @@ class Trajectory:
         # zero out 'self-hop' for good measure (numerical safety)
         probs[self.state] = 0.0
 
-        P = sum(probs)
-        accumulated_P = 0.0
-        zeta = self.random.uniform()
-        if zeta < P: # do switch
-            for target in range(nstates):
-                if (target == self.state): continue
+        # clip probabilities to make sure they are between zero and one
+        probs = probs.clip(0.0, 1.0)
 
-                accumulated_P += probs[target]
-                if (zeta < accumulated_P):
-                    new_potential, old_potential = elec_states.energies[target], elec_states.energies[self.state]
-                    delV = new_potential - old_potential
-                    derivative_coupling = elec_states.compute_derivative_coupling(target, self.state)
-                    component_kinetic = self.mode_kinetic_energy(derivative_coupling)
-                    if delV <= component_kinetic:
-                        self.state = target
-                        self.rescale_component(derivative_coupling, -delV)
-                        self.tracer.hops += 1
-                break
-        return P
+        accumulated_P = np.cumsum(probs)
+        zeta = self.random.uniform()
+        do_hop = np.less(zeta, accumulated_P)
+        if (any(do_hop)): # do switch
+            # jump to the first state for which zeta is less
+            for target in range(nstates):
+                if do_hop[target]: break
+
+            new_potential, old_potential = elec_states.energies[target], elec_states.energies[self.state]
+            delV = new_potential - old_potential
+            derivative_coupling = elec_states.compute_derivative_coupling(target, self.state)
+            component_kinetic = self.mode_kinetic_energy(derivative_coupling)
+            if delV <= component_kinetic:
+                self.state = target
+                self.rescale_component(derivative_coupling, -delV)
+                self.tracer.hops += 1
+        return sum(probs)
 
     ## helper function to simplify the calculation of the electronic states at a given position
     def compute_electronics(self, position, ref_coeff = None):
