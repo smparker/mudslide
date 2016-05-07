@@ -498,7 +498,7 @@ if __name__ == "__main__":
         elif (args.model == "extended"):
             min_k, max_k = 1.0, 35.0
         elif (args.model == "super"):
-            min_k, max_k = 1.0, 35.0
+            min_k, max_k = 0.5, 20.0
         else:
             print "Warning! published option chosen but no available bounds! Using inputs."
 
