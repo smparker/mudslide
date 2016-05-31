@@ -133,7 +133,6 @@ class Trajectory:
 
         # read out of options
         self.dt = options["dt"]
-        self.nsteps = int(options["total_time"] / self.dt)
         self.outcome_type = options["outcome_type"]
 
         # propagator
@@ -242,6 +241,10 @@ class Trajectory:
                 self.tracer.hops += 1
         return sum(probs)
 
+    ## function to check for the end of the simulation
+    def check_end(self):
+        return self.position > 5.0 or self.position < -10.1
+
     ## helper function to simplify the calculation of the electronic states at a given position
     def compute_electronics(self, position, ref_coeff = None):
         return ElectronicStates(model.V(position), model.dV(position), ref_coeff)
@@ -266,7 +269,7 @@ class Trajectory:
         self.trace(electronics, prob, "collect")
 
         # propagation
-        for step in range(self.nsteps):
+        while (True):
             # first update nuclear coordinates
             self.position += self.velocity * self.dt
 
@@ -281,6 +284,10 @@ class Trajectory:
             self.time += self.dt
 
             self.trace(electronics, prob, "collect")
+
+            # ending condition
+            if (self.check_end()):
+                break
 
         self.trace(electronics, prob, "finalize")
 
