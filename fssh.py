@@ -243,7 +243,10 @@ class Trajectory:
 
     ## function to check for the end of the simulation
     def check_end(self):
-        return self.position > 5.0 or self.position < -10.1
+        if self.time > (self.dt * 2000.0):
+            return True
+        else:
+            return self.position > 5.0 or self.position < -10.1
 
     ## helper function to simplify the calculation of the electronic states at a given position
     def compute_electronics(self, position, ref_coeff = None):
@@ -283,11 +286,11 @@ class Trajectory:
             prob = self.surface_hopping(electronics)
             self.time += self.dt
 
-            self.trace(electronics, prob, "collect")
-
             # ending condition
             if (self.check_end()):
                 break
+
+            self.trace(electronics, prob, "collect")
 
         self.trace(electronics, prob, "finalize")
 
