@@ -352,54 +352,65 @@ class TraceManager:
     def __iter__(self):
         return self.traces.__iter__()
 
-## Canned function that returns a class to check for the end of a simulation
-def end_checker(box_bounds, nsteps):
-    class CheckEnd(object):
-        def __init__(self):
-            self.reached_interaction = False
+## Canned class that checks for the end of a simulation.
+## Requires one to directly manipulate the class parameters to change the bounds and steps allowed
+class CheckEnd(object):
+    box_bounds = 5.0
+    nsteps = 5000
 
-        def __call__(self, traj):
-            if self.reached_interaction: # simulation has made it to interaction region
-                if traj.time > traj.dt * nsteps:
-                    return True
-                else:
-                    return traj.position < -box_bounds or traj.position > box_bounds
-            else: # check whether in interaction region
-                if traj.position > -box_bounds and traj.position < box_bounds:
-                    self.reached_interaction = True
-                return False
+    def __init__(self):
+        self.reached_interaction = False
 
-    return CheckEnd
-
-#####################################################################################
-# Series of canned functions that return generator functions for initial conditions #
-#####################################################################################
-
-## Canned function that returns a generator function that generates initial conditions
-## for batches of trajectories.
-def const_init(initial_position, initial_momentum, initial_rho):
-    def gen_wrapper(nsamples):
-        for i in range(nsamples):
-            yield { "position" : initial_position, "momentum" : initial_momentum, "initial_state" : initial_rho }
-    return gen_wrapper
-
-## Canned function that returns a generator function that returns a constant initial position but
-## a normally sampled initial momentum
-def normal_k_init(position, momentum, deviation, initial_rho, seed = None, kskip = lambda k: k < 0.0):
-    def gen_wrapper(nsamples):
-        random_state = np.random.RandomState(seed)
-        x0 = np.array(position)
-        k0 = np.array(momentum)
-        for i in range(nsamples):
-            k = random_state.normal(k0, deviation, k0.shape)
-            if kskip(k): # skips negative
-                continue
+    def __call__(self, traj):
+        lb, rb = -abs(self.box_bounds), abs(self.box_bounds)
+        if self.reached_interaction: # simulation has made it to interaction region
+            if traj.time > traj.dt * self.nsteps:
+                return True
             else:
-                yield { "position" : x0, "momentum": k, "initial_state" : initial_rho }
+                return traj.position < lb or traj.position > rb
+        else: # check whether in interaction region
+            if traj.position > lb and traj.position < rb:
+                self.reached_interaction = True
+            return False
 
-    return gen_wrapper
+#####################################################################################
+# Series of canned classes act as generator functions for initial conditions        #
+#####################################################################################
 
-## Class to manage many FSSH trajectories
+## Canned class whose call function acts as a generator for static initial conditions
+class TrajGenConst(object):
+    def __init__(self, position, momentum, initial_state):
+        self.position = position
+        self.momentum = momentum
+        self.initial_state = initial_state
+
+    def __call__(self, nsamples):
+        for i in range(nsamples):
+            yield { "position" : self.position, "momentum" : self.momentum, "initial_state" : self.initial_state }
+
+## Canned class whose call function acts as a generator for normally distributed initial conditions
+class TrajGenNormal(object):
+    def __init__(self, position, momentum, initial_state, position_deviation = 0.0, momentum_deviation = 0.0, seed = None):
+        self.position = position
+        self.position_deviation = position_deviation
+        self.momentum = momentum
+        self.momentum_deviation = momentum_deviation
+        self.initial_state = initial_state
+
+        self.random_state = np.random.RandomState(seed)
+
+    def kskip(self, ktest):
+        return ktest < 0.0
+
+    def __call__(self, nsamples):
+        for i in range(nsamples):
+            x = random_state.normal(self.position, self.position_deviation)
+            k = random_state.normal(self.momentum, self.momentum_deviation)
+
+            if (self.kskip(k)): continue
+            yield { "position": x, "momentum": k, "initial_state": self.initial_state }
+
+## Class to manage many TrajectorySH trajectories
 #
 # Requires a model object which is a class that has functions V(x), dV(x), nstates(), and ndim()
 # that return the Hamiltonian at position x, gradient of the Hamiltonian at position x
@@ -529,7 +540,7 @@ if __name__ == "__main__":
     parser.add_argument('-K', '--ksampling', default="none", type=str, choices=('none', 'normal'), help="how to sample momenta for a set of simulations (%(default)s)")
     parser.add_argument('-f', '--normal', default=0.05, type=float, help="standard deviation as a fraction of momentum for normal samping (%(default)s)")
     parser.add_argument('-s', '--samples', default=200, type=int, help="number of samples (%(default)d)")
-    parser.add_argument('-j', '--nprocs', default=1, type=int, help="number of processors (%(default)d)")
+    parser.add_argument('-j', '--nprocs', default=2, type=int, help="number of processors (%(default)d)")
     parser.add_argument('-p', '--propagator', default="exponential", choices=('exponential', 'ode'), type=str, help="propagator (%(default)s)")
     parser.add_argument('-M', '--mass', default=2000.0, type=float, help="particle mass (%(default)s)")
     parser.add_argument('-t', '--dt', default=20.0, type=float, help="time step in a.u.(%(default)s)")
@@ -566,10 +577,6 @@ if __name__ == "__main__":
         else:
             print "Warning! published option chosen but no available bounds! Using inputs."
 
-    if args.nprocs > 1:
-        print "# Multiprocessing is currently broken. Resetting nprocs to 1."
-        args.nprocs = 1
-
     kpoints = []
     if args.kspacing == "linear":
         kpoints = np.linspace(min_k, max_k, nk)
@@ -578,13 +585,14 @@ if __name__ == "__main__":
     else:
         raise Exception("Unrecognized type of spacing")
 
-    CheckEnd = end_checker(args.bounds, args.nt)
+    CheckEnd.box_bounds = args.bounds
+    CheckEnd.nsteps = args.nt
 
     for k in kpoints:
         if args.ksampling == "none":
-            traj_gen = const_init(args.position, k, "ground")
+            traj_gen = TrajGenConst(args.position, k, "ground")
         elif args.ksampling == "normal":
-            traj_gen = normal_k_init(args.position, k, k*args.normal, "ground")
+            traj_gen = TrajGenNormal(args.position, k, "ground", momentum_deviation = k*args.normal)
 
         # hack-y scale of time step so that the input amount roughly makes sense for 10.0 a.u.
         dt = args.dt * (10.0 / k) if args.scale_dt else args.dt
