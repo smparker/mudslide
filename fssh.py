@@ -113,8 +113,8 @@ class ElectronicStates:
         return out
 
 ## Class to propagate a single FSSH Trajectory
-class Trajectory:
-    def __init__(self, model, tracer, options):
+class TrajectorySH:
+    def __init__(self, model, tracer, **options):
         self.model = model
         self.tracer = tracer
         self.position = options["position"]
@@ -419,7 +419,7 @@ class FSSH:
         traces = []
         try:
             for it in range(n):
-                traj = Trajectory(self.model, self.tracemanager.spawn_tracer(), self.options)
+                traj = TrajectorySH(self.model, self.tracemanager.spawn_tracer(), **self.options)
                 trace = traj.simulate()
                 traces.append(trace)
                 outcomes += traj.outcome()
@@ -438,7 +438,7 @@ class FSSH:
         if nprocs > 1:
             pool = mp.Pool(nprocs)
             chunksize = (nsamples - 1)/nprocs + 1
-            batches = [ nsamples - chunksize*ip for ip in range ]
+            batches = [ min(chunksize, nsamples - chunksize*ip) for ip in range(nprocs) ]
             poolresult = [ pool.apply_async(unwrapped_run_trajectories, (self, b)) for b in batches ]
             try:
                 for r in poolresult:
@@ -446,7 +446,9 @@ class FSSH:
                     outcomes += oc
                     self.tracemanager.add_batch(tr)
             except KeyboardInterrupt:
-                    exit(" Aborting!")
+                pool.terminate()
+                pool.join()
+                exit(" Aborting!")
             pool.close()
             pool.join()
         else:
