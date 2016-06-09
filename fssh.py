@@ -117,10 +117,10 @@ class TrajectorySH:
     def __init__(self, model, tracer, **options):
         self.model = model
         self.tracer = tracer
-        self.position = options["position"]
-        self.velocity = options["velocity"]
-        self.last_velocity = np.zeros([model.ndim()])
         self.mass = options["mass"]
+        self.position = options["position"]
+        self.velocity = options["momentum"] / self.mass
+        self.last_velocity = np.zeros([model.ndim()])
         if options["initial_state"] == "ground":
             self.rho = np.zeros([model.nstates(),model.nstates()], dtype=np.complex128)
             self.rho[0,0] = 1.0
@@ -371,6 +371,18 @@ def end_checker(box_bounds, nsteps):
 
     return CheckEnd
 
+#####################################################################################
+# Series of canned functions that return generator functions for initial conditions #
+#####################################################################################
+
+## Canned function that returns a generator function that generates initial conditions
+## for batches of trajectories.
+def const_init(initial_position, initial_momentum, initial_rho):
+    def gen_wrapper(nsamples):
+        for i in range(nsamples):
+            yield { "position" : initial_position, "momentum" : initial_momentum, "initial_state" : initial_rho }
+    return gen_wrapper
+
 ## Class to manage many FSSH trajectories
 #
 # Requires a model object which is a class that has functions V(x), dV(x), nstates(), and ndim()
@@ -383,14 +395,10 @@ class BatchedTraj:
     # Accepted keyword arguments and their defaults:
     # | key                |   default                  |
     # ---------------------|----------------------------|
-    # | initial_state      | "ground"                   |
-    # | position           |    -5.0                    |
     # | mass               | 2000.0                     |
-    # | momentum           | 2.0                        |
     # | initial_time       | 0.0                        |
-    # | dt                 | 0.1 / velocity            |
-    # | total_time         | 2 * abs(position/velocity) |
     # | samples            | 2000                       |
+    # | dt                 | 20.0  ~ 0.5 fs            |
     # | propagator         | "exponential"              |
     # | nprocs             | MultiProcessing.cpu_count  |
     # | outcome_type       | "state"                    |
@@ -400,19 +408,13 @@ class BatchedTraj:
         self.options = {}
 
         # system parameters
-        self.options["initial_state"] = inp.get("initial_state", "ground")
-        self.options["position"]      = inp.get("position", -10.0)
         self.options["mass"]          = inp.get("mass", 2000.0)
-        self.options["velocity"]      = inp.get("momentum", 2.0) / self.options["mass"]
 
         # time parameters
         self.options["initial_time"]  = inp.get("initial_time", 0.0)
-        self.options["dt"]            = inp.get("dt", 0.10 / self.options["velocity"])
-        if self.options["dt"] is None: self.options["dt"] = 0.10 / self.options["velocity"]
-        self.options["total_time"]    = inp.get("total_time", 2.0 * abs(self.options["position"] / self.options["velocity"]))
-
         # statistical parameters
         self.options["samples"]       = inp.get("samples", 2000)
+        self.options["dt"]            = inp.get("dt", 20.0) # default to roughly half a femtosecond
 
         # random seed
         self.options["seed"]          = inp.get("seed", None)
@@ -434,7 +436,12 @@ class BatchedTraj:
         if "check_end" in inp:
             self.options["check_end"] = inp["check_end"]
         else:
-            self.options["check_end"] = end_checker(abs(self.position), 1e30)
+            raise Exception("A class must be provided that will check for the end of a simulation: check_end")
+
+        if "traj_gen" in inp:
+            self.options["traj_gen"] = inp["traj_gen"]
+        else:
+            raise Exception("A generator function must be provided that generates initial conditions: traj_gen")
 
     ## runs a set of trajectories and collects the results
     # @param n number of trajectories to run
@@ -442,8 +449,10 @@ class BatchedTraj:
         outcomes = np.zeros([self.model.nstates(),2])
         traces = []
         try:
-            for it in range(n):
-                traj = TrajectorySH(self.model, self.tracemanager.spawn_tracer(), **self.options)
+            for params in self.options["traj_gen"](n):
+                traj_input = self.options
+                traj_input.update(params)
+                traj = TrajectorySH(self.model, self.tracemanager.spawn_tracer(), **traj_input)
                 trace = traj.simulate()
                 traces.append(trace)
                 outcomes += traj.outcome()
@@ -506,7 +515,9 @@ if __name__ == "__main__":
     parser.add_argument('-p', '--propagator', default="exponential", choices=('exponential', 'ode'), type=str, help="propagator (%(default)s)")
     parser.add_argument('-M', '--mass', default=2000.0, type=float, help="particle mass (%(default)s)")
     parser.add_argument('-t', '--dt', default=None, type=float, help="time step (%(default)s)")
-    parser.add_argument('-x', '--position', default=-5.0, type=float, help="starting position (%(default)s)")
+    parser.add_argument('-T', '--nt', default=2000, type=int, help="max number of steps (%(default)s)")
+    parser.add_argument('-x', '--position', default=-10.0, type=float, help="starting position (%(default)s)")
+    parser.add_argument('-b', '--bounds', default=5.0, type=float, help="bounding box to end simulation (%(default)s)")
     parser.add_argument('-o', '--output', default="averaged", type=str, help="what to print as output (%(default)s)")
     parser.add_argument('-z', '--seed', default=None, type=int, help="random seed (current date)")
     parser.add_argument('--published', dest="published", action="store_true", help="override ranges to use those found in relevant papers (%(default)s)")
@@ -553,7 +564,8 @@ if __name__ == "__main__":
                            nprocs = args.nprocs,
                            dt = args.dt,
                            seed = args.seed,
-                           check_end = end_checker(5.0, 2000)
+                           traj_gen = const_init(args.position, k, "ground"),
+                           check_end = end_checker(args.bounds, args.nt)
                    )
         results = fssh.compute()
         outcomes = results.outcomes
