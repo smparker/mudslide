@@ -118,8 +118,8 @@ class TrajectorySH:
         self.model = model
         self.tracer = tracer
         self.mass = options["mass"]
-        self.position = options["position"]
-        self.velocity = options["momentum"] / self.mass
+        self.position = np.array(options["position"]).reshape(model.ndim())
+        self.velocity = np.array(options["momentum"]).reshape(model.ndim()) / self.mass
         self.last_velocity = np.zeros([model.ndim()])
         if options["initial_state"] == "ground":
             self.rho = np.zeros([model.nstates(),model.nstates()], dtype=np.complex128)
@@ -383,6 +383,22 @@ def const_init(initial_position, initial_momentum, initial_rho):
             yield { "position" : initial_position, "momentum" : initial_momentum, "initial_state" : initial_rho }
     return gen_wrapper
 
+## Canned function that returns a generator function that returns a constant initial position but
+## a normally sampled initial momentum
+def normal_k_init(position, momentum, deviation, initial_rho, seed = None, kskip = lambda k: k < 0.0):
+    def gen_wrapper(nsamples):
+        random_state = np.random.RandomState(seed)
+        x0 = np.array(position)
+        k0 = np.array(momentum)
+        for i in range(nsamples):
+            k = random_state.normal(k0, deviation, k0.shape)
+            if kskip(k): # skips negative
+                continue
+            else:
+                yield { "position" : x0, "momentum": k, "initial_state" : initial_rho }
+
+    return gen_wrapper
+
 ## Class to manage many FSSH trajectories
 #
 # Requires a model object which is a class that has functions V(x), dV(x), nstates(), and ndim()
@@ -510,12 +526,15 @@ if __name__ == "__main__":
     parser.add_argument('-k', '--krange', default=(0.1,30.0), nargs=2, type=float, help="range of momenta to consider (%(default)s)")
     parser.add_argument('-n', '--nk', default=20, type=int, help="number of momenta to compute (%(default)d)")
     parser.add_argument('-l', '--kspacing', default="linear", type=str, choices=('linear', 'log'), help="linear or log spacing for momenta (%(default)s)")
+    parser.add_argument('-K', '--ksampling', default="none", type=str, choices=('none', 'normal'), help="how to sample momenta for a set of simulations (%(default)s)")
+    parser.add_argument('-f', '--normal', default=0.05, type=float, help="standard deviation as a fraction of momentum for normal samping (%(default)s)")
     parser.add_argument('-s', '--samples', default=200, type=int, help="number of samples (%(default)d)")
-    parser.add_argument('-j', '--nprocs', default=2, type=int, help="number of processors (%(default)d)")
+    parser.add_argument('-j', '--nprocs', default=1, type=int, help="number of processors (%(default)d)")
     parser.add_argument('-p', '--propagator', default="exponential", choices=('exponential', 'ode'), type=str, help="propagator (%(default)s)")
     parser.add_argument('-M', '--mass', default=2000.0, type=float, help="particle mass (%(default)s)")
-    parser.add_argument('-t', '--dt', default=None, type=float, help="time step (%(default)s)")
-    parser.add_argument('-T', '--nt', default=2000, type=int, help="max number of steps (%(default)s)")
+    parser.add_argument('-t', '--dt', default=20.0, type=float, help="time step in a.u.(%(default)s)")
+    parser.add_argument('-y', '--scale_dt', dest="scale_dt", action="store_true", help="scale (hack-like) time step using momentum (%(default)s)")
+    parser.add_argument('-T', '--nt', default=5000, type=int, help="max number of steps (%(default)s)")
     parser.add_argument('-x', '--position', default=-10.0, type=float, help="starting position (%(default)s)")
     parser.add_argument('-b', '--bounds', default=5.0, type=float, help="bounding box to end simulation (%(default)s)")
     parser.add_argument('-o', '--output', default="averaged", type=str, help="what to print as output (%(default)s)")
@@ -547,6 +566,10 @@ if __name__ == "__main__":
         else:
             print "Warning! published option chosen but no available bounds! Using inputs."
 
+    if args.nprocs > 1:
+        print "# Multiprocessing is currently broken. Resetting nprocs to 1."
+        args.nprocs = 1
+
     kpoints = []
     if args.kspacing == "linear":
         kpoints = np.linspace(min_k, max_k, nk)
@@ -555,17 +578,27 @@ if __name__ == "__main__":
     else:
         raise Exception("Unrecognized type of spacing")
 
+    CheckEnd = end_checker(args.bounds, args.nt)
+
     for k in kpoints:
+        if args.ksampling == "none":
+            traj_gen = const_init(args.position, k, "ground")
+        elif args.ksampling == "normal":
+            traj_gen = normal_k_init(args.position, k, k*args.normal, "ground")
+
+        # hack-y scale of time step so that the input amount roughly makes sense for 10.0 a.u.
+        dt = args.dt * (10.0 / k) if args.scale_dt else args.dt
+
         fssh = BatchedTraj(model, momentum = k,
                            position = args.position,
                            mass = args.mass,
                            samples = args.samples,
                            propagator = args.propagator,
                            nprocs = args.nprocs,
-                           dt = args.dt,
+                           dt = dt,
                            seed = args.seed,
-                           traj_gen = const_init(args.position, k, "ground"),
-                           check_end = end_checker(args.bounds, args.nt)
+                           traj_gen = traj_gen,
+                           check_end = CheckEnd
                    )
         results = fssh.compute()
         outcomes = results.outcomes
