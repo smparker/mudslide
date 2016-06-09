@@ -112,7 +112,7 @@ class ElectronicStates:
 
         return out
 
-## Class to propagate a single FSSH Trajectory
+## Class to propagate a single SH Trajectory
 class TrajectorySH:
     def __init__(self, model, tracer, **options):
         self.model = model
@@ -127,6 +127,13 @@ class TrajectorySH:
             self.state = 0
         else:
             raise Exception("Unrecognized initial state option")
+
+        # check_end must be a class that implements __call__ that accepts TrajectorySH
+        # and returns True when the simulation is over
+        if "check_end" in options:
+            self.check_end = options["check_end"]()
+        else:
+            self.check_end = end_checker(abs(options["position"]), 1e30)()
 
         # fixed initial parameters
         self.time = 0.0
@@ -241,13 +248,6 @@ class TrajectorySH:
                 self.tracer.hops += 1
         return sum(probs)
 
-    ## function to check for the end of the simulation
-    def check_end(self):
-        if self.time > (self.dt * 2000.0):
-            return True
-        else:
-            return self.position > 5.0 or self.position < -10.1
-
     ## helper function to simplify the calculation of the electronic states at a given position
     def compute_electronics(self, position, ref_coeff = None):
         return ElectronicStates(model.V(position), model.dV(position), ref_coeff)
@@ -287,7 +287,7 @@ class TrajectorySH:
             self.time += self.dt
 
             # ending condition
-            if (self.check_end()):
+            if (self.check_end(self)):
                 break
 
             self.trace(electronics, prob, "collect")
@@ -352,12 +352,31 @@ class TraceManager:
     def __iter__(self):
         return self.traces.__iter__()
 
+## Canned function that returns a class to check for the end of a simulation
+def end_checker(box_bounds, nsteps):
+    class CheckEnd(object):
+        def __init__(self):
+            self.reached_interaction = False
+
+        def __call__(self, traj):
+            if self.reached_interaction: # simulation has made it to interaction region
+                if traj.time > traj.dt * nsteps:
+                    return True
+                else:
+                    return traj.position < -box_bounds or traj.position > box_bounds
+            else: # check whether in interaction region
+                if traj.position > -box_bounds and traj.position < box_bounds:
+                    self.reached_interaction = True
+                return False
+
+    return CheckEnd
+
 ## Class to manage many FSSH trajectories
 #
 # Requires a model object which is a class that has functions V(x), dV(x), nstates(), and ndim()
 # that return the Hamiltonian at position x, gradient of the Hamiltonian at position x
 # number of electronic states, and dimension of nuclear space, respectively.
-class FSSH:
+class BatchedTraj:
     ## Constructor requires model and options input as kwargs
     # @param model object used to describe the model system
     #
@@ -412,6 +431,11 @@ class FSSH:
         self.options["nprocs"]        = inp.get("nprocs", mp.cpu_count())
         self.options["outcome_type"]  = inp.get("outcome_type", "state")
 
+        if "check_end" in inp:
+            self.options["check_end"] = inp["check_end"]
+        else:
+            self.options["check_end"] = end_checker(abs(self.position), 1e30)
+
     ## runs a set of trajectories and collects the results
     # @param n number of trajectories to run
     def run_trajectories(self, n):
@@ -463,9 +487,9 @@ class FSSH:
         self.tracemanager.outcomes = outcomes
         return self.tracemanager
 
-## global version of FSSH.run_trajectories that is necessary because of the stupid way threading pools work in python
+## global version of BatchedTraj.run_trajectories that is necessary because of the stupid way threading pools work in python
 def unwrapped_run_trajectories(fssh, n):
-    return FSSH.run_trajectories(fssh, n)
+    return BatchedTraj.run_trajectories(fssh, n)
 
 if __name__ == "__main__":
     import tullymodels as tm
@@ -521,14 +545,15 @@ if __name__ == "__main__":
         raise Exception("Unrecognized type of spacing")
 
     for k in kpoints:
-        fssh = FSSH(model, momentum = k,
+        fssh = BatchedTraj(model, momentum = k,
                            position = args.position,
                            mass = args.mass,
                            samples = args.samples,
                            propagator = args.propagator,
                            nprocs = args.nprocs,
                            dt = args.dt,
-                           seed = args.seed
+                           seed = args.seed,
+                           check_end = end_checker(5.0, 2000)
                    )
         results = fssh.compute()
         outcomes = results.outcomes
