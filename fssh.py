@@ -7,6 +7,7 @@ import numpy as np
 import math as m
 import multiprocessing as mp
 import collections
+import pickle
 
 import sys
 
@@ -545,10 +546,10 @@ if __name__ == "__main__":
     parser.add_argument('-M', '--mass', default=2000.0, type=float, help="particle mass (%(default)s)")
     parser.add_argument('-t', '--dt', default=20.0, type=float, help="time step in a.u.(%(default)s)")
     parser.add_argument('-y', '--scale_dt', dest="scale_dt", action="store_true", help="scale (hack-like) time step using momentum (%(default)s)")
-    parser.add_argument('-T', '--nt', default=5000, type=int, help="max number of steps (%(default)s)")
+    parser.add_argument('-T', '--nt', default=50000, type=int, help="max number of steps (%(default)s)")
     parser.add_argument('-x', '--position', default=-10.0, type=float, help="starting position (%(default)s)")
     parser.add_argument('-b', '--bounds', default=5.0, type=float, help="bounding box to end simulation (%(default)s)")
-    parser.add_argument('-o', '--output', default="averaged", type=str, help="what to print as output (%(default)s)")
+    parser.add_argument('-o', '--output', default="averaged", type=str, choices=('averaged', 'single', 'pickle'), help="what to produce as output (%(default)s)")
     parser.add_argument('-z', '--seed', default=None, type=int, help="random seed (current date)")
     parser.add_argument('--published', dest="published", action="store_true", help="override ranges to use those found in relevant papers (%(default)s)")
 
@@ -588,6 +589,8 @@ if __name__ == "__main__":
     CheckEnd.box_bounds = args.bounds
     CheckEnd.nsteps = args.nt
 
+    all_results = {}
+
     for k in kpoints:
         if args.ksampling == "none":
             traj_gen = TrajGenConst(args.position, k, "ground")
@@ -616,5 +619,9 @@ if __name__ == "__main__":
         elif (args.output == "single"):
             for i in results.traces[0]:
                 print "%12.6f %12.6f %12.6f %6d" % (i.time, i.position, i.momentum, i.activestate)
+        elif (args.output == "pickle"): # save results for later processing
+            all_results[k] = results
         else:
             print "Not printing results. This is probably not what you wanted!"
+
+    pickle.dump(all_results, open("fssh.pickle", "wb"))
