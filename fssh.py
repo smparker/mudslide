@@ -2,6 +2,7 @@
 
 ## @package fssh
 #  Module responsible for propagating surface hopping trajectories
+from __future__ import print_function
 
 import numpy as np
 import math as m
@@ -463,7 +464,7 @@ class BatchedTraj:
             try:
                 import scipy.integrate
             except ImportError:
-                print "Error: scipy is required for the ode propagator!"
+                print("Error: scipy is required for the ode propagator!")
                 quit()
 
         self.options["nprocs"]        = inp.get("nprocs", mp.cpu_count())
@@ -494,7 +495,7 @@ class BatchedTraj:
                     traces.append(trace)
                     outcomes += traj.outcome()
                 except StillInteracting:
-                    print "BEWARE: a simulation ended while still in interaction region"
+                    print("BEWARE: a simulation ended while still in interaction region", file=sys.stderr)
                     pass
             return (outcomes, traces)
         except KeyboardInterrupt:
@@ -588,7 +589,7 @@ if __name__ == "__main__":
         elif (args.model == "super"):
             min_k, max_k = 0.5, 20.0
         else:
-            print "Warning! published option chosen but no available bounds! Using inputs."
+            print("Warning! Published option chosen but no available bounds! Using inputs.", file=sys.stderr)
 
     kpoints = []
     if args.kspacing == "linear":
@@ -627,13 +628,13 @@ if __name__ == "__main__":
         outcomes = results.outcomes
 
         if (args.output == "averaged"):
-            print "%12.6f %s" % (k, " ".join(["%12.6f" % x for x in np.nditer(outcomes)]))
+            print("%12.6f %s" % (k, " ".join(["%12.6f" % x for x in np.nditer(outcomes)])))
         elif (args.output == "single"):
             for i in results.traces[0]:
-                print "%12.6f %12.6f %12.6f %6d" % (i.time, i.position, i.momentum, i.activestate)
+                print("%12.6f %12.6f %12.6f %6d" % (i.time, i.position, i.momentum, i.activestate))
         elif (args.output == "pickle"): # save results for later processing
             all_results[k] = results
         else:
-            print "Not printing results. This is probably not what you wanted!"
+            print("Not printing results. This is probably not what you wanted!")
 
     pickle.dump(all_results, open("fssh.pickle", "wb"))
