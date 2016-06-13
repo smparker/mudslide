@@ -355,6 +355,11 @@ class TraceManager:
 
 ## Canned class that checks for the end of a simulation.
 ## Requires one to directly manipulate the class parameters to change the bounds and steps allowed
+
+class StillInteracting(Exception):
+    def __init__(self):
+        Exception.__init__(self, "A simulation ended while still inside the interaction region.")
+
 class CheckEnd(object):
     box_bounds = 5.0
     nsteps = 5000
@@ -366,7 +371,10 @@ class CheckEnd(object):
         lb, rb = -abs(self.box_bounds), abs(self.box_bounds)
         if self.reached_interaction: # simulation has made it to interaction region
             if traj.time > traj.dt * self.nsteps:
-                return True
+                if (traj.position > lb and traj.position < rb):
+                    raise StillInteracting()
+                else:
+                    return True
             else:
                 return traj.position < lb or traj.position > rb
         else: # check whether in interaction region
@@ -481,12 +489,16 @@ class BatchedTraj:
                 traj_input = self.options
                 traj_input.update(params)
                 traj = TrajectorySH(self.model, self.tracemanager.spawn_tracer(), **traj_input)
-                trace = traj.simulate()
-                traces.append(trace)
-                outcomes += traj.outcome()
+                try:
+                    trace = traj.simulate()
+                    traces.append(trace)
+                    outcomes += traj.outcome()
+                except StillInteracting:
+                    print "BEWARE: a simulation ended while still in interaction region"
+                    pass
             return (outcomes, traces)
         except KeyboardInterrupt:
-            pass
+            raise
 
     ## runs many trajectories and returns averaged results
     def compute(self):
@@ -520,7 +532,7 @@ class BatchedTraj:
             except KeyboardInterrupt:
                 exit(" Aborting!")
 
-        outcomes /= float(nsamples)
+        outcomes /= np.sum(outcomes)
         self.tracemanager.outcomes = outcomes
         return self.tracemanager
 
