@@ -14,105 +14,82 @@ import sys
 
 ## Wrapper around all the information computed for a set of electronics
 #  states at a given position: V, dV, eigenvectors, eigenvalues
+#  Parameters with names starting with '_' indicate things that by
+#  design should not be called outside of ElectronicStates.
 class ElectronicStates:
     ## Constructor
     # @param V Hamiltonian/potential
     # @param dV Gradient of Hamiltonian/potential
     # @param ref_coeff [optional] set of coefficients (for example, from a previous step) used to keep the sign of eigenvectors consistent
-    def __init__(self, V, dV, ref_coeff = None):
-        self.V = V
-        self.dV = dV
-        self.energies, self.coeff = np.linalg.eigh(V)
-        if ref_coeff is not None:
-            for mo in range(self.nstates()):
-                if (np.dot(self.coeff[:,mo], ref_coeff[:,mo]) < 0.0):
-                    self.coeff[:,mo] *= -1.0
+    def __init__(self, V, dV, reference = None):
+        # raw internal quantities
+        self._V = V
+        self._dV = dV
+        self._coeff = self._compute_coeffs(reference)
+
+        # processed quantities used in simulation
+        self.hamiltonian = self._compute_hamiltonian()
+        self.force = self._compute_force()
+        self.derivative_coupling = self._compute_derivative_coupling()
 
     ## returns dimension of (electronic) Hamiltonian
     def nstates(self):
-        return self.V.shape[1]
+        return self._V.shape[1]
 
     ## returns dimensionality of model (nuclear coordinates)
     def ndim(self):
-        return self.dV.shape[0]
+        return self._dV.shape[0]
+
+    ## returns coefficient matrix for basis states
+    def _compute_coeffs(self, reference):
+        energies, coeff = np.linalg.eigh(self._V)
+        if reference is not None:
+            try:
+                ref_coeff = reference._coeff
+                for mo in range(self.nstates()):
+                    if (np.dot(coeff[:,mo], ref_coeff[:,mo]) < 0.0):
+                        coeff[:,mo] *= -1.0
+            except:
+                raise Exception("Failed to regularize new ElectronicStates from a reference object %s" % (reference))
+        self._energies = energies
+        return coeff
 
     ## returns \f$-\langle \phi_{\mbox{state}} | \nabla H | \phi_{\mbox{state}} \rangle\f$ of Hamiltonian
-    # @param state state along which to compute force
-    def compute_force(self, state):
-        out = np.zeros(self.ndim())
-        state_vec = self.coeff[:,state]
-        for d in range(self.ndim()):
-            out[d] = - (np.dot(state_vec.T, np.dot(self.dV[d,:,:], state_vec)))
+    def _compute_force(self):
+        out = np.zeros([self.nstates(), self.ndim()])
+        for ist in range(self.nstates()):
+            state_vec = self._coeff[:,ist]
+            for d in range(self.ndim()):
+                out[ist,d] = - (np.dot(state_vec.T, np.dot(self._dV[d,:,:], state_vec)))
         return out
 
     ## returns \f$\phi_{\mbox{state}} | H | \phi_{\mbox{state}} = \varepsilon_{\mbox{state}}\f$
-    def compute_potential(self, state):
-        return self.energies[state]
+    def _compute_hamiltonian(self):
+        return np.dot(self._coeff.T, np.dot(self._V, self._coeff))
 
     ## returns \f$\phi_{i} | \nabla_\alpha \phi_{j} = d^\alpha_{ij}\f$
-    def compute_derivative_coupling(self, bra_state, ket_state):
-        out = np.zeros(self.ndim())
-        if (bra_state != ket_state):
-            for d in range(self.ndim()):
-                out[d] = np.dot(self.coeff[:,bra_state].T, np.dot(self.dV[d,:,:], self.coeff[:,ket_state]))
+    def _compute_derivative_coupling(self):
+        out = np.zeros([self.nstates(), self.nstates(), self.ndim()])
+        for j in range(self.nstates()):
+            for i in range(j):
+                for d in range(self.ndim()):
+                    out[i,j,d] = np.dot(self._coeff[:,i].T, np.dot(self._dV[d,:,:], self._coeff[:,j]))
+                dE = self._energies[j] - self._energies[i]
+                if abs(dE) < 1.0e-14:
+                    dE = m.copysign(1.0e-14, dE)
 
-            dE = self.energies[ket_state] - self.energies[bra_state]
-            if abs(dE) < 1.0e-14:
-                dE = m.copysign(1.0e-14, dE)
-            out /= dE
+                out[i,j,:] /= dE
+                out[j,i,:] = -out[i,j,:]
+
         return out
 
     ## returns \f$ \sum_\alpha v^\alpha D^\alpha \f$ where \f$ D^\alpha_{ij} = d^\alpha_{ij} \f$
-    def compute_NAC_matrix(self, velocity):
+    def NAC_matrix(self, velocity):
         nstates = self.nstates()
         ndim = self.ndim()
         assert(ndim == velocity.shape[0])
 
-        # first build a contraction of dV with the velocity
-        dV = np.dot(self.dV.reshape([ndim, nstates*nstates]).T, velocity).reshape([nstates,nstates])
-
-        # transform to eigenbasis
-        out = np.dot(self.coeff.T, np.dot(dV, self.coeff))
-
-        for i in range(nstates):
-            # build dE inverse all at once
-            dE = self.energies[0:i] - self.energies[i]
-            # replace exact zeros
-            dE[dE==0.0] = 1.0e-30
-
-            # still use clip to keep results in reasonable window
-            dE = np.reciprocal(dE).clip(-1.0e14, 1.0e14)
-
-            out[i,0:i] *= dE
-            out[0:i,i] = -out[i,0:i]
-
-            out[i,i] = 0.0
-        return out
-
-    ## returns a single column of \f$ \sum_\alpha v^\alpha D^\alpha \f$ where \f$ D^\alpha_{ij} = d^\alpha_{ij} \f$
-    ## and \f$i\f$ is specified
-    def compute_NAC_column(self, velocity, i):
-        nstates = self.nstates()
-        ndim = self.ndim()
-        assert(ndim == velocity.shape[0])
-
-        # first build a contraction of dV with the velocity
-        dV = np.dot(self.dV.reshape([ndim, nstates*nstates]).T, velocity).reshape([nstates,nstates])
-
-        # transform to eigenbasis in [i,:] type form
-        out = np.dot(self.coeff[:,i].T, np.dot(dV, self.coeff))
-
-        dE = self.energies[:] - self.energies[i]
-        # replace exact zeros with small number
-        dE[dE==0.0] = 1.0e-30
-
-        # divide by reciprocal clip
-        out *= np.reciprocal(dE).clip(-1.0e14,1.0e14)
-
-        # but now fix diagonal
-        out[i] = 0.0
-
-        return out
+        return np.dot(self.derivative_coupling, velocity)
 
 ## Class to propagate a single SH Trajectory
 class TrajectorySH:
@@ -191,7 +168,7 @@ class TrajectorySH:
     def propagate_rho(self, elec_states, dt):
         velo = 0.5 * (self.last_velocity + self.velocity)
 
-        W = np.diag(elec_states.energies) - 1j * elec_states.compute_NAC_matrix(velo)
+        W = elec_states.hamiltonian - 1j * elec_states.NAC_matrix(velo)
 
         if self.propagator == "exponential":
             diags, coeff = np.linalg.eigh(W)
@@ -222,7 +199,7 @@ class TrajectorySH:
         nstates = self.model.nstates()
 
         velo = 0.5 * (self.last_velocity + self.velocity) # interpolate velocities to get value at integer step
-        W = elec_states.compute_NAC_column(velo, self.state)
+        W = elec_states.NAC_matrix(velo)[self.state, :]
 
         probs = 2.0 * np.real(self.rho[self.state,:]) * W[:] * self.dt / np.real(self.rho[self.state,self.state])
 
@@ -240,9 +217,9 @@ class TrajectorySH:
             for target in range(nstates):
                 if do_hop[target]: break
 
-            new_potential, old_potential = elec_states.energies[target], elec_states.energies[self.state]
+            new_potential, old_potential = elec_states.hamiltonian[target, target], elec_states.hamiltonian[self.state, self.state]
             delV = new_potential - old_potential
-            derivative_coupling = elec_states.compute_derivative_coupling(target, self.state)
+            derivative_coupling = elec_states.derivative_coupling[target, self.state, :]
             component_kinetic = self.mode_kinetic_energy(derivative_coupling)
             if delV <= component_kinetic:
                 self.state = target
@@ -251,8 +228,8 @@ class TrajectorySH:
         return sum(probs)
 
     ## helper function to simplify the calculation of the electronic states at a given position
-    def compute_electronics(self, position, ref_coeff = None):
-        return ElectronicStates(model.V(position), model.dV(position), ref_coeff)
+    def compute_electronics(self, position, electronics = None):
+        return ElectronicStates(model.V(position), model.dV(position), electronics)
 
     ## run simulation
     def simulate(self):
@@ -260,14 +237,14 @@ class TrajectorySH:
         electronics = self.compute_electronics(self.position)
 
         # start by taking half step in velocity
-        initial_acc = electronics.compute_force(self.state) / self.mass
+        initial_acc = electronics.force[self.state, :] / self.mass
         veloc = self.velocity
         dv = 0.5 * initial_acc * self.dt
         self.last_velocity, self.velocity = veloc - dv, veloc + dv
 
         # propagate wavefunction a half-step forward to match velocity
         self.propagate_rho(electronics, 0.5*self.dt)
-        potential_energy = electronics.compute_potential(self.state)
+        potential_energy = electronics.hamiltonian[self.state, self.state]
 
         prob = 0.0
 
@@ -279,8 +256,8 @@ class TrajectorySH:
             self.position += self.velocity * self.dt
 
             # calculate electronics at new position
-            last_electronics, electronics = electronics, self.compute_electronics(self.position, electronics.coeff)
-            acceleration = electronics.compute_force(self.state) / self.mass
+            last_electronics, electronics = electronics, self.compute_electronics(self.position, electronics)
+            acceleration = electronics.force[self.state,:] / self.mass
             self.last_velocity, self.velocity = self.velocity, self.velocity + acceleration * self.dt
 
             # now propagate the electronic wavefunction to the new time
