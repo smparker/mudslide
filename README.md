@@ -58,7 +58,7 @@ will run 20 scattering simulations in parallel with a particle starting at -5.0 
 * `propagator` - method used to propagate electronic wavefunction
     * "exponential" (default) - apply exponentiated Hamiltonian via diagonalization
     * "ode" - scipy's ODE integrator
-* `nprocs` - number of processes over which to parallelize trajectories (default: number of CPUs available)
+* `nprocs` - number of processes over which to parallelize trajectories (default: 1)
 * `outcome_type` - how to count statistics at the end of a trajectory
     * "state" (default) - use the state attribute of the simulation only
     * "populations" - use the diagonals of the density matrix
