@@ -444,7 +444,7 @@ class BatchedTraj:
                 print("Error: scipy is required for the ode propagator!")
                 quit()
 
-        self.options["nprocs"]        = inp.get("nprocs", mp.cpu_count())
+        self.options["nprocs"]        = inp.get("nprocs", 1)
         self.options["outcome_type"]  = inp.get("outcome_type", "state")
 
     ## runs a set of trajectories and collects the results
