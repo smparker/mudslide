@@ -93,7 +93,7 @@ class ElectronicStates:
 
 ## Class to propagate a single SH Trajectory
 class TrajectorySH:
-    def __init__(self, model, tracer, **options):
+    def __init__(self, model, tracer, check_end, **options):
         self.model = model
         self.tracer = tracer
         self.mass = options["mass"]
@@ -109,10 +109,7 @@ class TrajectorySH:
 
         # check_end must be a class that implements __call__ that accepts TrajectorySH
         # and returns True when the simulation is over
-        if "check_end" in options:
-            self.check_end = options["check_end"]()
-        else:
-            self.check_end = end_checker(abs(options["position"]), 1e30)()
+        self.check_end = check_end()
 
         # fixed initial parameters
         self.time = 0.0
@@ -229,7 +226,7 @@ class TrajectorySH:
 
     ## helper function to simplify the calculation of the electronic states at a given position
     def compute_electronics(self, position, electronics = None):
-        return ElectronicStates(model.V(position), model.dV(position), electronics)
+        return ElectronicStates(self.model.V(position), self.model.dV(position), electronics)
 
     ## run simulation
     def simulate(self):
@@ -412,13 +409,16 @@ class BatchedTraj:
     # | mass               | 2000.0                     |
     # | initial_time       | 0.0                        |
     # | samples            | 2000                       |
-    # | dt                 | 20.0  ~ 0.5 fs            |
+    # | dt                 | 20.0  ~ 0.5 fs             |
+    # | seed               | None (date)                |
     # | propagator         | "exponential"              |
     # | nprocs             | MultiProcessing.cpu_count  |
     # | outcome_type       | "state"                    |
-    def __init__(self, model, tracemanager = TraceManager(), **inp):
+    def __init__(self, model, check_end, traj_gen, tracemanager = TraceManager(), **inp):
         self.model = model
         self.tracemanager = tracemanager
+        self.check_end = check_end
+        self.traj_gen = traj_gen
         self.options = {}
 
         # system parameters
@@ -447,26 +447,16 @@ class BatchedTraj:
         self.options["nprocs"]        = inp.get("nprocs", mp.cpu_count())
         self.options["outcome_type"]  = inp.get("outcome_type", "state")
 
-        if "check_end" in inp:
-            self.options["check_end"] = inp["check_end"]
-        else:
-            raise Exception("A class must be provided that will check for the end of a simulation: check_end")
-
-        if "traj_gen" in inp:
-            self.options["traj_gen"] = inp["traj_gen"]
-        else:
-            raise Exception("A generator function must be provided that generates initial conditions: traj_gen")
-
     ## runs a set of trajectories and collects the results
     # @param n number of trajectories to run
     def run_trajectories(self, n):
         outcomes = np.zeros([self.model.nstates(),2])
         traces = []
         try:
-            for params in self.options["traj_gen"](n):
+            for params in self.traj_gen(n):
                 traj_input = self.options
                 traj_input.update(params)
-                traj = TrajectorySH(self.model, self.tracemanager.spawn_tracer(), **traj_input)
+                traj = TrajectorySH(self.model, self.tracemanager.spawn_tracer(), self.check_end, **traj_input)
                 try:
                     trace = traj.simulate()
                     traces.append(trace)
@@ -591,16 +581,15 @@ if __name__ == "__main__":
         # hack-y scale of time step so that the input amount roughly makes sense for 10.0 a.u.
         dt = args.dt * (10.0 / k) if args.scale_dt else args.dt
 
-        fssh = BatchedTraj(model, momentum = k,
+        fssh = BatchedTraj(model, CheckEnd, traj_gen,
+                           momentum = k,
                            position = args.position,
                            mass = args.mass,
                            samples = args.samples,
                            propagator = args.propagator,
                            nprocs = args.nprocs,
                            dt = dt,
-                           seed = args.seed,
-                           traj_gen = traj_gen,
-                           check_end = CheckEnd
+                           seed = args.seed
                    )
         results = fssh.compute()
         outcomes = results.outcomes
