@@ -2,17 +2,26 @@
 
 let failures=0
 
+base=$(dirname $0)
+fssh=$base/../fssh.py
+check_trace=$base/check_trace.py
+
+trim() {
+  echo -n "$1"
+}
+
 # do simple tests first
 for k in 8 14 20; do
-  outfile=simple/k${k}/k${k}.out
-  reffile=simple/k${k}/k${k}.ref
+  outfile=$base/simple/k${k}/k${k}.out
+  reffile=$base/simple/k${k}/k${k}.ref
 
   printf "    %-80s\r" "Running Tully's simple avoided crossing with k = $k a.u."
 
-  python ../fssh.py -s 1 -m simple -k $k $k -x -10 --dt 5 -n 1 -z 200 -o "single" -j 1 > $outfile
-  ktest=$(python check_trace.py $outfile $reffile)
+  $fssh -s 1 -m simple -k $k $k -x -10 --dt 5 -n 1 -z 200 -o "single" -j 1 > $outfile
+  ktest=$($check_trace $outfile $reffile)
+  ktest=$(trim $ktest)
 
-  if [ "$ktest" != "" ]; then
+  if [ "$ktest" != "pass" ]; then
       printf "%-80s\n" "Tully's simple avoided crossing with input momentum = $k au failed!"
       let failures+=1
   fi
@@ -20,15 +29,16 @@ done
 
 # do dual avoided crossing tests next
 for k in 20 50 100; do
-  outfile=dual/k${k}/k${k}.out
-  reffile=dual/k${k}/k${k}.ref
+  outfile=$base/dual/k${k}/k${k}.out
+  reffile=$base/dual/k${k}/k${k}.ref
 
   printf "    %-80s\r" "Running Tully's dual avoided crossing with k = $k a.u."
 
-  python ../fssh.py -s 1 -m dual -k $k $k -x -10 --dt 5 -n 1 -z 200 -o "single" -j 1 > $outfile
-  ktest=$(python check_trace.py $outfile $reffile)
+  $fssh -s 1 -m dual -k $k $k -x -10 --dt 5 -n 1 -z 200 -o "single" -j 1 > $outfile
+  ktest=$($check_trace $outfile $reffile)
+  ktest=$(trim $ktest)
 
-  if [ "$ktest" != "" ]; then
+  if [ "$ktest" != "pass" ]; then
       printf "%-80s\n" "Tully's dual avoided crossing with input momentum = $k au failed!"
       let failures+=1
   fi
@@ -36,15 +46,16 @@ done
 
 # do extended tests next
 for k in 10 15 20; do
-  outfile=extended/k${k}/k${k}.out
-  reffile=extended/k${k}/k${k}.ref
+  outfile=$base/extended/k${k}/k${k}.out
+  reffile=$base/extended/k${k}/k${k}.ref
 
   printf "    %-80s\r" "Running Tully's extended model with k = $k a.u."
 
-  python ../fssh.py -s 1 -m extended -k $k $k -x -10 --dt 5 -n 1 -z 200 -o "single" -j 1 > $outfile
-  ktest=$(python check_trace.py $outfile $reffile)
+  $fssh -s 1 -m extended -k $k $k -x -10 --dt 5 -n 1 -z 200 -o "single" -j 1 > $outfile
+  ktest=$($check_trace $outfile $reffile)
+  ktest=$(trim $ktest)
 
-  if [ "$ktest" != "" ]; then
+  if [ "$ktest" != "pass" ]; then
       printf "%-80s\n" "Tully's extended model with input momentum = $k au failed!"
       let failures+=1
   fi
@@ -54,4 +65,5 @@ if [ $failures -eq 0 ]; then
   printf "%-84s\n" "All tests passed!"
 else
   printf "%-84s\n" "Tests finished with $failures failures"
+  exit 1
 fi

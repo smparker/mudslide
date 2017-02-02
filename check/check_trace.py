@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 def print_diff(where, line1, line2):
-    print "%s differ at:" % (", ".join(where))
-    print "< %s" % (line1.rstrip())
-    print "> %s" % (line2.rstrip())
+    print("%s differ at:" % (", ".join(where)))
+    print("< %s" % (line1.rstrip()))
+    print("> %s" % (line2.rstrip()))
 
 if __name__ == "__main__":
     import argparse as ap
@@ -20,7 +22,7 @@ if __name__ == "__main__":
         f1 = open(args.file1)
         f2 = open(args.file2)
     except IOError:
-        print "One or both files could not be opened!"
+        print("One or both files could not be opened!")
         raise
 
     tol = args.tol
@@ -56,15 +58,17 @@ if __name__ == "__main__":
 
         if (len(problems) > 0):
             print_diff(problems, l1, l2)
+        else:
+            print("pass")
 
     try:
         f1.next()
-        print "file1 is longer than file2"
+        print("file1 is longer than file2")
     except Exception:
         pass
 
     try:
         f2.next()
-        print "file2 is longer than file1"
+        print("file2 is longer than file1")
     except Exception:
         pass
