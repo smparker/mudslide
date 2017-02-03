@@ -1,4 +1,4 @@
-# Fewest Switches Surface Hopping
+# Fewest Switches Surface Hopping [![Build Status](https://travis-ci.org/smparker/FSSH.svg?branch=master)](https://travis-ci.org/smparker/FSSH)
 Python implementation of Tully's Fewest Switches Surface Hopping (FSSH) for model problems including
 a propagator and an implementation of Tully's model problems described in Tully, J.C. _J. Chem. Phys._ (1990) **93** 1061.
 The current implementation probably works for more than two electronic states, is completely untested for more than
