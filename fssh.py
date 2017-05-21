@@ -93,7 +93,7 @@ class ElectronicStates:
 
 ## Class to propagate a single SH Trajectory
 class TrajectorySH:
-    def __init__(self, model, tracer, check_end, **options):
+    def __init__(self, model, tracer, **options):
         self.model = model
         self.tracer = tracer
         self.mass = options["mass"]
@@ -107,21 +107,40 @@ class TrajectorySH:
         else:
             raise Exception("Unrecognized initial state option")
 
-        # check_end must be a class that implements __call__ that accepts TrajectorySH
-        # and returns True when the simulation is over
-        self.check_end = check_end()
+        # function duration_initialize should get us ready to for future continue_simulating calls
+        # that decide whether the simulation has finished
+        self.duration_initialize()
 
         # fixed initial parameters
         self.time = 0.0
+        self.nsteps = 0
 
         # read out of options
         self.dt = options["dt"]
         self.outcome_type = options["outcome_type"]
 
-        # propagator
-        self.propagator = options["propagator"]
-
         self.random = np.random.RandomState(options["seed"])
+
+    def currently_interacting(self):
+        """determines whether trajectory is currently inside an interaction region"""
+        return self.box_bounds[0] < self.position and self.box_bounds[1] > self.position
+
+    def duration_initialize(self):
+        """Initializes variables related to continue_simulating"""
+        self.found_box = False
+        self.box_bounds = (-5,5)
+        self.max_steps = 10000
+
+    def continue_simulating(self):
+        """Returns True if a trajectory ought to keep running, False if it should finish"""
+        if self.nsteps > self.max_steps:
+            return False
+        elif self.found_box:
+            return self.currently_interacting()
+        else:
+            if self.currently_interacting():
+                self.found_box = True
+            return True
 
     def trace(self, electronics, prob, call):
         if call == "collect":
@@ -167,29 +186,11 @@ class TrajectorySH:
 
         W = elec_states.hamiltonian - 1j * elec_states.NAC_matrix(velo)
 
-        if self.propagator == "exponential":
-            diags, coeff = np.linalg.eigh(W)
+        diags, coeff = np.linalg.eigh(W)
 
-            # use W as temporary storage
-            U = np.dot(coeff, np.dot(np.diag(np.exp(-1j * diags * dt)), coeff.T.conj(), out=W))
-            np.dot(U, np.dot(self.rho, U.T.conj(), out=W), out=self.rho)
-        elif self.propagator == "ode":
-            nstates = self.model.nstates()
-            G *= -1j
-            def drho(time, y):
-                ymat = np.reshape(y, [nstates, nstates])
-                dro = np.dot(G, ymat) - np.dot(ymat, G)
-                return np.reshape(dro, [nstates*nstates])
-
-            rhovec = np.reshape(self.rho, [nstates*nstates])
-            integrator = scipy.integrate.complex_ode(drho).set_integrator('vode', method='bdf', with_jacobian=False)
-            integrator.set_initial_value(rhovec, self.time)
-            integrator.integrate(self.time + dt)
-            self.rho = np.reshape(integrator.y, [nstates,nstates])
-            if not integrator.successful():
-                exit("Propagation of the electronic wavefunction failed!")
-        else:
-            raise Exception("Unrecognized method for propagation of electronic density matrix!")
+        # use W as temporary storage
+        U = np.dot(coeff, np.dot(np.diag(np.exp(-1j * diags * dt)), coeff.T.conj(), out=W))
+        np.dot(U, np.dot(self.rho, U.T.conj(), out=W), out=self.rho)
 
     ## Compute probability of hopping, generate random number, and perform hops
     def surface_hopping(self, elec_states):
@@ -206,23 +207,34 @@ class TrajectorySH:
         # clip probabilities to make sure they are between zero and one
         probs = probs.clip(0.0, 1.0)
 
-        accumulated_P = np.cumsum(probs)
-        zeta = self.random.uniform()
-        do_hop = np.less(zeta, accumulated_P)
-        if (any(do_hop)): # do switch
-            # jump to the first state for which zeta is less
-            for target in range(nstates):
-                if do_hop[target]: break
-
-            new_potential, old_potential = elec_states.hamiltonian[target, target], elec_states.hamiltonian[self.state, self.state]
+        do_hop, hop_to = self.hopper(probs)
+        if (do_hop): # do switch
+            new_potential, old_potential = elec_states.hamiltonian[hop_to, hop_to], elec_states.hamiltonian[self.state, self.state]
             delV = new_potential - old_potential
-            derivative_coupling = elec_states.derivative_coupling[target, self.state, :]
+            derivative_coupling = elec_states.derivative_coupling[hop_to, self.state, :]
             component_kinetic = self.mode_kinetic_energy(derivative_coupling)
             if delV <= component_kinetic:
-                self.state = target
+                self.state = hop_to
                 self.rescale_component(derivative_coupling, -delV)
                 self.tracer.hops += 1
+
         return sum(probs)
+
+    ## given a set of probabilities, determines whether and where to hop
+    def hopper(self, probs):
+        zeta = self.random.uniform()
+        acc_prob = np.cumsum(probs)
+        hops = np.less(zeta, acc_prob)
+        if any(hops):
+            hop_to = -1
+            for i in range(self.model.nstates()):
+                if hops[i]:
+                    hop_to = i
+                    break
+
+            return True, hop_to
+        else:
+            return False, -1
 
     ## helper function to simplify the calculation of the electronic states at a given position
     def compute_electronics(self, position, electronics = None):
@@ -261,9 +273,10 @@ class TrajectorySH:
             self.propagate_rho(electronics, self.dt)
             prob = self.surface_hopping(electronics)
             self.time += self.dt
+            self.nsteps += 1
 
             # ending condition
-            if (self.check_end(self)):
+            if not self.continue_simulating():
                 break
 
             self.trace(electronics, prob, "collect")
@@ -335,28 +348,6 @@ class StillInteracting(Exception):
     def __init__(self):
         Exception.__init__(self, "A simulation ended while still inside the interaction region.")
 
-class CheckEnd(object):
-    box_bounds = 5.0
-    nsteps = 5000
-
-    def __init__(self):
-        self.reached_interaction = False
-
-    def __call__(self, traj):
-        lb, rb = -abs(self.box_bounds), abs(self.box_bounds)
-        if self.reached_interaction: # simulation has made it to interaction region
-            if traj.time > traj.dt * self.nsteps:
-                if (traj.position > lb and traj.position < rb):
-                    raise StillInteracting()
-                else:
-                    return True
-            else:
-                return traj.position < lb or traj.position > rb
-        else: # check whether in interaction region
-            if traj.position > lb and traj.position < rb:
-                self.reached_interaction = True
-            return False
-
 #####################################################################################
 # Series of canned classes act as generator functions for initial conditions        #
 #####################################################################################
@@ -411,13 +402,12 @@ class BatchedTraj:
     # | samples            | 2000                       |
     # | dt                 | 20.0  ~ 0.5 fs             |
     # | seed               | None (date)                |
-    # | propagator         | "exponential"              |
     # | nprocs             | MultiProcessing.cpu_count  |
     # | outcome_type       | "state"                    |
-    def __init__(self, model, check_end, traj_gen, tracemanager = TraceManager(), **inp):
+    def __init__(self, model, traj_gen, trajectory_type = TrajectorySH, tracemanager = TraceManager(), **inp):
         self.model = model
         self.tracemanager = tracemanager
-        self.check_end = check_end
+        self.trajectory = trajectory_type
         self.traj_gen = traj_gen
         self.options = {}
 
@@ -433,17 +423,6 @@ class BatchedTraj:
         # random seed
         self.options["seed"]          = inp.get("seed", None)
 
-        # numerical parameters
-        self.options["propagator"]    = inp.get("propagator", "exponential")
-        if self.options["propagator"] not in ["exponential", "ode"]:
-            raise Exception("Unrecognized electronic propagator!")
-        elif self.options["propagator"] == "ode":
-            try:
-                import scipy.integrate
-            except ImportError:
-                print("Error: scipy is required for the ode propagator!")
-                quit()
-
         self.options["nprocs"]        = inp.get("nprocs", 1)
         self.options["outcome_type"]  = inp.get("outcome_type", "state")
 
@@ -456,7 +435,7 @@ class BatchedTraj:
             for params in self.traj_gen(n):
                 traj_input = self.options
                 traj_input.update(params)
-                traj = TrajectorySH(self.model, self.tracemanager.spawn_tracer(), self.check_end, **traj_input)
+                traj = self.trajectory(self.model, self.tracemanager.spawn_tracer(), **traj_input)
                 try:
                     trace = traj.simulate()
                     traces.append(trace)
@@ -522,7 +501,6 @@ if __name__ == "__main__":
     parser.add_argument('-f', '--normal', default=0.05, type=float, help="standard deviation as a fraction of momentum for normal samping (%(default)s)")
     parser.add_argument('-s', '--samples', default=200, type=int, help="number of samples (%(default)d)")
     parser.add_argument('-j', '--nprocs', default=2, type=int, help="number of processors (%(default)d)")
-    parser.add_argument('-p', '--propagator', default="exponential", choices=('exponential', 'ode'), type=str, help="propagator (%(default)s)")
     parser.add_argument('-M', '--mass', default=2000.0, type=float, help="particle mass (%(default)s)")
     parser.add_argument('-t', '--dt', default=20.0, type=float, help="time step in a.u.(%(default)s)")
     parser.add_argument('-y', '--scale_dt', dest="scale_dt", action="store_true", help="scale (hack-like) time step using momentum (%(default)s)")
@@ -567,9 +545,6 @@ if __name__ == "__main__":
     else:
         raise Exception("Unrecognized type of spacing")
 
-    CheckEnd.box_bounds = args.bounds
-    CheckEnd.nsteps = args.nt
-
     all_results = []
 
     for k in kpoints:
@@ -581,12 +556,11 @@ if __name__ == "__main__":
         # hack-y scale of time step so that the input amount roughly makes sense for 10.0 a.u.
         dt = args.dt * (10.0 / k) if args.scale_dt else args.dt
 
-        fssh = BatchedTraj(model, CheckEnd, traj_gen,
+        fssh = BatchedTraj(model, traj_gen,
                            momentum = k,
                            position = args.position,
                            mass = args.mass,
                            samples = args.samples,
-                           propagator = args.propagator,
                            nprocs = args.nprocs,
                            dt = dt,
                            seed = args.seed
