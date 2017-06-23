@@ -2,7 +2,7 @@
 
 ## @package fssh
 #  Module responsible for propagating surface hopping trajectories
-from __future__ import print_function
+from __future__ import print_function, division
 
 import numpy as np
 import math as m
@@ -16,7 +16,7 @@ import sys
 #  states at a given position: V, dV, eigenvectors, eigenvalues
 #  Parameters with names starting with '_' indicate things that by
 #  design should not be called outside of ElectronicStates.
-class ElectronicStates:
+class ElectronicStates(object):
     ## Constructor
     # @param V Hamiltonian/potential
     # @param dV Gradient of Hamiltonian/potential
@@ -92,7 +92,7 @@ class ElectronicStates:
         return np.dot(self.derivative_coupling, velocity)
 
 ## Class to propagate a single SH Trajectory
-class TrajectorySH:
+class TrajectorySH(object):
     def __init__(self, model, tracer, **options):
         self.model = model
         self.tracer = tracer
@@ -306,7 +306,7 @@ class TrajectorySH:
 ## Class to collect observables for a given trajectory
 TraceData = collections.namedtuple('TraceData', 'time position momentum rho activestate electronics hopping')
 
-class Trace:
+class Trace(object):
     def __init__(self):
         self.data = []
         self.hops = 0
@@ -324,7 +324,7 @@ class Trace:
         return self.data.__iter__()
 
 ## Class to manage the collection of observables from a set of trajectories
-class TraceManager:
+class TraceManager(object):
     def __init__(self):
         self.traces = []
 
@@ -393,7 +393,7 @@ class TrajGenNormal(object):
 # Requires a model object which is a class that has functions V(x), dV(x), nstates(), and ndim()
 # that return the Hamiltonian at position x, gradient of the Hamiltonian at position x
 # number of electronic states, and dimension of nuclear space, respectively.
-class BatchedTraj:
+class BatchedTraj(object):
     ## Constructor requires model and options input as kwargs
     # @param model object used to describe the model system
     #

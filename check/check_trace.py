@@ -20,8 +20,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     try:
-        f1 = open(args.file1)
-        f2 = open(args.file2)
+        f1 = open(args.file1, "r")
+        f2 = open(args.file2, "r")
     except IOError:
         print("One or both files could not be opened!")
         raise
@@ -57,17 +57,19 @@ if __name__ == "__main__":
             print_diff(problems, l1, l2)
             failed = True
 
+    try:
+        next(f1) # this should throw
+        print("file1 is longer than file2")
+        failed = True
+    except StopIteration:
+        pass
+
+    try:
+        next(f2) # this should throw
+        print("file2 is longer than file1")
+        failed = True
+    except StopIteration:
+        pass
+
     if not failed:
         print("pass")
-
-    try:
-        f1.next()
-        print("file1 is longer than file2")
-    except Exception:
-        pass
-
-    try:
-        f2.next()
-        print("file2 is longer than file1")
-    except Exception:
-        pass

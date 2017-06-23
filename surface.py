@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 import sys
 import argparse
 import numpy as np
@@ -44,9 +46,9 @@ if __name__ == "__main__":
         out += " ".join([ "%12.6f" % tuple(-estates.force[i,:]) for i in range(nstates)])
         return out
 
-    print headprinter()
+    print(headprinter())
     for x in xr:
         elec = fssh.ElectronicStates(model.V(x), model.dV(x), last_elec)
-        print lineprinter(x, elec)
+        print(lineprinter(x, elec))
 
         last_elec = elec
