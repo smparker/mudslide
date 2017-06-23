@@ -75,9 +75,9 @@ for model in "simple" "extended" "dual" "super"; do
   reffile=${outfile%out}ref
   checkfile=${outfile%out}check
 
-  totest="ffffff"
+  totest="ffffffff"
   if [ "$model" == "super" ]; then
-    totest="ffffffffff"
+    totest="fffffffffffff"
   fi
 
   $surface -m $model -r -11 11 -n 200 > $outfile

@@ -29,26 +29,27 @@ if __name__ == "__main__":
     last_elec = None
 
     def headprinter():
-        out = "#%12s" % ("x")
-        out += " ".join([ "%12s" % ( "E_%1d" % i) for i in range(nstates)])
-        for i in range(nstates):
-            out += " ".join([ "%12s" % ( "d_%1d%1d" % (j, i) ) for j in range(i) ])
-        out += " ".join([ "%12s" % ( "dE_%1d" % i) for i in range(nstates)])
-        return out
+        diabats = [ "V_%1d" % i for i in range(nstates) ]
+        energies = [ "E_%1d" % i for i in range(nstates) ]
+        dc = [ "d_%1d%1d" % (j, i) for i in range(nstates) for j in range(i) ]
+        forces = [ "dE_%1d" % i for i in range(nstates) ]
 
-    def lineprinter(x, estates):
-        ham = estates.hamiltonian
-        energies = [ ham[i,i] for i in range(nstates) ]
-        out = "%12.6f" % (x)
-        out += " ".join([ "%12.6f" % e for e in energies ])
-        for i in range(nstates):
-            out += " ".join([ "%12.6f" % ( estates.derivative_coupling[j,i] ) for j in range(i) ])
-        out += " ".join([ "%12.6f" % tuple(-estates.force[i,:]) for i in range(nstates)])
-        return out
+        plist = [ "x" ] + diabats + energies + dc + forces
+        return "#" + " ".join([ "%12s" % x for x in plist ])
+
+    def lineprinter(x, model, estates):
+        V = model.V(x)
+        diabats = [ V[i,i] for i in range(nstates) ]
+        energies = [ estates.hamiltonian[i,i] for i in range(nstates) ]
+        dc = [ estates.derivative_coupling[j,i] for i in range(nstates) for j in range(i) ]
+        forces = [ -estates.force[i,:] for i in range(nstates) ]
+        plist = [ x ] + diabats + energies + dc + forces
+
+        return " ".join([ "%12f" % x for x in plist ])
 
     print(headprinter())
     for x in xr:
         elec = fssh.ElectronicStates(model.V(x), model.dV(x), last_elec)
-        print(lineprinter(x, elec))
+        print(lineprinter(x, model, elec))
 
         last_elec = elec
