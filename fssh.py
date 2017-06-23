@@ -119,7 +119,10 @@ class TrajectorySH:
         self.dt = options["dt"]
         self.outcome_type = options["outcome_type"]
 
-        self.random = np.random.RandomState(options["seed"])
+        self.random_state = np.random.RandomState(options["seed"])
+
+    def random(self):
+        return self.random_state.uniform()
 
     def currently_interacting(self):
         """determines whether trajectory is currently inside an interaction region"""
@@ -222,7 +225,7 @@ class TrajectorySH:
 
     ## given a set of probabilities, determines whether and where to hop
     def hopper(self, probs):
-        zeta = self.random.uniform()
+        zeta = self.random()
         acc_prob = np.cumsum(probs)
         hops = np.less(zeta, acc_prob)
         if any(hops):
@@ -365,11 +368,11 @@ class TrajGenConst(object):
 
 ## Canned class whose call function acts as a generator for normally distributed initial conditions
 class TrajGenNormal(object):
-    def __init__(self, position, momentum, initial_state, position_deviation = 0.0, momentum_deviation = 0.0, seed = None):
+    def __init__(self, position, momentum, initial_state, sigma, seed = None):
         self.position = position
-        self.position_deviation = position_deviation
+        self.position_deviation = 0.5 * sigma
         self.momentum = momentum
-        self.momentum_deviation = momentum_deviation
+        self.momentum_deviation = 1.0 / sigma
         self.initial_state = initial_state
 
         self.random_state = np.random.RandomState(seed)
@@ -379,8 +382,8 @@ class TrajGenNormal(object):
 
     def __call__(self, nsamples):
         for i in range(nsamples):
-            x = random_state.normal(self.position, self.position_deviation)
-            k = random_state.normal(self.momentum, self.momentum_deviation)
+            x = self.random_state.normal(self.position, self.position_deviation)
+            k = self.random_state.normal(self.momentum, self.momentum_deviation)
 
             if (self.kskip(k)): continue
             yield { "position": x, "momentum": k, "initial_state": self.initial_state }
@@ -457,8 +460,9 @@ class BatchedTraj:
 
         if nprocs > 1:
             pool = mp.Pool(nprocs)
-            chunksize = (nsamples - 1)/nprocs + 1
-            batches = [ min(chunksize, nsamples - chunksize*ip) for ip in range(nprocs) ]
+            chunksize = min((nsamples - 1)/nprocs + 1, 5)
+            nchunks = (nsamples -1)/chunksize + 1
+            batches = [ min(chunksize, nsamples - chunksize*ip) for ip in range(nchunks) ]
             poolresult = [ pool.apply_async(unwrapped_run_trajectories, (self, b)) for b in batches ]
             try:
                 for r in poolresult:
@@ -466,6 +470,7 @@ class BatchedTraj:
                     outcomes += oc
                     self.tracemanager.add_batch(tr)
             except KeyboardInterrupt:
+                return
                 pool.terminate()
                 pool.join()
                 exit(" Aborting!")
@@ -473,7 +478,7 @@ class BatchedTraj:
             pool.join()
         else:
             try:
-                oc, tr = unwrapped_run_trajectories(self, nsamples)
+                oc, tr = self.run_trajectories(nsamples)
                 outcomes += oc
                 self.tracemanager.add_batch(tr)
             except KeyboardInterrupt:
@@ -485,7 +490,31 @@ class BatchedTraj:
 
 ## global version of BatchedTraj.run_trajectories that is necessary because of the stupid way threading pools work in python
 def unwrapped_run_trajectories(fssh, n):
-    return BatchedTraj.run_trajectories(fssh, n)
+    try:
+        return BatchedTraj.run_trajectories(fssh, n)
+    except KeyboardInterrupt:
+        pass
+
+class TrajectoryCum(TrajectorySH):
+    def __init__(self, *args, **kwargs):
+        TrajectorySH.__init__(self, *args, **kwargs)
+
+        self.prob_cum = 0.0
+        self.zeta = self.random()
+
+    def hopper(self, probs):
+        accumulated = self.prob_cum
+        for i, p in enumerate(probs):
+            accumulated = accumulated + (1 - accumulated) * p
+            if accumulated > self.zeta: # then hop
+                # reset prob_cum, zeta
+                self.prob_cum = 0.0
+                self.zeta = self.random()
+                return True, i
+
+        self.prob_cum = accumulated
+
+        return False, -1
 
 if __name__ == "__main__":
     import tullymodels as tm
@@ -507,7 +536,7 @@ if __name__ == "__main__":
     parser.add_argument('-T', '--nt', default=50000, type=int, help="max number of steps (%(default)s)")
     parser.add_argument('-x', '--position', default=-10.0, type=float, help="starting position (%(default)s)")
     parser.add_argument('-b', '--bounds', default=5.0, type=float, help="bounding box to end simulation (%(default)s)")
-    parser.add_argument('-o', '--output', default="averaged", type=str, choices=('averaged', 'single', 'pickle', 'hack'), help="what to produce as output (%(default)s)")
+    parser.add_argument('-o', '--output', default="averaged", type=str, choices=('averaged', 'single', 'pickle', 'swarm', 'hack'), help="what to produce as output (%(default)s)")
     parser.add_argument('-O', '--outfile', default="sh.pickle", type=str, help="name of pickled file to produce (%(default)s)")
     parser.add_argument('-z', '--seed', default=None, type=int, help="random seed (current date)")
     parser.add_argument('--published', dest="published", action="store_true", help="override ranges to use those found in relevant papers (%(default)s)")
@@ -551,12 +580,13 @@ if __name__ == "__main__":
         if args.ksampling == "none":
             traj_gen = TrajGenConst(args.position, k, "ground")
         elif args.ksampling == "normal":
-            traj_gen = TrajGenNormal(args.position, k, "ground", momentum_deviation = k*args.normal)
+            traj_gen = TrajGenNormal(args.position, k, "ground", sigma = 0.05*k)
 
         # hack-y scale of time step so that the input amount roughly makes sense for 10.0 a.u.
         dt = args.dt * (10.0 / k) if args.scale_dt else args.dt
 
         fssh = BatchedTraj(model, traj_gen,
+                           trajectory_type = TrajectorySH,
                            momentum = k,
                            position = args.position,
                            mass = args.mass,
@@ -571,6 +601,14 @@ if __name__ == "__main__":
         if (args.output == "single"):
             for i in results.traces[0]:
                 print("%12.6f %12.6f %12.6f %6d" % (i.time, i.position, i.momentum, i.activestate))
+        if (args.output == "swarm"):
+            maxsteps = max([ len(t) for t in results.traces ])
+            for i in range(maxsteps):
+                for t in results.traces:
+                    if i < len(t):
+                        print("%12.6f %12.6f %6d" % (t[i].time, t[i].position, t[i].activestate))
+                print()
+                print()
         elif (args.output == "averaged" or args.output == "pickle"):
             print("%12.6f %s" % (k, " ".join(["%12.6f" % x for x in np.nditer(outcomes)])))
             if (args.output == "pickle"): # save results for later processing

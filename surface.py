@@ -24,7 +24,7 @@ if __name__ == "__main__":
     xr = np.linspace(start, end, samples)
 
     nstates = model.nstates()
-    last_coeff = np.eye(nstates)
+    last_elec = None
 
     def headprinter():
         out = "#%12s" % ("x")
@@ -35,16 +35,18 @@ if __name__ == "__main__":
         return out
 
     def lineprinter(x, estates):
+        ham = estates.hamiltonian
+        energies = [ ham[i,i] for i in range(nstates) ]
         out = "%12.6f" % (x)
-        out += " ".join([ "%12.6f" % (estates.energies[i]) for i in range(nstates)])
+        out += " ".join([ "%12.6f" % e for e in energies ])
         for i in range(nstates):
-            out += " ".join([ "%12.6f" % ( estates.compute_derivative_coupling(j,i) ) for j in range(i) ])
-        out += " ".join([ "%12.6f" % (-estates.compute_force(i)) for i in range(nstates)])
+            out += " ".join([ "%12.6f" % ( estates.derivative_coupling[j,i] ) for j in range(i) ])
+        out += " ".join([ "%12.6f" % tuple(-estates.force[i,:]) for i in range(nstates)])
         return out
 
     print headprinter()
     for x in xr:
-        elec = fssh.ElectronicStates(model.V(x), model.dV(x), last_coeff)
+        elec = fssh.ElectronicStates(model.V(x), model.dV(x), last_elec)
         print lineprinter(x, elec)
 
-        last_coeff = elec.coeff
+        last_elec = elec
