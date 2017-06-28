@@ -329,6 +329,9 @@ class Trace(object):
     def __iter__(self):
         return self.data.__iter__()
 
+    def __getitem__(self, i):
+        return self.data[i]
+
 ## Class to manage the collection of observables from a set of trajectories
 class TraceManager(object):
     def __init__(self):
@@ -349,6 +352,9 @@ class TraceManager(object):
 
     def __iter__(self):
         return self.traces.__iter__()
+
+    def __getitem__(self, i):
+        return self.traces[i]
 
 ## Canned class that checks for the end of a simulation.
 ## Requires one to directly manipulate the class parameters to change the bounds and steps allowed
@@ -547,7 +553,7 @@ if __name__ == "__main__":
     parser.add_argument('-n', '--nk', default=20, type=int, help="number of momenta to compute (%(default)d)")
     parser.add_argument('-l', '--kspacing', default="linear", type=str, choices=('linear', 'log'), help="linear or log spacing for momenta (%(default)s)")
     parser.add_argument('-K', '--ksampling', default="none", type=str, choices=('none', 'normal'), help="how to sample momenta for a set of simulations (%(default)s)")
-    parser.add_argument('-f', '--normal', default=0.05, type=float, help="standard deviation as a fraction of momentum for normal samping (%(default)s)")
+    parser.add_argument('-f', '--normal', default=20, type=float, help="standard deviation as a proportion of inverse momentum for normal samping (%(default)s)")
     parser.add_argument('-s', '--samples', default=200, type=int, help="number of samples (%(default)d)")
     parser.add_argument('-j', '--nprocs', default=2, type=int, help="number of processors (%(default)d)")
     parser.add_argument('-M', '--mass', default=2000.0, type=float, help="particle mass (%(default)s)")
@@ -607,7 +613,7 @@ if __name__ == "__main__":
         if args.ksampling == "none":
             traj_gen = TrajGenConst(args.position, k, "ground")
         elif args.ksampling == "normal":
-            traj_gen = TrajGenNormal(args.position, k, "ground", sigma = 0.05*k)
+            traj_gen = TrajGenNormal(args.position, k, "ground", sigma = args.normal/k)
 
         # hack-y scale of time step so that the input amount roughly makes sense for 10.0 a.u.
         dt = args.dt * (10.0 / k) if args.scale_dt else args.dt
