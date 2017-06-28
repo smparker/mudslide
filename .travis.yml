@@ -8,5 +8,7 @@ python:
   - "3.5"
   - "3.6"
 install:
+  - pip install --upgrade pip
   - pip install numpy
+  - pip install --upgrade numpy
 script: check/run_test
