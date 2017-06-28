@@ -466,8 +466,8 @@ class BatchedTraj(object):
 
         if nprocs > 1:
             pool = mp.Pool(nprocs)
-            chunksize = min((nsamples - 1)/nprocs + 1, 5)
-            nchunks = (nsamples -1)/chunksize + 1
+            chunksize = min((nsamples - 1)//nprocs + 1, 5)
+            nchunks = (nsamples -1)//chunksize + 1
             batches = [ min(chunksize, nsamples - chunksize*ip) for ip in range(nchunks) ]
             poolresult = [ pool.apply_async(unwrapped_run_trajectories, (self, b)) for b in batches ]
             try:
@@ -522,12 +522,26 @@ class TrajectoryCum(TrajectorySH):
 
         return False, -1
 
+class Ehrenfest(TrajectorySH):
+    def __init__(self, *args, **kwargs):
+        TrajectorySH.__init__(self, *args, **kwargs)
+
+    def potential_energy(self, electronics):
+        return np.real(np.dot(self.rho, electronics.hamiltonian))
+
+    def force(self, electronics):
+        return np.dot(np.real(np.diag(self.rho)), electronics.force)
+
+    def surface_hopping(self, electronics):
+        return 0.0
+
 if __name__ == "__main__":
     import tullymodels as tm
     import argparse as ap
 
-    parser = ap.ArgumentParser(description="Example driver for FSSH")
+    parser = ap.ArgumentParser(description="Example driver for SH")
 
+    parser.add_argument('-a', '--method', default="fssh", choices=("fssh", "fssh-cumulative", "ehrenfest"), type=str.lower, help="Variant of SH")
     parser.add_argument('-m', '--model', default='simple', choices=[x for x in tm.modeldict], type=str, help="Tully model to plot (%(default)s)")
     parser.add_argument('-k', '--krange', default=(0.1,30.0), nargs=2, type=float, help="range of momenta to consider (%(default)s)")
     parser.add_argument('-n', '--nk', default=20, type=int, help="number of momenta to compute (%(default)d)")
@@ -580,6 +594,13 @@ if __name__ == "__main__":
     else:
         raise Exception("Unrecognized type of spacing")
 
+    if args.method == "fssh":
+        trajectory_type = TrajectorySH
+    elif args.method == "fssh-cumulative":
+        trajectory_type = TrajectoryCum
+    elif args.method == "ehrenfest":
+        trajectory_type = Ehrenfest
+
     all_results = []
 
     for k in kpoints:
@@ -592,7 +613,7 @@ if __name__ == "__main__":
         dt = args.dt * (10.0 / k) if args.scale_dt else args.dt
 
         fssh = BatchedTraj(model, traj_gen,
-                           trajectory_type = TrajectorySH,
+                           trajectory_type = trajectory_type,
                            momentum = k,
                            position = args.position,
                            mass = args.mass,
@@ -606,8 +627,11 @@ if __name__ == "__main__":
 
         if (args.output == "single"):
             for i in results.traces[0]:
-                print("%12.6f %12.6f %12.6f %6d" % (i.time, i.position, i.momentum, i.activestate))
-        if (args.output == "swarm"):
+                line = "%12.6f %12.6f %12.6f " % (i.time, i.position, i.momentum)
+                line += " ".join(["%12.6f" % x for x in np.real(np.diag(i.rho))])
+                line += " %6d" % i.activestate
+                print(line)
+        elif (args.output == "swarm"):
             maxsteps = max([ len(t) for t in results.traces ])
             for i in range(maxsteps):
                 for t in results.traces:
