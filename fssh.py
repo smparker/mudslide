@@ -156,10 +156,16 @@ class TrajectorySH(object):
     def kinetic_energy(self):
         return 0.5 * self.mass * np.dot(self.velocity, self.velocity)
 
-    def total_energy(self, elec_state):
-        potential = elec_state.compute_potential(self.state)
+    def potential_energy(self, electronics):
+        return electronics.hamiltonian[self.state,self.state]
+
+    def total_energy(self, electronics):
+        potential = self.potential_energy(electronics)
         kinetic = self.kinetic_energy()
         return potential + kinetic
+
+    def force(self, electronics):
+        return electronics.force[self.state,:]
 
     def mode_kinetic_energy(self, direction):
         component = np.dot(direction, self.velocity) / np.dot(direction, direction) * direction
@@ -192,7 +198,7 @@ class TrajectorySH(object):
         diags, coeff = np.linalg.eigh(W)
 
         # use W as temporary storage
-        U = np.dot(coeff, np.dot(np.diag(np.exp(-1j * diags * dt)), coeff.T.conj(), out=W))
+        U = np.linalg.multi_dot([ coeff, np.diag(np.exp(-1j * diags * dt)), coeff.T.conj() ])
         np.dot(U, np.dot(self.rho, U.T.conj(), out=W), out=self.rho)
 
     ## Compute probability of hopping, generate random number, and perform hops
@@ -249,14 +255,14 @@ class TrajectorySH(object):
         electronics = self.compute_electronics(self.position)
 
         # start by taking half step in velocity
-        initial_acc = electronics.force[self.state, :] / self.mass
+        initial_acc = self.force(electronics) / self.mass
         veloc = self.velocity
         dv = 0.5 * initial_acc * self.dt
         self.last_velocity, self.velocity = veloc - dv, veloc + dv
 
         # propagate wavefunction a half-step forward to match velocity
         self.propagate_rho(electronics, 0.5*self.dt)
-        potential_energy = electronics.hamiltonian[self.state, self.state]
+        potential_energy = self.potential_energy(electronics)
 
         prob = 0.0
 
@@ -269,7 +275,7 @@ class TrajectorySH(object):
 
             # calculate electronics at new position
             last_electronics, electronics = electronics, self.compute_electronics(self.position, electronics)
-            acceleration = electronics.force[self.state,:] / self.mass
+            acceleration = self.force(electronics) / self.mass
             self.last_velocity, self.velocity = self.velocity, self.velocity + acceleration * self.dt
 
             # now propagate the electronic wavefunction to the new time
