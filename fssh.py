@@ -151,7 +151,9 @@ class TrajectorySH(object):
         elif call == "finalize":
             func = self.tracer.finalize
 
-        func(self.time, np.copy(self.position), self.mass*np.copy(self.velocity), np.copy(self.rho), self.state, electronics, prob)
+        func(self.time, np.copy(self.position), self.mass*np.copy(self.velocity),
+            self.potential_energy(electronics), self.kinetic_energy(), self.total_energy(electronics),
+            np.copy(self.rho), self.state, electronics, prob)
 
     def kinetic_energy(self):
         return 0.5 * self.mass * np.dot(self.velocity, self.velocity)
@@ -185,15 +187,22 @@ class TrajectorySH(object):
         scal = min(roots, key=lambda x: abs(x))
         self.velocity += scal * direction
 
+    ## Compute the Hamiltonian used to propagate the electronic wavefunction
+    #  returns nonadiabatic coupling H - i W
+    #  @param elec_states ElectronicStates at \f$t\f$
+    def hamiltonian_propagator(self, elec_states):
+        velo = 0.5*(self.last_velocity + self.velocity)
+
+        out = elec_states.hamiltonian - 1j * elec_states.NAC_matrix(velo)
+        return out
+
     ## Propagates \f$\rho(t)\f$ to \f$\rho(t + dt)\f$
     # @param elec_states ElectronicStates at \f$t\f$
     #
     # The propagation assumes the electronic energies and couplings are static throughout.
     # This will only be true for fairly small time steps
     def propagate_rho(self, elec_states, dt):
-        velo = 0.5 * (self.last_velocity + self.velocity)
-
-        W = elec_states.hamiltonian - 1j * elec_states.NAC_matrix(velo)
+        W = self.hamiltonian_propagator(elec_states)
 
         diags, coeff = np.linalg.eigh(W)
 
@@ -310,7 +319,7 @@ class TrajectorySH(object):
         # first bit is left (0) or right (1), second bit is electronic state
 
 ## Class to collect observables for a given trajectory
-TraceData = collections.namedtuple('TraceData', 'time position momentum rho activestate electronics hopping')
+TraceData = collections.namedtuple('TraceData', 'time position momentum potential kinetic energy rho activestate electronics hopping')
 
 class Trace(object):
     def __init__(self):
@@ -318,19 +327,22 @@ class Trace(object):
         self.hops = 0
 
     ## collect and optionally process data
-    def collect(self, time, position, momentum, rho, activestate, electronics, prob):
-        self.data.append(TraceData(time=time, position=position, momentum=momentum,
-                                rho=rho, activestate=activestate, electronics=electronics, hopping=prob))
+    def collect(self, time, position, momentum, potential_energy, kinetic_energy, total_energy, rho, activestate, electronics, prob):
+        self.data.append(TraceData(time=time, position=position, momentum=momentum, potential=potential_energy, kinetic=kinetic_energy,
+                            energy=total_energy, rho=rho, activestate=activestate, electronics=electronics, hopping=prob))
 
     ## finalize an individual trajectory
-    def finalize(self, time, position, momentum, rho, activestate, electronics, prob):
-        self.collect(time, position, momentum, rho, activestate, electronics, prob)
+    def finalize(self, time, position, momentum, potential_energy, kinetic_energy, total_energy, rho, activestate, electronics, prob):
+        self.collect(time, position, momentum, potential_energy, kinetic_energy, total_energy, rho, activestate, electronics, prob)
 
     def __iter__(self):
         return self.data.__iter__()
 
     def __getitem__(self, i):
         return self.data[i]
+
+    def __len__(self):
+        return len(self.data)
 
 ## Class to manage the collection of observables from a set of trajectories
 class TraceManager(object):
@@ -533,7 +545,7 @@ class Ehrenfest(TrajectorySH):
         TrajectorySH.__init__(self, *args, **kwargs)
 
     def potential_energy(self, electronics):
-        return np.real(np.dot(self.rho, electronics.hamiltonian))
+        return np.real(np.trace(np.dot(self.rho, electronics.hamiltonian)))
 
     def force(self, electronics):
         return np.dot(np.real(np.diag(self.rho)), electronics.force)
@@ -541,14 +553,21 @@ class Ehrenfest(TrajectorySH):
     def surface_hopping(self, electronics):
         return 0.0
 
+# Add a method into this dictionary to register it with argparse
+methods = {
+        "fssh": TrajectorySH,
+        "fssh-cumulative": TrajectoryCum,
+        "ehrenfest": Ehrenfest
+        }
+
 if __name__ == "__main__":
     import tullymodels as tm
     import argparse as ap
 
     parser = ap.ArgumentParser(description="Example driver for SH")
 
-    parser.add_argument('-a', '--method', default="fssh", choices=("fssh", "fssh-cumulative", "ehrenfest"), type=str.lower, help="Variant of SH")
-    parser.add_argument('-m', '--model', default='simple', choices=[x for x in tm.modeldict], type=str, help="Tully model to plot (%(default)s)")
+    parser.add_argument('-a', '--method', default="fssh", choices=methods.keys(), type=str.lower, help="Variant of SH")
+    parser.add_argument('-m', '--model', default='simple', choices=tm.modeldict.keys(), type=str, help="Tully model to plot (%(default)s)")
     parser.add_argument('-k', '--krange', default=(0.1,30.0), nargs=2, type=float, help="range of momenta to consider (%(default)s)")
     parser.add_argument('-n', '--nk', default=20, type=int, help="number of momenta to compute (%(default)d)")
     parser.add_argument('-l', '--kspacing', default="linear", type=str, choices=('linear', 'log'), help="linear or log spacing for momenta (%(default)s)")
@@ -569,10 +588,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if args.model in tm.modeldict:
-        model = tm.modeldict[args.model]()
-    else:
-        raise Exception("Unknown model chosen") # the argument parser should prevent this throw from being possible
+    model = tm.modeldict[args.model]()
 
     if (args.seed is not None):
         np.random.seed(args.seed)
@@ -600,12 +616,7 @@ if __name__ == "__main__":
     else:
         raise Exception("Unrecognized type of spacing")
 
-    if args.method == "fssh":
-        trajectory_type = TrajectorySH
-    elif args.method == "fssh-cumulative":
-        trajectory_type = TrajectoryCum
-    elif args.method == "ehrenfest":
-        trajectory_type = Ehrenfest
+    trajectory_type = methods[args.method]
 
     all_results = []
 
@@ -633,24 +644,36 @@ if __name__ == "__main__":
 
         if (args.output == "single"):
             for i in results.traces[0]:
-                line = "%12.6f %12.6f %12.6f " % (i.time, i.position, i.momentum)
+                line = "%12.6f %12.6f %12.6f %12.6f %12.6f %12.6f" % (i.time, i.position, i.momentum, i.potential, i.kinetic, i.energy)
                 line += " ".join(["%12.6f" % x for x in np.real(np.diag(i.rho))])
+                line += " ".join(["%12.6f" % x for x in np.real(np.diag(i.electronics.hamiltonian))])
                 line += " %6d" % i.activestate
                 print(line)
         elif (args.output == "swarm"):
             maxsteps = max([ len(t) for t in results.traces ])
+            outfiles = [ "state_%d.trace" % i for i in range(model.nstates()) ]
+            fils = [ open(o, "w") for o in outfiles ]
             for i in range(maxsteps):
+                nswarm = [ 0 for x in fils ]
                 for t in results.traces:
                     if i < len(t):
-                        print("%12.6f %12.6f %6d" % (t[i].time, t[i].position, t[i].activestate))
-                print()
-                print()
+                        iact = t[i].activestate
+                        nswarm[iact] += 1
+                        print("%12.6f" % t[i].position, file=fils[iact])
+
+                for ist in range(model.nstates()):
+                    if nswarm[ist] == 0:
+                        print("%12.6f" % -9999999, file=fils[ist])
+                    print(file=fils[ist])
+                    print(file=fils[ist])
+            for f in fils:
+                f.close()
         elif (args.output == "averaged" or args.output == "pickle"):
             print("%12.6f %s" % (k, " ".join(["%12.6f" % x for x in np.nditer(outcomes)])))
             if (args.output == "pickle"): # save results for later processing
                 all_results.append((k, results))
         elif (args.output == "hack"):
-            print("Put your very own output functions here.")
+            print("Hack something here, if you like.")
         else:
             print("Not printing results. This is probably not what you wanted!")
 
