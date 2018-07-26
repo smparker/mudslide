@@ -201,7 +201,7 @@ class TrajectorySH(object):
     #
     # The propagation assumes the electronic energies and couplings are static throughout.
     # This will only be true for fairly small time steps
-    def propagate_rho(self, elec_states, dt):
+    def propagate_electronics(self, elec_states, dt):
         W = self.hamiltonian_propagator(elec_states)
 
         diags, coeff = np.linalg.eigh(W)
@@ -270,7 +270,7 @@ class TrajectorySH(object):
         self.last_velocity, self.velocity = veloc - dv, veloc + dv
 
         # propagate wavefunction a half-step forward to match velocity
-        self.propagate_rho(electronics, 0.5*self.dt)
+        self.propagate_electronics(electronics, 0.5*self.dt)
         potential_energy = self.potential_energy(electronics)
 
         prob = 0.0
@@ -288,7 +288,7 @@ class TrajectorySH(object):
             self.last_velocity, self.velocity = self.velocity, self.velocity + acceleration * self.dt
 
             # now propagate the electronic wavefunction to the new time
-            self.propagate_rho(electronics, self.dt)
+            self.propagate_electronics(electronics, self.dt)
             prob = self.surface_hopping(electronics)
             self.time += self.dt
             self.nsteps += 1
