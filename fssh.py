@@ -210,6 +210,14 @@ class TrajectorySH(object):
         U = np.linalg.multi_dot([ coeff, np.diag(np.exp(-1j * diags * dt)), coeff.T.conj() ])
         np.dot(U, np.dot(self.rho, U.T.conj(), out=W), out=self.rho)
 
+    def advance_position(self):
+        self.position += self.velocity * self.dt
+
+    def advance_velocity(self, electronics):
+        acceleration = self.force(electronics) / self.mass
+
+        self.last_velocity, self.velocity = self.velocity, self.velocity + acceleration * self.dt
+
     ## Compute probability of hopping, generate random number, and perform hops
     def surface_hopping(self, elec_states):
         nstates = self.model.nstates()
@@ -280,16 +288,18 @@ class TrajectorySH(object):
         # propagation
         while (True):
             # first update nuclear coordinates
-            self.position += self.velocity * self.dt
+            self.advance_position()
 
             # calculate electronics at new position
             last_electronics, electronics = electronics, self.compute_electronics(self.position, electronics)
-            acceleration = self.force(electronics) / self.mass
-            self.last_velocity, self.velocity = self.velocity, self.velocity + acceleration * self.dt
+
+            # update velocity
+            self.advance_velocity(electronics)
 
             # now propagate the electronic wavefunction to the new time
             self.propagate_electronics(electronics, self.dt)
             prob = self.surface_hopping(electronics)
+
             self.time += self.dt
             self.nsteps += 1
 
