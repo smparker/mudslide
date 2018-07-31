@@ -656,7 +656,7 @@ if __name__ == "__main__":
 
         if (args.output == "single"):
             nst = results.traces[0][0].rho.shape[0]
-            headerlist = [ "%12s" % x for x in "time", "x", "p", "V", "T", "E" ]
+            headerlist = [ "%12s" % x for x in [ "time", "x", "p", "V", "T", "E" ] ]
             headerlist += [ "%12s" % x for x in [ "rho_{%d,%d}" % (i,i) for i in range(nst) ] ]
             headerlist += [ "%12s" % x for x in [ "H_{%d,%d}" % (i,i) for i in range(nst) ] ]
             headerlist += [ "%12s" % "active" ]
