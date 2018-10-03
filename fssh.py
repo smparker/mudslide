@@ -186,6 +186,13 @@ class TrajectorySH(object):
         component = np.dot(direction, self.velocity) / np.dot(direction, direction) * direction
         return 0.5 * self.mass * np.dot(component, component)
 
+    ## Return direction in which to rescale momentum
+    # @param tau derivative coupling vector
+    # @param source active state before hop
+    # @param target active state after hop
+    def rescale_direction(self, tau, source, target):
+        return tau
+
     ## Rescales velocity in the specified direction and amount
     # @param direction array specifying the direction of the velocity to rescale
     # @param reduction scalar specifying how much kinetic energy should be damped
@@ -254,7 +261,8 @@ class TrajectorySH(object):
             component_kinetic = self.mode_kinetic_energy(derivative_coupling)
             if delV <= component_kinetic:
                 self.state = hop_to
-                self.rescale_component(derivative_coupling, -delV)
+                u = self.rescale_direction(derivative_coupling, self.state, hop_to)
+                self.rescale_component(u, -delV)
                 self.tracer.hops += 1
 
         return sum(probs)
