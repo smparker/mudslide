@@ -59,12 +59,11 @@ class ElectronicStates(object):
         nst = self.nstates()
         ndim = self.ndim()
 
-        half = np.zeros([nst, nst, ndim])
-        half += np.einsum("dab,bc->acd", self._dV, self._coeff)
+        half = np.einsum("xij,jp->ipx", self._dV, self._coeff)
 
         out = np.zeros([nst, ndim])
         for ist in range(self.nstates()):
-            out[ist,:] += -np.einsum("a,ad->d", self._coeff[:,ist], half[:,ist,:])
+            out[ist,:] += -np.einsum("i,ix->x", self._coeff[:,ist], half[:,ist,:])
         return out
 
     ## returns \f$\phi_{\mbox{state}} | H | \phi_{\mbox{state}} = \varepsilon_{\mbox{state}}\f$
