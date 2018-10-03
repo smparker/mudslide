@@ -73,14 +73,7 @@ class ElectronicStates(object):
 
     ## returns \f$\phi_{i} | \nabla_\alpha \phi_{j} = d^\alpha_{ij}\f$
     def _compute_derivative_coupling(self):
-        nst = self.nstates()
-        ndim = self.ndim()
-
-        half = np.zeros([nst, nst, ndim])
-        half += np.einsum("dab,bc->acd", self._dV, self._coeff)
-
-        out = np.zeros([nst, nst, ndim])
-        out += np.einsum("ac,abd->cbd", self._coeff, half)
+        out = np.einsum("ip,xij,jq->pqx", self._coeff, self._dV, self._coeff)
 
         for j in range(self.nstates()):
             for i in range(j):
@@ -95,14 +88,13 @@ class ElectronicStates(object):
 
     ## returns \f$ \sum_\alpha v^\alpha D^\alpha \f$ where \f$ D^\alpha_{ij} = d^\alpha_{ij} \f$
     def NAC_matrix(self, velocity):
-        nstates = self.nstates()
-
-        out = np.zeros([nstates,nstates])
-        out += np.einsum("pqd,d->pq", self.derivative_coupling, velocity)
-
+        out = np.einsum("pqx,x->pq", self.derivative_coupling, velocity)
         return out
 
-
+    ## returns F^\xi{ij} = \langle \phi_i | -\nabla_\xi H | \phi_j\rangle
+    def force_matrix(self):
+        out = -np.einsum("ip,xij,jq->pqx", self._coeff, self._dV, self._coeff)
+        return out
 
 ## Class to propagate a single SH Trajectory
 class TrajectorySH(object):
