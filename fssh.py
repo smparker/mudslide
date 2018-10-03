@@ -653,6 +653,13 @@ if __name__ == "__main__":
 
     all_results = []
 
+    if (args.output == "averaged" or args.output == "pickle"):
+        print("# momentum ", end='')
+        for ist in range(model.nstates()):
+            for d in [ "reflected", "transmitted"]:
+                print("%d_%s" % (ist, d), end=' ')
+        print()
+
     for k in kpoints:
         if args.ksampling == "none":
             traj_gen = TrajGenConst(args.position, k, "ground")
