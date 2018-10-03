@@ -56,11 +56,15 @@ class ElectronicStates(object):
 
     ## returns \f$-\langle \phi_{\mbox{state}} | \nabla H | \phi_{\mbox{state}} \rangle\f$ of Hamiltonian
     def _compute_force(self):
-        out = np.zeros([self.nstates(), self.ndim()])
+        nst = self.nstates()
+        ndim = self.ndim()
+
+        half = np.zeros([nst, nst, ndim])
+        half += np.einsum("dab,bc->acd", self._dV, self._coeff)
+
+        out = np.zeros([nst, ndim])
         for ist in range(self.nstates()):
-            state_vec = self._coeff[:,ist]
-            for d in range(self.ndim()):
-                out[ist,d] = - (np.dot(state_vec.T, np.dot(self._dV[d,:,:], state_vec)))
+            out[ist,:] += -np.einsum("a,ad->d", self._coeff[:,ist], half[:,ist,:])
         return out
 
     ## returns \f$\phi_{\mbox{state}} | H | \phi_{\mbox{state}} = \varepsilon_{\mbox{state}}\f$
@@ -69,27 +73,36 @@ class ElectronicStates(object):
 
     ## returns \f$\phi_{i} | \nabla_\alpha \phi_{j} = d^\alpha_{ij}\f$
     def _compute_derivative_coupling(self):
-        out = np.zeros([self.nstates(), self.nstates(), self.ndim()])
+        nst = self.nstates()
+        ndim = self.ndim()
+
+        half = np.zeros([nst, nst, ndim])
+        half += np.einsum("dab,bc->acd", self._dV, self._coeff)
+
+        out = np.zeros([nst, nst, ndim])
+        out += np.einsum("ac,abd->cbd", self._coeff, half)
+
         for j in range(self.nstates()):
             for i in range(j):
-                for d in range(self.ndim()):
-                    out[i,j,d] = np.dot(self._coeff[:,i].T, np.dot(self._dV[d,:,:], self._coeff[:,j]))
                 dE = self._energies[j] - self._energies[i]
                 if abs(dE) < 1.0e-14:
                     dE = m.copysign(1.0e-14, dE)
 
                 out[i,j,:] /= dE
-                out[j,i,:] = -out[i,j,:]
+                out[j,i,:] /= -dE
 
         return out
 
     ## returns \f$ \sum_\alpha v^\alpha D^\alpha \f$ where \f$ D^\alpha_{ij} = d^\alpha_{ij} \f$
     def NAC_matrix(self, velocity):
         nstates = self.nstates()
-        ndim = self.ndim()
-        assert(ndim == velocity.shape[0])
 
-        return np.dot(self.derivative_coupling, velocity)
+        out = np.zeros([nstates,nstates])
+        out += np.einsum("pqd,d->pq", self.derivative_coupling, velocity)
+
+        return out
+
+
 
 ## Class to propagate a single SH Trajectory
 class TrajectorySH(object):
