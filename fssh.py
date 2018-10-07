@@ -37,7 +37,7 @@ class ElectronicStates(object):
     ## Constructor
     # @param V Hamiltonian/potential
     # @param dV Gradient of Hamiltonian/potential
-    # @param ref_coeff [optional] set of coefficients (for example, from a previous step) used to keep the sign of eigenvectors consistent
+    # @param reference [optional] set of coefficients (for example, from a previous step) used to keep the sign of eigenvectors consistent
     def __init__(self, V, dV, reference = None):
         # raw internal quantities
         self._V = V
@@ -58,7 +58,8 @@ class ElectronicStates(object):
         return self._dV.shape[0]
 
     ## returns coefficient matrix for basis states
-    def _compute_coeffs(self, reference):
+    # @param reference optional ElectronicStates from previous step used only to fix phase
+    def _compute_coeffs(self, reference=None):
         energies, coeff = np.linalg.eigh(self._V)
         if reference is not None:
             try:
@@ -103,17 +104,22 @@ class ElectronicStates(object):
         return out
 
     ## returns \f$ \sum_\alpha v^\alpha D^\alpha \f$ where \f$ D^\alpha_{ij} = d^\alpha_{ij} \f$
+    # @param velocity [ndim] numpy array of velocities
     def NAC_matrix(self, velocity):
         out = np.einsum("pqx,x->pq", self.derivative_coupling, velocity)
         return out
 
-    ## returns F^\xi{ij} = \langle \phi_i | -\nabla_\xi H | \phi_j\rangle
+    ## returns \f$F^\xi{ij} = \langle \phi_i | -\nabla_\xi H | \phi_j\rangle\f$
     def force_matrix(self):
         out = -np.einsum("ip,xij,jq->pqx", self._coeff, self._dV, self._coeff)
         return out
 
 ## Class to propagate a single SH Trajectory
 class TrajectorySH(object):
+    ## Constructor
+    # @param model Model object defining problem
+    # @param tracer spawn from TraceManager to collect results
+    # @param options option dictionary
     def __init__(self, model, tracer, **options):
         self.model = model
         self.tracer = tracer
@@ -142,19 +148,23 @@ class TrajectorySH(object):
 
         self.random_state = np.random.RandomState(options["seed"])
 
+    ## Return random number for hopping decisions
     def random(self):
         return self.random_state.uniform()
 
+    ## Is trajectory still inside interaction region?
     def currently_interacting(self):
         """determines whether trajectory is currently inside an interaction region"""
         return self.box_bounds[0] < self.position and self.box_bounds[1] > self.position
 
+    ## Initializes variables related to continue_simulating
     def duration_initialize(self):
         """Initializes variables related to continue_simulating"""
         self.found_box = False
         self.box_bounds = (-5,5)
         self.max_steps = 10000
 
+    ## Returns True if a trajectory ought to keep running, False if it should finish
     def continue_simulating(self):
         """Returns True if a trajectory ought to keep running, False if it should finish"""
         if self.nsteps > self.max_steps:
@@ -166,6 +176,7 @@ class TrajectorySH(object):
                 self.found_box = True
             return True
 
+    ## add results from current time point to tracing function TODO: ugly
     def trace(self, electronics, prob, call):
         if call == "collect":
             func = self.tracer.collect
@@ -176,20 +187,29 @@ class TrajectorySH(object):
             self.potential_energy(electronics), self.kinetic_energy(), self.total_energy(electronics),
             np.copy(self.rho), self.state, electronics, prob)
 
+    ## current kinetic energy
     def kinetic_energy(self):
         return 0.5 * self.mass * np.dot(self.velocity, self.velocity)
 
+    ## current potential energy
+    # @param electronics ElectronicStates from current step
     def potential_energy(self, electronics):
         return electronics.hamiltonian[self.state,self.state]
 
+    ## current kinetic + potential energy
+    # @param electronics ElectronicStates from current step
     def total_energy(self, electronics):
         potential = self.potential_energy(electronics)
         kinetic = self.kinetic_energy()
         return potential + kinetic
 
+    ## force on active state
+    # @param electronics ElectronicStates from current step
     def force(self, electronics):
         return electronics.force[self.state,:]
 
+    ## kinetic energy along given mode
+    # @param direction [ndim] numpy array defining direction
     def mode_kinetic_energy(self, direction):
         component = np.dot(direction, self.velocity) / np.dot(direction, direction) * direction
         return 0.5 * self.mass * np.dot(component, component)
@@ -226,6 +246,7 @@ class TrajectorySH(object):
 
     ## Propagates \f$\rho(t)\f$ to \f$\rho(t + dt)\f$
     # @param elec_states ElectronicStates at \f$t\f$
+    # @param dt time step
     #
     # The propagation assumes the electronic energies and couplings are static throughout.
     # This will only be true for fairly small time steps
@@ -238,15 +259,20 @@ class TrajectorySH(object):
         U = np.linalg.multi_dot([ coeff, np.diag(np.exp(-1j * diags * dt)), coeff.T.conj() ])
         np.dot(U, np.dot(self.rho, U.T.conj(), out=W), out=self.rho)
 
-    def advance_position(self):
+    ## move classical position forward one step
+    # @param electronics ElectronicStates from current step
+    def advance_position(self, electronics):
         self.position += self.velocity * self.dt
 
+    ## move classical velocity forward one step
+    # @param electronics ElectronicStates from current step
     def advance_velocity(self, electronics):
         acceleration = self.force(electronics) / self.mass
 
         self.last_velocity, self.velocity = self.velocity, self.velocity + acceleration * self.dt
 
     ## Compute probability of hopping, generate random number, and perform hops
+    # @param elec_states ElectronicStates from current step
     def surface_hopping(self, elec_states):
         nstates = self.model.nstates()
 
@@ -276,8 +302,8 @@ class TrajectorySH(object):
         return sum(probs)
 
     ## given a set of probabilities, determines whether and where to hop
-    ##
-    ## returns (do_hop, target_state)
+    # @param probs [nstates] numpy array of individual hopping probabilities
+    #  returns (do_hop, target_state)
     def hopper(self, probs):
         zeta = self.random()
         acc_prob = np.cumsum(probs)
@@ -294,6 +320,8 @@ class TrajectorySH(object):
             return False, -1
 
     ## helper function to simplify the calculation of the electronic states at a given position
+    # @param position classical positions
+    # @param electronics ElectronicStates from previous step
     def compute_electronics(self, position, electronics = None):
         return ElectronicStates(self.model.V(position), self.model.dV(position), electronics)
 
@@ -319,7 +347,7 @@ class TrajectorySH(object):
         # propagation
         while (True):
             # first update nuclear coordinates
-            self.advance_position()
+            self.advance_position(electronics)
 
             # calculate electronics at new position
             last_electronics, electronics = electronics, self.compute_electronics(self.position, electronics)
@@ -362,6 +390,7 @@ class TrajectorySH(object):
 ## Class to collect observables for a given trajectory
 TraceData = collections.namedtuple('TraceData', 'time position momentum potential kinetic energy rho activestate electronics hopping')
 
+## Collect results from a single trajectory
 class Trace(object):
     def __init__(self):
         self.data = []
@@ -425,12 +454,20 @@ class TrajGenConst(object):
         self.momentum = momentum
         self.initial_state = initial_state
 
+    ## generate nsamples initial conditions
+    #  @param nsamples number of initial conditions requested
     def __call__(self, nsamples):
         for i in range(nsamples):
             yield { "position" : self.position, "momentum" : self.momentum, "initial_state" : self.initial_state }
 
 ## Canned class whose call function acts as a generator for normally distributed initial conditions
 class TrajGenNormal(object):
+    ## Constructor
+    # @param position center of normal distribution for position
+    # @param momentum center of normal distribution for momentum
+    # @param initial_state initial state designation
+    # @param sigma standard deviation of distribution
+    # @param seed initial seed to give to trajectory
     def __init__(self, position, momentum, initial_state, sigma, seed = None):
         self.position = position
         self.position_deviation = 0.5 * sigma
@@ -440,9 +477,13 @@ class TrajGenNormal(object):
 
         self.random_state = np.random.RandomState(seed)
 
+    ## Whether to skip given momentum
+    #  @param ktest momentum
     def kskip(self, ktest):
         return ktest < 0.0
 
+    ## generate nsamples initial conditions
+    #  @param nsamples number of initial conditions requested
     def __call__(self, nsamples):
         for i in range(nsamples):
             x = self.random_state.normal(self.position, self.position_deviation)
@@ -459,6 +500,10 @@ class TrajGenNormal(object):
 class BatchedTraj(object):
     ## Constructor requires model and options input as kwargs
     # @param model object used to describe the model system
+    # @param traj_gen generator object to generate initial conditions
+    # @param trajectory_type surface hopping trajectory type
+    # @param tracemanager object to collect results
+    # @param inp input options
     #
     # Accepted keyword arguments and their defaults:
     # | key                |   default                  |
@@ -513,7 +558,7 @@ class BatchedTraj(object):
         except KeyboardInterrupt:
             raise
 
-    ## runs many trajectories and returns averaged results
+    ## run many trajectories and returns averaged results
     def compute(self):
         # for now, define four possible outcomes of the simulation
         outcomes = np.zeros([self.model.nstates(),2])
@@ -558,13 +603,23 @@ def unwrapped_run_trajectories(fssh, n):
     except KeyboardInterrupt:
         pass
 
+## Trajectory surface hopping using a cumulative approach rather than instantaneous
+#
+#  Instead of using a random number generator at every time step to test for a hop,
+#  hops occur when the cumulative probability of a hop crosses a randomly determined
+#  threshold. Swarmed results should be identical to the traditional variety, but
+#  should be a bit easier to reproduce since far fewer random numbers are ever needed.
 class TrajectoryCum(TrajectorySH):
+    ## Constructor (see TrajectorySH constructor)
     def __init__(self, *args, **kwargs):
         TrajectorySH.__init__(self, *args, **kwargs)
 
         self.prob_cum = 0.0
         self.zeta = self.random()
 
+    ## given a set of probabilities, determines whether and where to hop
+    # @param probs [nstates] numpy array of individual hopping probabilities
+    #  returns (do_hop, target_state)
     def hopper(self, probs):
         accumulated = self.prob_cum
         for i, p in enumerate(probs):
@@ -579,16 +634,23 @@ class TrajectoryCum(TrajectorySH):
 
         return False, -1
 
+## Ehrenfest dynamics
 class Ehrenfest(TrajectorySH):
     def __init__(self, *args, **kwargs):
         TrajectorySH.__init__(self, *args, **kwargs)
 
+    ## Ehrenfest potential energy = tr(rho * H)
+    # @param electronics ElectronicStates from current step
     def potential_energy(self, electronics):
         return np.real(np.trace(np.dot(self.rho, electronics.hamiltonian)))
 
+    ## Ehrenfest force = tr(rho * H')
+    # @param electronics ElectronicStates from current step
     def force(self, electronics):
         return np.dot(np.real(np.diag(self.rho)), electronics.force)
 
+    ## Ehrenfest never hops
+    # @param electronics ElectronicStates from current step (not used)
     def surface_hopping(self, electronics):
         return 0.0
 
