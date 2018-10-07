@@ -409,9 +409,7 @@ class TraceManager(object):
     def __getitem__(self, i):
         return self.traces[i]
 
-## Canned class that checks for the end of a simulation.
-## Requires one to directly manipulate the class parameters to change the bounds and steps allowed
-
+## Exception class indicating that a simulation was terminated while still inside the "interaction region"
 class StillInteracting(Exception):
     def __init__(self):
         Exception.__init__(self, "A simulation ended while still inside the interaction region.")

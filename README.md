@@ -18,8 +18,8 @@ one dimensional potentials.
 
 ## FSSH
 Sets of simulations are run using the `BatchedTraj` class. A `BatchedTraj` object must be instantiated by passing a model object
-(handles electronic PESs and couplings), a check_end class whose objects decide when to quit the simulation, and a traj_gen
-generator that generators new initial conditions. Some simple canned examples are provided for check_end and traj_gen. All
+(handles electronic PESs and couplings), and a traj_gen
+generator that generators new initial conditions. Some simple canned examples are provided for traj_gen. All
 other options are passed as keyword arguments to the constructor. The `compute()` function of the 
 `BatchedTraj` object returns a `TraceManager` object that contains all the results. Custom `TraceManager`s can also be
 provided. For example:
@@ -29,13 +29,10 @@ provided. For example:
 
     simple_model = models.TullySimpleAvoidedCrossing()
 
-    fssh.CheckEnd.box_bounds = 4 # quit the simulation once the particle leaves the box [-4,4]
-    fssh.CheckEnd.nsteps = 10000 # quit the simulation after 10000 time steps
-
     # Generates trajectories always with starting position -5, starting momentum 2, on ground state
-    traj_gen = fssh.TrajGenConst(-5.0, 9.0, "ground")
+    traj_gen = fssh.TrajGenConst(-5.0, 2.0, "ground")
 
-    simulator = fssh.BatchedTraj(simple_model, fssh.CheckEnd, traj_gen, samples = 20)
+    simulator = fssh.BatchedTraj(simple_model, traj_gen, samples = 20)
     results = simulator.compute()
     outcomes = results.outcomes
 
@@ -80,7 +77,7 @@ The file tullymodels.py implements the three models in Tully's original paper. T
 
 Oleg Prezhdo's three-state super exchange is also include as `SuperExchange`.
 
-## Trajectory generator and ender
+## Trajectory generator
 For batch runs, one must tell `BatchedTraj` how to decide on new initial conditions
 how to decide when a trajectory has finished. The basic requirements for each of those
 is simple.
@@ -88,17 +85,8 @@ is simple.
 The structure of these classes is somewhat strange because of the limitations of
 multiprocessing in python. To make use of multiprocessing, every object
 must be able to be `pickle`d, meaning that multiprocessing inherits all the
-same limitations. As a result, when using multiprocessing, the end checking
-class and the trajectory generator class must both be fully defined in the default
-namespace.
-
-### Checking end of simulation
-A class must be provided that will decide when to stop running a simulation. It must
-implement a constructor that takes no required arguments and it must implement a
-`__call__` function that accepts the current state of the trajectory and returns `True`
-if simulation should quit, `False` if it should continue. See the `TrajectorySH` class
-to find what information the trajectory object passed to `__call__` has access to.
-See canned class `CheckEnd` in fssh.py for an example.
+same limitations. As a result, when using multiprocessing, the trajectory generator class must
+be fully defined in the default namespace.
 
 ### Generating initial conditions
 This should be a generator function that accepts a number of samples
