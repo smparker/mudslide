@@ -85,18 +85,18 @@ class TullySimpleAvoidedCrossing(object):
 
     ## \f$V(x)\f$
     def V(self, x):
-        v11 = m.copysign(self.A, x) * ( 1.0 - m.exp(-self.B * abs(x)) )
+        v11 = float(np.copysign(self.A, x) * ( 1.0 - np.exp(-self.B * np.abs(x)) ))
         v22 = -v11
-        v12 = self.C * m.exp(-self.D * x * x)
-        out = np.array([ [v11, v12],
-                         [v12, v22] ])
+        v12 = float(self.C * np.exp(-self.D * x * x))
+        out = np.array([ [v11, v12], [v12, v22] ])
         return out
 
     ## \f$\nabla V(x)\f$
     def dV(self, x):
-        v11 = self.A * self.B * m.exp(-self.B * abs(x))
+        xx = np.array(x)
+        v11 = self.A * self.B * np.exp(-self.B * abs(xx))
         v22 = -v11
-        v12 = -2.0 * self.C * self.D * x * m.exp(-self.D * x * x)
+        v12 = -2.0 * self.C * self.D * xx * np.exp(-self.D * xx * xx)
         out = np.array([ [v11, v12],
                          [v12, v22] ])
         return out.reshape([1, 2, 2])
@@ -124,17 +124,18 @@ class TullyDualAvoidedCrossing(object):
     ## \f$V(x)\f$
     def V(self, x):
         v11 = 0.0
-        v22 = - self.A * m.exp(-self.B * x * x) + self.E0
-        v12 = self.C * m.exp(-self.D * x * x)
+        v22 = float(-self.A * np.exp(-self.B * x * x) + self.E0)
+        v12 = float(self.C * np.exp(-self.D * x * x))
         out = np.array([ [v11, v12],
                          [v12, v22] ])
         return out
 
     ## \f$\nabla V(x)\f$
     def dV(self, x):
-        v11 = 0.0
-        v22 = 2.0 * self.A * self.B * x * m.exp(-self.B * x * x)
-        v12 = -2.0 * self.C * self.D * x * m.exp(-self.D * x * x)
+        xx = np.array(x)
+        v11 = np.zeros_like(xx)
+        v22 = 2.0 * self.A * self.B * xx * np.exp(-self.B * xx * xx)
+        v12 = -2.0 * self.C * self.D * xx * np.exp(-self.D * xx * xx)
         out = np.array([ [v11, v12],
                          [v12, v22] ])
         return out.reshape([1, 2, 2])
@@ -166,7 +167,7 @@ class TullyExtendedCouplingReflection(object):
     def V(self, x):
         v11 = self.A
         v22 = -self.A
-        v12 = m.exp(-abs(x)*self.C)
+        v12 = float(np.exp(-np.abs(x)*self.C))
         if x < 0:
             v12 = self.B * v12
         else:
@@ -177,9 +178,10 @@ class TullyExtendedCouplingReflection(object):
 
     ## \f$\nabla V(x)\f$
     def dV(self, x):
-        v11 = 0.0
-        v22 = 0.0
-        v12 = self.B * self.C * m.exp(-self.C * abs(x))
+        xx = np.array(x)
+        v11 = np.zeros_like(xx)
+        v22 = np.zeros_like(xx)
+        v12 = self.B * self.C * np.exp(-self.C * np.abs(xx))
         out = np.array([ [v11, v12],
                          [v12, v22] ])
         return out.reshape([1, 2, 2])
@@ -201,8 +203,8 @@ class SuperExchange(object):
 
     ## \f$V(x)\f$
     def V(self, x):
-        v12 = self.v12 * m.exp(-0.5*x*x)
-        v23 = self.v23 * m.exp(-0.5*x*x)
+        v12 = self.v12 * np.exp(-0.5*x*x)
+        v23 = self.v23 * np.exp(-0.5*x*x)
 
         return np.array([ [self.v11, v12, 0.0],
                           [v12, self.v22, v23],
@@ -210,8 +212,8 @@ class SuperExchange(object):
 
     ## \f$ \nabla V(x)\f$
     def dV(self, x):
-        v12 = -x * self.v12 * m.exp(-0.5*x*x)
-        v23 = -x * self.v23 * m.exp(-0.5*x*x)
+        v12 = -x * self.v12 * np.exp(-0.5*x*x)
+        v23 = -x * self.v23 * np.exp(-0.5*x*x)
         out = np.array([ [0.0, v12, 0.0],
                          [v12, 0.0, v23],
                          [0.0, v23, 0.0] ])
