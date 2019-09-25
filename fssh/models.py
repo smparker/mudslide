@@ -20,7 +20,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import numpy as np
-import math as m
 
 # Here are some helper functions that pad the model problems with fake electronic states.
 # Useful for debugging, so keeping it around
