@@ -118,6 +118,11 @@ class BatchedTraj(object):
         self.options["nprocs"]        = inp.get("nprocs", 1)
         self.options["outcome_type"]  = inp.get("outcome_type", "state")
 
+        # everything else just gets copied over
+        for x in inp:
+            if x not in self.options:
+                self.options[x] = inp[x]
+
     ## runs a set of trajectories and collects the results
     # @param n number of trajectories to run
     def run_trajectories(self, n):

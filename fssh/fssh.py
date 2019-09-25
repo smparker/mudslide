@@ -47,7 +47,7 @@ class TrajectorySH(object):
 
         # function duration_initialize should get us ready to for future continue_simulating calls
         # that decide whether the simulation has finished
-        self.duration_initialize()
+        self.duration_initialize(options)
 
         # fixed initial parameters
         self.time = options.get("t0", 0.0)
@@ -66,19 +66,27 @@ class TrajectorySH(object):
     ## Is trajectory still inside interaction region?
     def currently_interacting(self):
         """determines whether trajectory is currently inside an interaction region"""
-        return self.box_bounds[0] < self.position and self.box_bounds[1] > self.position
+        if self.box_bounds is None:
+            return False
+        return np.all(self.box_bounds[0] < self.position) and np.all(self.position < self.box_bounds[1])
 
     ## Initializes variables related to continue_simulating
-    def duration_initialize(self):
+    def duration_initialize(self, options):
         """Initializes variables related to continue_simulating"""
         self.found_box = False
-        self.box_bounds = (-5,5)
-        self.max_steps = 10000
+
+        bounds = options.get('bounds', None)
+        if bounds:
+            self.box_bounds = ( np.array(bounds[0]), np.array(bounds[1]) )
+        else:
+            self.box_bounds = None
+        self.max_steps = options.get('max_steps', 10000)
+        self.max_time = options.get('max_time', 1e25) # default is to hopefully never hit this
 
     ## Returns True if a trajectory ought to keep running, False if it should finish
     def continue_simulating(self):
         """Returns True if a trajectory ought to keep running, False if it should finish"""
-        if self.nsteps > self.max_steps:
+        if self.nsteps > self.max_steps or self.time > self.max_time:
             return False
         elif self.found_box:
             return self.currently_interacting()
@@ -123,7 +131,7 @@ class TrajectorySH(object):
     # @param direction [ndim] numpy array defining direction
     def mode_kinetic_energy(self, direction):
         component = np.dot(direction, self.velocity) / np.dot(direction, direction) * direction
-        return 0.5 * self.mass * np.dot(component, component)
+        return 0.5 * np.einsum('m,m,m', self.mass, component, component)
 
     ## Return direction in which to rescale momentum
     # @param tau derivative coupling vector
@@ -138,13 +146,14 @@ class TrajectorySH(object):
     def rescale_component(self, direction, reduction):
         # normalize
         direction /= np.sqrt(np.dot(direction, direction))
+        M_inv = 1.0 / self.mass
         Md = self.mass * direction
-        a = np.dot(Md, Md)
-        b = 2.0 * np.dot(self.mass * self.velocity, Md)
-        c = -2.0 * self.mass * reduction
+        a = np.einsum('m,m,m', M_inv, direction, direction)
+        b = 2.0 * np.dot(self.velocity, direction)
+        c = -2.0 * reduction
         roots = np.roots([a, b, c])
         scal = min(roots, key=lambda x: abs(x))
-        self.velocity += scal * direction
+        self.velocity += scal * M_inv * direction
 
     ## Compute the Hamiltonian used to propagate the electronic wavefunction
     #  returns nonadiabatic coupling H - i W

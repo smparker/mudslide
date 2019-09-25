@@ -121,7 +121,8 @@ def main():
                            samples = args.samples,
                            nprocs = args.nprocs,
                            dt = dt,
-                           seed = args.seed
+                           seed = args.seed,
+                           bounds = [ -abs(args.bounds), abs(args.bounds) ]
                    )
         results = fssh.compute()
         outcomes = results.outcomes
