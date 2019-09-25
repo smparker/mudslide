@@ -22,7 +22,7 @@ from __future__ import print_function, division
 
 import numpy as np
 
-from fssh import TraceManager
+from .fssh import StillInteracting, TraceManager
 
 #####################################################################################
 # Canned classes act as generator functions for initial conditions                  #
