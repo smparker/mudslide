@@ -5,16 +5,38 @@ The current implementation probably works for more than two electronic states, i
 one dimensional potentials.
 
 ## Contents
-* fssh.py --- FSSH implementation. The FSSH class within fssh.py should be used to run sets of scattering simulations using FSSH.
-* tullymodels.py --- Implementation of several models (three in Tully's 1990 JCP, and a super exchange model from Prezhdo):
-  - TullySimpleAvoidedCrossing
-  - TullyDualAvoidedCrossing
-  - TullyExtendedCouplingReflection
-  - SuperExchange
-* surfaces.py --- script to print potential energy surfaces of the models
+* `fssh` package that contains
+  - implementation of all surface hopping methods
+    - `TrajectorySH` - FSSH
+    - `TrajectoryCum` - FSSH with a cumulative point of view
+    - `Ehrenfest` - Ehrenfest dynamics
+  - collection of 1D models
+    - `TullySimpleAvoidedCrossing`
+    - `TullyDualAvoidedCrossing`
+    - `TullyExtendedCouplingReflection`
+    - `SuperExchange`
+* `fssh` script that runs simple model trajectories
+* `surface` script that prints 1D surface and couplings
 
 ## Requirements
 * numpy
+
+## Setup
+FSSH has switched to a proper python package structure, which means to work properly it now needs to be "installed". The
+most straightforward way to do this is
+
+    cd /path/to/fssh
+    pip install --user -e .
+
+which install into your user installation dir. You can find out your user installation
+directory with the command
+
+    python -m site --user-base
+
+To use the `fssh` or `surface` command, make sure your `PATH` includes this using, for example,
+
+    export PATH=$(python -m site --user-base)/bin:$PATH
+
 
 ## FSSH
 Sets of simulations are run using the `BatchedTraj` class. A `BatchedTraj` object must be instantiated by passing a model object
@@ -25,7 +47,7 @@ other options are passed as keyword arguments to the constructor. The `compute()
 provided. For example:
 
     import fssh
-    import tullymodels as models
+    import fssh.models as models
 
     simple_model = models.TullySimpleAvoidedCrossing()
 

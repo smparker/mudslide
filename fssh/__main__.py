@@ -31,7 +31,7 @@ import sys
 
 from .fssh import TrajectorySH, TrajectoryCum, Ehrenfest, TrajGenConst, TrajGenNormal, BatchedTraj
 #from .trajectory import
-from .tullymodels import modeldict
+from .models import models
 
 import argparse as ap
 
@@ -47,7 +47,7 @@ def main():
     parser = ap.ArgumentParser(description="FSSH driver")
 
     parser.add_argument('-a', '--method', default="fssh", choices=methods.keys(), type=str.lower, help="Variant of SH")
-    parser.add_argument('-m', '--model', default='simple', choices=modeldict.keys(), type=str, help="Tully model to plot (%(default)s)")
+    parser.add_argument('-m', '--model', default='simple', choices=models.keys(), type=str, help="Tully model to plot (%(default)s)")
     parser.add_argument('-k', '--krange', default=(0.1,30.0), nargs=2, type=float, help="range of momenta to consider (%(default)s)")
     parser.add_argument('-n', '--nk', default=20, type=int, help="number of momenta to compute (%(default)d)")
     parser.add_argument('-l', '--kspacing', default="linear", type=str, choices=('linear', 'log'), help="linear or log spacing for momenta (%(default)s)")
@@ -68,7 +68,7 @@ def main():
 
     args = parser.parse_args()
 
-    model = modeldict[args.model]()
+    model = models[args.model]()
 
     if (args.seed is not None):
         np.random.seed(args.seed)

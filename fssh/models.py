@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-## @package tullymodels
+## @package models
 #  Implementations of the one-dimensional two-state models Tully demonstrated FSSH on in Tully, J.C. <I>J. Chem. Phys.</I> 1990 <B>93</B> 1061.
 
 # fssh: program to run surface hopping simulations for model problems
@@ -226,7 +226,7 @@ class SuperExchange(object):
     def ndim(self):
         return 1
 
-modeldict = { "simple" : TullySimpleAvoidedCrossing,
+models =    { "simple" : TullySimpleAvoidedCrossing,
               "dual"   : TullyDualAvoidedCrossing,
               "extended" : TullyExtendedCouplingReflection,
               "super"  : SuperExchange }
