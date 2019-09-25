@@ -3,8 +3,10 @@
 let failures=0
 
 base=$(dirname $0)
-fssh=$base/../fssh.py
-surface=$base/../surface.py
+#fssh=$base/../fssh.py
+#surface=$base/../surface.py
+fssh=fssh
+surface=surface
 check_trace=$base/check_trace.py
 
 trim() {

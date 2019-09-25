@@ -23,10 +23,10 @@ from __future__ import print_function
 import sys
 import argparse
 import numpy as np
-import tullymodels as tm
 import fssh
+import fssh.tullymodels as tm
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description="Generate potential energy surface scans of two-state models")
     parser.add_argument('-m', '--model', default='simple', choices=[m for m in tm.modeldict], help="Tully model to plot")
     parser.add_argument('-r', '--range', default=(-10.0,10.0), nargs=2, type=float, help="range over which to plot PES (default: %(default)s)")
@@ -71,3 +71,6 @@ if __name__ == "__main__":
         print(lineprinter(x, model, elec))
 
         last_elec = elec
+
+if __name__ == "__main__":
+    main()

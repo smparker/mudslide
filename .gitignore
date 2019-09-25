@@ -2,4 +2,5 @@ latex
 html
 *.out
 *.check
-tullymodels.pyc
+*.pyc
+*.egg-info
