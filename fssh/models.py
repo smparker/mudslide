@@ -76,11 +76,12 @@ def pad_model(nstates, diags):
 # \f[ V_{12} = V_{21} = C e^{-D x^2} \f]
 class TullySimpleAvoidedCrossing(object):
     ## Constructor that defaults to the values reported in Tully's 1990 JCP
-    def __init__(self, a = 0.01, b = 1.6, c = 0.005, d = 1.0):
+    def __init__(self, a = 0.01, b = 1.6, c = 0.005, d = 1.0, mass = 2000.0):
         self.A = a
         self.B = b
         self.C = c
         self.D = d
+        self.mass = np.array(mass).reshape(self.ndim())
 
     ## \f$V(x)\f$
     def V(self, x):
@@ -113,12 +114,13 @@ class TullySimpleAvoidedCrossing(object):
 # \f[ V_{12} = V_{21} = C e^{-D x^2} \f]
 class TullyDualAvoidedCrossing(object):
     ## Constructor that defaults to the values reported in Tully's 1990 JCP
-    def __init__(self, a = 0.1, b = 0.28, c = 0.015, d = 0.06, e = 0.05):
+    def __init__(self, a = 0.1, b = 0.28, c = 0.015, d = 0.06, e = 0.05, mass = 2000.0):
         self.A = a
         self.B = b
         self.C = c
         self.D = d
         self.E0 = e
+        self.mass = np.array(mass).reshape(self.ndim())
 
     ## \f$V(x)\f$
     def V(self, x):
@@ -157,10 +159,11 @@ class TullyDualAvoidedCrossing(object):
 # \f]
 class TullyExtendedCouplingReflection(object):
     ## Constructor that defaults to the values reported in Tully's 1990 JCP
-    def __init__(self, a = 0.0006, b = 0.10, c = 0.90):
+    def __init__(self, a = 0.0006, b = 0.10, c = 0.90, mass = 2000.0):
         self.A = a
         self.B = b
         self.C = c
+        self.mass = np.array(mass).reshape(self.ndim())
 
     ## \f$V(x)\f$
     def V(self, x):
@@ -193,12 +196,13 @@ class TullyExtendedCouplingReflection(object):
 
 class SuperExchange(object):
     ## Constructor defaults to Prezhdo paper on GFSH
-    def __init__(self, v11 = 0.0, v22 = 0.01, v33 = 0.005, v12 = 0.001, v23 = 0.01):
+    def __init__(self, v11 = 0.0, v22 = 0.01, v33 = 0.005, v12 = 0.001, v23 = 0.01, mass = 2000.0):
         self.v11 = v11
         self.v22 = v22
         self.v33 = v33
         self.v12 = v12
         self.v23 = v23
+        self.mass = np.array(mass).reshape(self.ndim())
 
     ## \f$V(x)\f$
     def V(self, x):

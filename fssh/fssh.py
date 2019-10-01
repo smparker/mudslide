@@ -34,7 +34,7 @@ class TrajectorySH(object):
     def __init__(self, model, tracer, **options):
         self.model = model
         self.tracer = tracer
-        self.mass = np.array(options["mass"]).reshape(model.ndim())
+        self.mass = model.mass
         self.position = np.array(options["position"]).reshape(model.ndim())
         self.velocity = np.array(options["momentum"]).reshape(model.ndim()) / self.mass
         self.last_velocity = np.zeros_like(self.velocity)

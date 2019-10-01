@@ -65,7 +65,7 @@ def main():
 
     args = parser.parse_args()
 
-    model = models[args.model]()
+    model = models[args.model](mass=args.mass)
 
     if (args.seed is not None):
         np.random.seed(args.seed)
@@ -117,7 +117,6 @@ def main():
                            trajectory_type = trajectory_type,
                            momentum = k,
                            position = args.position,
-                           mass = args.mass,
                            samples = args.samples,
                            nprocs = args.nprocs,
                            dt = dt,

@@ -89,7 +89,6 @@ class BatchedTraj(object):
     # Accepted keyword arguments and their defaults:
     # | key                |   default                  |
     # ---------------------|----------------------------|
-    # | mass               | 2000.0                     |
     # | initial_time       | 0.0                        |
     # | samples            | 2000                       |
     # | dt                 | 20.0  ~ 0.5 fs             |
@@ -102,9 +101,6 @@ class BatchedTraj(object):
         self.trajectory = trajectory_type
         self.traj_gen = traj_gen
         self.options = {}
-
-        # system parameters
-        self.options["mass"]          = inp.get("mass", 2000.0)
 
         # time parameters
         self.options["initial_time"]  = inp.get("initial_time", 0.0)
