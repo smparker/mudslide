@@ -31,14 +31,14 @@ class TrajectorySH(object):
     # @param model Model object defining problem
     # @param tracer spawn from TraceManager to collect results
     # @param options option dictionary
-    def __init__(self, model, tracer, **options):
+    def __init__(self, model, x0, p0, initial, tracer, **options):
         self.model = model
         self.tracer = tracer
         self.mass = model.mass
-        self.position = np.array(options["position"]).reshape(model.ndim())
-        self.velocity = np.array(options["momentum"]).reshape(model.ndim()) / self.mass
+        self.position = np.array(x0).reshape(model.ndim())
+        self.velocity = np.array(p0).reshape(model.ndim()) / self.mass
         self.last_velocity = np.zeros_like(self.velocity)
-        if options["initial_state"] == "ground":
+        if initial == "ground":
             self.rho = np.zeros([model.nstates(),model.nstates()], dtype=np.complex128)
             self.rho[0,0] = 1.0
             self.state = 0

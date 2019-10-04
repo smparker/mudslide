@@ -39,7 +39,7 @@ class TrajGenConst(object):
     #  @param nsamples number of initial conditions requested
     def __call__(self, nsamples):
         for i in range(nsamples):
-            yield { "position" : self.position, "momentum" : self.momentum, "initial_state" : self.initial_state }
+            yield (self.position, self.momentum, self.initial_state, {})
 
 ## Canned class whose call function acts as a generator for normally distributed initial conditions
 class TrajGenNormal(object):
@@ -71,7 +71,7 @@ class TrajGenNormal(object):
             k = self.random_state.normal(self.momentum, self.momentum_deviation)
 
             if (self.kskip(k)): continue
-            yield { "position": x, "momentum": k, "initial_state": self.initial_state }
+            yield (x, k, self.initial_state, {})
 
 ## Class to manage many TrajectorySH trajectories
 #
@@ -125,10 +125,10 @@ class BatchedTraj(object):
         outcomes = np.zeros([self.model.nstates(),2])
         traces = []
         try:
-            for params in self.traj_gen(n):
+            for x0, p0, initial, params in self.traj_gen(n):
                 traj_input = self.options
                 traj_input.update(params)
-                traj = self.trajectory(self.model, self.tracemanager.spawn_tracer(), **traj_input)
+                traj = self.trajectory(self.model, x0, p0, initial, self.tracemanager.spawn_tracer(), **traj_input)
                 try:
                     trace = traj.simulate()
                     traces.append(trace)
