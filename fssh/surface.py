@@ -22,7 +22,6 @@ from __future__ import print_function
 
 import argparse
 import numpy as np
-import fssh
 import fssh.models as tm
 
 def main():
@@ -44,6 +43,7 @@ def main():
 
     nstates = model.nstates()
     last_elec = None
+    elec = model.update(start)
 
     def headprinter():
         diabats = [ "V_%1d" % i for i in range(nstates) ]
@@ -65,8 +65,9 @@ def main():
         return " ".join([ "%12f" % x for x in plist ])
 
     print(headprinter())
+
     for x in xr:
-        elec = fssh.ElectronicStates(model.V(x), model.dV(x), last_elec)
+        elec = elec.update(x, last_elec)
         print(lineprinter(x, model, elec))
 
         last_elec = elec

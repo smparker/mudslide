@@ -21,6 +21,8 @@
 
 import numpy as np
 
+from .electronics import DiabaticModel_
+
 # Here are some helper functions that pad the model problems with fake electronic states.
 # Useful for debugging, so keeping it around
 '''
@@ -74,9 +76,15 @@ def pad_model(nstates, diags):
 # \f]
 # \f[ V_{22} = -V_{11} \f]
 # \f[ V_{12} = V_{21} = C e^{-D x^2} \f]
-class TullySimpleAvoidedCrossing(object):
+class TullySimpleAvoidedCrossing(DiabaticModel_):
+    ndim_ = 1
+    nstates_ = 2
+
     ## Constructor that defaults to the values reported in Tully's 1990 JCP
-    def __init__(self, a = 0.01, b = 1.6, c = 0.005, d = 1.0, mass = 2000.0):
+    def __init__(self, representation="adiabatic", reference=None,
+            a = 0.01, b = 1.6, c = 0.005, d = 1.0, mass = 2000.0):
+        DiabaticModel_.__init__(self, representation=representation, reference=reference)
+
         self.A = a
         self.B = b
         self.C = c
@@ -101,20 +109,19 @@ class TullySimpleAvoidedCrossing(object):
                          [v12, v22] ])
         return out.reshape([1, 2, 2])
 
-    def nstates(self):
-        return 2
-
-    def ndim(self):
-        return 1
-
 ## Tunneling through a double avoided crossing used in Tully's 1990 JCP
 #
 # \f[ V_{11} = 0 \f]
 # \f[ V_{22} = -A e^{-Bx^2} + E_0 \f]
 # \f[ V_{12} = V_{21} = C e^{-D x^2} \f]
-class TullyDualAvoidedCrossing(object):
+class TullyDualAvoidedCrossing(DiabaticModel_):
+    ndim_ = 1
+    nstates_ = 2
+
     ## Constructor that defaults to the values reported in Tully's 1990 JCP
-    def __init__(self, a = 0.1, b = 0.28, c = 0.015, d = 0.06, e = 0.05, mass = 2000.0):
+    def __init__(self, representation="adiabatic", reference=None,
+            a = 0.1, b = 0.28, c = 0.015, d = 0.06, e = 0.05, mass = 2000.0):
+        DiabaticModel_.__init__(self, representation=representation, reference=reference)
         self.A = a
         self.B = b
         self.C = c
@@ -141,12 +148,6 @@ class TullyDualAvoidedCrossing(object):
                          [v12, v22] ])
         return out.reshape([1, 2, 2])
 
-    def nstates(self):
-        return 2
-
-    def ndim(self):
-        return 1
-
 ## Model with extended coupling and the possibility of reflection. The most challenging of the
 #  models used in Tully's 1990 JCP
 # \f[ V_{11} = A \f]
@@ -157,9 +158,14 @@ class TullyDualAvoidedCrossing(object):
 #                   B \left( 2 - e^{-Cx} \right) & x > 0
 #                   \end{array} \right.
 # \f]
-class TullyExtendedCouplingReflection(object):
+class TullyExtendedCouplingReflection(DiabaticModel_):
+    ndim_ = 1
+    nstates_ = 2
+
     ## Constructor that defaults to the values reported in Tully's 1990 JCP
-    def __init__(self, a = 0.0006, b = 0.10, c = 0.90, mass = 2000.0):
+    def __init__(self, representation="adiabatic", reference=None,
+            a = 0.0006, b = 0.10, c = 0.90, mass = 2000.0):
+        DiabaticModel_.__init__(self, representation=representation, reference=reference)
         self.A = a
         self.B = b
         self.C = c
@@ -188,15 +194,14 @@ class TullyExtendedCouplingReflection(object):
                          [v12, v22] ])
         return out.reshape([1, 2, 2])
 
-    def nstates(self):
-        return 2
+class SuperExchange(DiabaticModel_):
+    nstates_ = 3
+    ndim_ = 1
 
-    def ndim(self):
-        return 1
-
-class SuperExchange(object):
     ## Constructor defaults to Prezhdo paper on GFSH
-    def __init__(self, v11 = 0.0, v22 = 0.01, v33 = 0.005, v12 = 0.001, v23 = 0.01, mass = 2000.0):
+    def __init__(self, representation="adiabatic", reference=None,
+            v11 = 0.0, v22 = 0.01, v33 = 0.005, v12 = 0.001, v23 = 0.01, mass = 2000.0):
+        DiabaticModel_.__init__(self, representation=representation, reference=reference)
         self.v11 = v11
         self.v22 = v22
         self.v33 = v33

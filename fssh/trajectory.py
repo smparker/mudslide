@@ -82,7 +82,7 @@ class BatchedTraj(object):
     ## Constructor requires model and options input as kwargs
     # @param model object used to describe the model system
     # @param traj_gen generator object to generate initial conditions
-    # @param trajectory_type surface hopping trajectory type
+    # @param trajectory_type surface hopping trajectory class
     # @param tracemanager object to collect results
     # @param inp input options
     #

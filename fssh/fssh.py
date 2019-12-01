@@ -23,7 +23,7 @@ from __future__ import print_function, division
 import numpy as np
 import collections
 
-from .electronics import ElectronicStates
+#from .electronics import ElectronicStates
 
 ## Class to propagate a single SH Trajectory
 class TrajectorySH(object):
@@ -127,6 +127,13 @@ class TrajectorySH(object):
     def force(self, electronics):
         return electronics.force[self.state,:]
 
+    ## Nonadiabatic coupling matrix
+    # @param electronics ElectronicStates from current step
+    # @param velocity velocity used to compute NAC (defaults to self.velocity)
+    def NAC_matrix(self, electronics, velocity=None):
+        velo = velocity if velocity is not None else self.velocity
+        return np.einsum("ijx,x->ij", electronics.derivative_coupling, velo)
+
     ## kinetic energy along given mode
     # @param direction [ndim] numpy array defining direction
     def mode_kinetic_energy(self, direction):
@@ -161,7 +168,7 @@ class TrajectorySH(object):
     def hamiltonian_propagator(self, elec_states):
         velo = 0.5*(self.last_velocity + self.velocity)
 
-        out = elec_states.hamiltonian - 1j * elec_states.NAC_matrix(velo)
+        out = elec_states.hamiltonian - 1j * self.NAC_matrix(elec_states, velo)
         return out
 
     ## Propagates \f$\rho(t)\f$ to \f$\rho(t + dt)\f$
@@ -197,7 +204,7 @@ class TrajectorySH(object):
         nstates = self.model.nstates()
 
         velo = 0.5 * (self.last_velocity + self.velocity) # interpolate velocities to get value at integer step
-        W = elec_states.NAC_matrix(velo)[self.state, :]
+        W = self.NAC_matrix(elec_states, velo)[self.state, :]
 
         probs = 2.0 * np.real(self.rho[self.state,:]) * W[:] * self.dt / np.real(self.rho[self.state,self.state])
 
@@ -239,16 +246,10 @@ class TrajectorySH(object):
         else:
             return False, -1
 
-    ## helper function to simplify the calculation of the electronic states at a given position
-    # @param position classical positions
-    # @param electronics ElectronicStates from previous step
-    def compute_electronics(self, position, electronics = None):
-        return ElectronicStates(self.model.V(position), self.model.dV(position), electronics)
-
     ## run simulation
     def simulate(self):
         last_electronics = None
-        electronics = self.compute_electronics(self.position)
+        electronics = self.model.update(self.position)
 
         # start by taking half step in velocity
         initial_acc = self.force(electronics) / self.mass
@@ -270,7 +271,7 @@ class TrajectorySH(object):
             self.advance_position(electronics)
 
             # calculate electronics at new position
-            last_electronics, electronics = electronics, self.compute_electronics(self.position, electronics)
+            last_electronics, electronics = electronics, electronics.update(self.position)
 
             # update velocity
             self.advance_velocity(electronics)

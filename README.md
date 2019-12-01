@@ -47,21 +47,20 @@ other options are passed as keyword arguments to the constructor. The `compute()
 provided. For example:
 
     import fssh
-    import fssh.models as models
 
-    simple_model = models.TullySimpleAvoidedCrossing()
+    simple_model = fssh.models.TullySimpleAvoidedCrossing()
 
     # Generates trajectories always with starting position -5, starting momentum 2, on ground state
-    traj_gen = fssh.TrajGenConst(-5.0, 2.0, "ground")
+    traj_gen = fssh.trajectory.TrajGenConst(-5.0, 10.0, "ground")
 
-    simulator = fssh.BatchedTraj(simple_model, traj_gen, samples = 20)
+    simulator = fssh.trajectory.BatchedTraj(simple_model, traj_gen, fssh.TrajectorySH, samples = 4)
     results = simulator.compute()
     outcomes = results.outcomes
 
-    print "Probability of reflection on the ground state:    %12.4f" % outcomes[0,0]
-    print "Probability of transmission on the ground state:  %12.4f" % outcomes[0,1]
-    print "Probability of reflection on the excited state:   %12.4f" % outcomes[1,0]
-    print "Probability of transmission on the excited state: %12.4f" % outcomes[1,1]
+    print("Probability of reflection on the ground state:    %12.4f" % outcomes[0,0])
+    print("Probability of transmission on the ground state:  %12.4f" % outcomes[0,1])
+    print("Probability of reflection on the excited state:   %12.4f" % outcomes[1,0])
+    print("Probability of transmission on the excited state: %12.4f" % outcomes[1,1])
 
 will run 20 scattering simulations in parallel with a particle starting at -5.0 a.u. and travelling with an initial momentum of 2.0 a.u.
 
