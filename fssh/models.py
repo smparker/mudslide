@@ -235,7 +235,7 @@ class ShinMetiu(AdiabaticModel_):
     ndim_ = 1
 
     def __init__(self, representation="adiabatic", reference=None, nstates = 3, L = 19.0, Rf = 5.0, Rl = 3.1, Rr = 4.0, mass = 1836.0,
-            m_el = 1.0, nel = 1000):
+            m_el = 1.0, nel = 128, box = None):
         AdiabaticModel_.__init__(self, representation=representation, reference=reference)
 
         self.L = L
@@ -247,12 +247,23 @@ class ShinMetiu(AdiabaticModel_):
         self.mass = np.array(mass).reshape(self.ndim())
         self.m_el = m_el
 
-        self.rr = np.linspace(-0.5*L, 0.5*L, nel+1, endpoint=False)[1:]
+        if box is None:
+            box = L
+        box_left, box_right = -0.5 * box, 0.5 * box
+        self.rr = np.linspace(box_left + 1e-12, box_right - 1e-12, nel, endpoint=True)
 
         self.nstates_ = nstates
 
-    def softened_coulomb(self, r12, gamma):
-        return erf(r12/gamma)/r12
+    def soft_coulomb(self, r12, gamma):
+        abs_r12 = np.abs(r12)
+        return erf(abs_r12/gamma)/abs_r12
+
+    def d_soft_coulomb(self, r12, gamma):
+        abs_r12 = np.abs(r12)
+        two_over_root_pi = 2.0 / np.sqrt(np.pi)
+        out = r12 * erf(abs_r12/gamma) / (abs_r12**3) \
+                - two_over_root_pi * r12 * np.exp(-abs_r12**2/(gamma**2)) / (gamma * abs_r12 * abs_r12)
+        return out
 
     def V_nuc(self, R):
         v0 = 1.0/np.abs(R - self.ion_left) + 1.0/np.abs(R - self.ion_right)
@@ -261,9 +272,9 @@ class ShinMetiu(AdiabaticModel_):
     def V_el(self, R):
         rr = self.rr
 
-        v_en = -self.softened_coulomb(np.abs(rr-R), self.Rf)
-        v_le = -self.softened_coulomb(np.abs(rr-self.ion_left), self.Rl)
-        v_re = -self.softened_coulomb(np.abs(rr-self.ion_right), self.Rr)
+        v_en = -self.soft_coulomb(rr-R, self.Rf)
+        v_le = -self.soft_coulomb(rr-self.ion_left, self.Rl)
+        v_re = -self.soft_coulomb(rr-self.ion_right, self.Rr)
         vv = v_en + v_le + v_re
 
         nr = len(rr)
@@ -284,9 +295,7 @@ class ShinMetiu(AdiabaticModel_):
     def dV_el(self, R):
         rr = self.rr
         rR = R - rr
-        pi_2_inv = 1.0/np.sqrt(np.pi)
-        dvv = rR * erf(np.abs(rR)/self.Rf)/np.abs(rR**3) \
-                - 2.0 * rR * pi_2_inv * np.exp(-rR*rR/(self.Rf*self.Rf)) / (self.Rf * rR * rR)
+        dvv = self.d_soft_coulomb(rR, self.Rf)
         return np.diag(dvv)
 
     ## \f$V(x)\f$

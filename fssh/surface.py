@@ -52,7 +52,7 @@ def main():
         forces = [ "dE_%1d" % i for i in range(nstates) ]
 
         plist = [ "x" ] + diabats + energies + dc + forces
-        return "#" + " ".join([ "%12s" % x for x in plist ])
+        return "#" + " ".join([ "%16s" % x for x in plist ])
 
     def lineprinter(x, model, estates):
         V = model.V(x)
@@ -62,7 +62,7 @@ def main():
         forces = [ -estates.force[i,:] for i in range(nstates) ]
         plist = [ x ] + diabats + energies + dc + forces
 
-        return " ".join([ "%12f" % x for x in plist ])
+        return " ".join([ "%16.10f" % x for x in plist ])
 
     print(headprinter())
 
