@@ -20,8 +20,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import numpy as np
+from scipy.special import erf
 
-from .electronics import DiabaticModel_
+from .electronics import DiabaticModel_, AdiabaticModel_
 
 # Here are some helper functions that pad the model problems with fake electronic states.
 # Useful for debugging, so keeping it around
@@ -228,13 +229,77 @@ class SuperExchange(DiabaticModel_):
 
         return out.reshape([1, 3, 3])
 
-    def nstates(self):
-        return 3
+class ShinMetiu(AdiabaticModel_):
+    ## Constructor defaults to classic Shin-Metiu as described in
+    ## Gossel, Liacombe, Maitra JCP 2019
+    ndim_ = 1
 
-    def ndim(self):
-        return 1
+    def __init__(self, representation="adiabatic", reference=None, nstates = 3, L = 19.0, Rf = 5.0, Rl = 3.1, Rr = 4.0, mass = 1836.0,
+            m_el = 1.0, nel = 1000):
+        AdiabaticModel_.__init__(self, representation=representation, reference=reference)
+
+        self.L = L
+        self.ion_left = -self.L*0.5
+        self.ion_right = self.L*0.5
+        self.Rf = Rf
+        self.Rl = Rl
+        self.Rr = Rr
+        self.mass = np.array(mass).reshape(self.ndim())
+        self.m_el = m_el
+
+        self.rr = np.linspace(-0.5*L, 0.5*L, nel+1, endpoint=False)[1:]
+
+        self.nstates_ = nstates
+
+    def softened_coulomb(self, r12, gamma):
+        return erf(r12/gamma)/r12
+
+    def V_nuc(self, R):
+        v0 = 1.0/np.abs(R - self.ion_left) + 1.0/np.abs(R - self.ion_right)
+        return v0
+
+    def V_el(self, R):
+        rr = self.rr
+
+        v_en = -self.softened_coulomb(np.abs(rr-R), self.Rf)
+        v_le = -self.softened_coulomb(np.abs(rr-self.ion_left), self.Rl)
+        v_re = -self.softened_coulomb(np.abs(rr-self.ion_right), self.Rr)
+        vv = v_en + v_le + v_re
+
+        nr = len(rr)
+        dr = rr[1] - rr[0]
+
+        T = (-0.5/(self.m_el * dr * dr)) * (np.eye(nr, k=-1) - 2.0*np.eye(nr) + np.eye(nr,k=1))
+        H = T + np.diag(vv)
+
+        return H
+
+    def dV_nuc(self, R):
+        LmR = np.abs(0.5 * self.L - R)
+        LpR = np.abs(0.5 * self.L + R)
+        dv0 = LmR / np.abs(LmR**3) - LpR / np.abs(LpR**3)
+
+        return dv0
+
+    def dV_el(self, R):
+        rr = self.rr
+        rR = R - rr
+        pi_2_inv = 1.0/np.sqrt(np.pi)
+        dvv = rR * erf(np.abs(rR)/self.Rf)/np.abs(rR**3) \
+                - 2.0 * rR * pi_2_inv * np.exp(-rR*rR/(self.Rf*self.Rf)) / (self.Rf * rR * rR)
+        return np.diag(dvv)
+
+    ## \f$V(x)\f$
+    def V(self, R):
+        return self.V_el(R) + self.V_nuc(R)
+
+    ## \f$\frac{V(x)}{dR}\f$
+    def dV(self, R):
+        return (self.dV_el(R) + self.dV_nuc(R)).reshape([1, len(self.rr), len(self.rr)])
+
 
 models =    { "simple" : TullySimpleAvoidedCrossing,
               "dual"   : TullyDualAvoidedCrossing,
               "extended" : TullyExtendedCouplingReflection,
-              "super"  : SuperExchange }
+              "super"  : SuperExchange,
+              "shin-metiu" : ShinMetiu }
