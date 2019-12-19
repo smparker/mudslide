@@ -71,13 +71,13 @@ for k in 10 15 20; do
 done
 
 printf "    %-80s\r" "Checking surface writer"
-for model in "simple" "extended" "dual" "super"; do
+for model in "simple" "extended" "dual" "super" "shin-metiu"; do
   outfile=$base/surface/$model/$model.out
   reffile=${outfile%out}ref
   checkfile=${outfile%out}check
 
   totest="ffffffff"
-  if [ "$model" == "super" ]; then
+  if [ "$model" == "super" ] || [ "$model" == "shin-metiu" ]; then
     totest="fffffffffffff"
   fi
 
