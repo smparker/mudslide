@@ -21,9 +21,6 @@
 from __future__ import print_function, division
 
 import numpy as np
-import collections
-
-#from .electronics import ElectronicStates
 
 ## Class to propagate a single SH Trajectory
 class TrajectorySH(object):
@@ -58,6 +55,9 @@ class TrajectorySH(object):
         self.outcome_type = options["outcome_type"]
 
         self.random_state = np.random.RandomState(options["seed"])
+
+        self.electronics = None
+        self.hopping = 0.0
 
     ## Return random number for hopping decisions
     def random(self):
@@ -95,16 +95,9 @@ class TrajectorySH(object):
                 self.found_box = True
             return True
 
-    ## add results from current time point to tracing function TODO: ugly
-    def trace(self, electronics, prob, call):
-        if call == "collect":
-            func = self.tracer.collect
-        elif call == "finalize":
-            func = self.tracer.finalize
-
-        func(self.time, np.copy(self.position), self.mass*np.copy(self.velocity),
-            self.potential_energy(electronics), self.kinetic_energy(), self.total_energy(electronics),
-            np.copy(self.rho), self.state, electronics, prob)
+    ## add results from current time point to tracing function
+    def trace(self):
+        self.tracer.collect(self)
 
     ## current kinetic energy
     def kinetic_energy(self):
@@ -112,26 +105,32 @@ class TrajectorySH(object):
 
     ## current potential energy
     # @param electronics ElectronicStates from current step
-    def potential_energy(self, electronics):
+    def potential_energy(self, electronics=None):
+        if electronics is None:
+            electronics = self.electronics
         return electronics.hamiltonian[self.state,self.state]
 
     ## current kinetic + potential energy
     # @param electronics ElectronicStates from current step
-    def total_energy(self, electronics):
+    def total_energy(self, electronics=None):
         potential = self.potential_energy(electronics)
         kinetic = self.kinetic_energy()
         return potential + kinetic
 
     ## force on active state
     # @param electronics ElectronicStates from current step
-    def force(self, electronics):
+    def force(self, electronics=None):
+        if electronics is None:
+            electronics = self.electronics
         return electronics.force[self.state,:]
 
     ## Nonadiabatic coupling matrix
     # @param electronics ElectronicStates from current step
     # @param velocity velocity used to compute NAC (defaults to self.velocity)
-    def NAC_matrix(self, electronics, velocity=None):
+    def NAC_matrix(self, electronics=None, velocity=None):
         velo = velocity if velocity is not None else self.velocity
+        if electronics is None:
+            electronics = self.electronics
         return np.einsum("ijx,x->ij", electronics.derivative_coupling, velo)
 
     ## kinetic energy along given mode
@@ -213,6 +212,7 @@ class TrajectorySH(object):
 
         # clip probabilities to make sure they are between zero and one
         probs = probs.clip(0.0, 1.0)
+        self.hopping = probs
 
         do_hop, hop_to = self.hopper(probs)
         if (do_hop): # do switch
@@ -221,10 +221,11 @@ class TrajectorySH(object):
             derivative_coupling = elec_states.derivative_coupling[hop_to, self.state, :]
             component_kinetic = self.mode_kinetic_energy(derivative_coupling)
             if delV <= component_kinetic:
+                hop_from = self.state
                 self.state = hop_to
                 u = self.rescale_direction(derivative_coupling, self.state, hop_to)
                 self.rescale_component(u, -delV)
-                self.tracer.hops += 1
+                self.tracer.hop(self.time, hop_from, hop_to)
 
         return sum(probs)
 
@@ -249,36 +250,36 @@ class TrajectorySH(object):
     ## run simulation
     def simulate(self):
         last_electronics = None
-        electronics = self.model.update(self.position)
+        self.electronics = self.model.update(self.position)
 
         # start by taking half step in velocity
-        initial_acc = self.force(electronics) / self.mass
+        initial_acc = self.force(self.electronics) / self.mass
         veloc = self.velocity
         dv = 0.5 * initial_acc * self.dt
         self.last_velocity, self.velocity = veloc - dv, veloc + dv
 
         # propagate wavefunction a half-step forward to match velocity
-        self.propagate_electronics(electronics, 0.5*self.dt)
-        potential_energy = self.potential_energy(electronics)
+        self.propagate_electronics(self.electronics, 0.5*self.dt)
+        potential_energy = self.potential_energy(self.electronics)
 
-        prob = 0.0
+        self.hopping = 0.0
 
-        self.trace(electronics, prob, "collect")
+        self.trace()
 
         # propagation
         while (True):
             # first update nuclear coordinates
-            self.advance_position(electronics)
+            self.advance_position(self.electronics)
 
             # calculate electronics at new position
-            last_electronics, electronics = electronics, electronics.update(self.position)
+            last_electronics, self.electronics = self.electronics, self.electronics.update(self.position)
 
             # update velocity
-            self.advance_velocity(electronics)
+            self.advance_velocity(self.electronics)
 
             # now propagate the electronic wavefunction to the new time
-            self.propagate_electronics(electronics, self.dt)
-            prob = self.surface_hopping(electronics)
+            self.propagate_electronics(self.electronics, self.dt)
+            self.hopping = self.surface_hopping(self.electronics)
 
             self.time += self.dt
             self.nsteps += 1
@@ -287,9 +288,9 @@ class TrajectorySH(object):
             if not self.continue_simulating():
                 break
 
-            self.trace(electronics, prob, "collect")
+            self.trace()
 
-        self.trace(electronics, prob, "finalize")
+        self.trace()
 
         return self.tracer
 
@@ -308,23 +309,33 @@ class TrajectorySH(object):
         return out
         # first bit is left (0) or right (1), second bit is electronic state
 
-## Class to collect observables for a given trajectory
-TraceData = collections.namedtuple('TraceData', 'time position momentum potential kinetic energy rho activestate electronics hopping')
-
 ## Collect results from a single trajectory
 class Trace(object):
     def __init__(self):
         self.data = []
-        self.hops = 0
+        self.hops = []
 
     ## collect and optionally process data
-    def collect(self, time, position, momentum, potential_energy, kinetic_energy, total_energy, rho, activestate, electronics, prob):
-        self.data.append(TraceData(time=time, position=position, momentum=momentum, potential=potential_energy, kinetic=kinetic_energy,
-                            energy=total_energy, rho=rho, activestate=activestate, electronics=electronics, hopping=prob))
+    def collect(self, traj):
+        self.data.append({
+            "time" : traj.time,
+            "position"  : np.copy(traj.position),
+            "momentum"  : traj.mass * np.copy(traj.velocity),
+            "potential" : traj.potential_energy(),
+            "kinetic"   : traj.kinetic_energy(),
+            "energy"    : traj.total_energy(),
+            "density_matrix" : np.copy(traj.rho),
+            "active"    : traj.state,
+            "electronics" : traj.electronics,
+            "hopping"   : traj.hopping
+            })
 
-    ## finalize an individual trajectory
-    def finalize(self, time, position, momentum, potential_energy, kinetic_energy, total_energy, rho, activestate, electronics, prob):
-        self.collect(time, position, momentum, potential_energy, kinetic_energy, total_energy, rho, activestate, electronics, prob)
+    def hop(self, time, hop_from, hop_to):
+        self.hops.append({
+            "time" : time,
+            "from" : hop_from,
+            "to"   : hop_to
+            })
 
     def __iter__(self):
         return self.data.__iter__()

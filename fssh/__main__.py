@@ -127,19 +127,18 @@ def main():
         outcomes = results.outcomes
 
         if (args.output == "single"):
-            nst = results.traces[0][0].rho.shape[0]
-            headerlist = [ "%12s" % x for x in [ "time", "x", "p", "V", "T", "E" ] ]
+            nst = results.traces[0][0]["density_matrix"].shape[0]
+            headerlist =  [ "%12s" % x for x in [ "time", "x", "p", "V", "T", "E" ] ]
             headerlist += [ "%12s" % x for x in [ "rho_{%d,%d}" % (i,i) for i in range(nst) ] ]
             headerlist += [ "%12s" % x for x in [ "H_{%d,%d}" % (i,i) for i in range(nst) ] ]
             headerlist += [ "%12s" % "active" ]
             headerlist += [ "%12s" % "hopping" ]
             print("#" + " ".join(headerlist))
             for i in results.traces[0]:
-                line = " %12.6f %12.6f %12.6f %12.6f %12.6f %12.6f " % (i.time, i.position, i.momentum, i.potential, i.kinetic, i.energy)
-                line += " ".join(["%12.6f" % x for x in np.real(np.diag(i.rho))])
-                line += " " + " ".join(["%12.6f" % x for x in np.real(np.diag(i.electronics.hamiltonian))])
-                line += " %12d" % i.activestate
-                line += " %12e" % i.hopping
+                line = " {time:12.6f} {position[0]:12.6f} {momentum[0]:12.6f} {potential:12.6f} {kinetic:12.6f} {energy:12.6f} ".format(**i)
+                line += " ".join(["%12.6f" % x for x in np.real(np.diag(i["density_matrix"]))])
+                line += " " + " ".join(["%12.6f" % x for x in np.real(np.diag(i["electronics"].hamiltonian))])
+                line += " {active:12d} {hopping:12e}".format(**i)
                 print(line)
         elif (args.output == "swarm"):
             maxsteps = max([ len(t) for t in results.traces ])
@@ -149,9 +148,9 @@ def main():
                 nswarm = [ 0 for x in fils ]
                 for t in results.traces:
                     if i < len(t):
-                        iact = t[i].activestate
+                        iact = t[i]["active"]
                         nswarm[iact] += 1
-                        print("%12.6f" % t[i].position, file=fils[iact])
+                        print("{position:12.6f}".format(**t[i]), file=fils[iact])
 
                 for ist in range(model.nstates()):
                     if nswarm[ist] == 0:
