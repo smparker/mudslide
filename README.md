@@ -20,6 +20,7 @@ one dimensional potentials.
 
 ## Requirements
 * numpy
+* scipy (for Shin-Metiu model)
 
 ## Setup
 FSSH has switched to a proper python package structure, which means to work properly it now needs to be "installed". The
@@ -33,10 +34,11 @@ directory with the command
 
     python -m site --user-base
 
-To use the `fssh` or `surface` command, make sure your `PATH` includes this using, for example,
+To set up your `PATH` and `PYTHONPATH` to be able to use both the command line scripts
+and the python package, use
 
     export PATH=$(python -m site --user-base)/bin:$PATH
-
+    export PYTHONPATH=$(python -m site --user-base):$PYTHONPATH
 
 ## FSSH
 Sets of simulations are run using the `BatchedTraj` class. A `BatchedTraj` object must be instantiated by passing a model object
@@ -50,7 +52,7 @@ provided. For example:
 
     simple_model = fssh.models.TullySimpleAvoidedCrossing()
 
-    # Generates trajectories always with starting position -5, starting momentum 2, on ground state
+    # Generates trajectories always with starting position -5, starting momentum 10.0, on ground state
     traj_gen = fssh.trajectory.TrajGenConst(-5.0, 10.0, "ground")
 
     simulator = fssh.trajectory.BatchedTraj(simple_model, traj_gen, fssh.TrajectorySH, samples = 4)
@@ -62,7 +64,7 @@ provided. For example:
     print("Probability of reflection on the excited state:   %12.4f" % outcomes[1,0])
     print("Probability of transmission on the excited state: %12.4f" % outcomes[1,1])
 
-will run 20 scattering simulations in parallel with a particle starting at -5.0 a.u. and travelling with an initial momentum of 2.0 a.u.
+will run 20 scattering simulations in parallel with a particle starting at -5.0 a.u. and traveling with an initial momentum of 10.0 a.u.
 
 #### Options
 * `initial_state` - specify how the initial electronic state is chosen
@@ -96,7 +98,9 @@ The file tullymodels.py implements the three models in Tully's original paper. T
 * TullyDualAvoidedCrossing
 * TullyExtendedCouplingReflection
 
-Oleg Prezhdo's three-state super exchange is also include as `SuperExchange`.
+Additional models incldued are:
+* `SuperExchange` - Oleg Prezhdo's three-state super exchange model.
+* `Shin-Metiu`
 
 ## Trajectory generator
 For batch runs, one must tell `BatchedTraj` how to decide on new initial conditions
