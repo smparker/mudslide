@@ -28,9 +28,9 @@ class TrajectorySH(object):
     # @param model Model object defining problem
     # @param tracer spawn from TraceManager to collect results
     # @param options option dictionary
-    def __init__(self, model, x0, p0, initial, tracer, **options):
+    def __init__(self, model, x0, p0, initial, tracer=None, **options):
         self.model = model
-        self.tracer = tracer
+        self.tracer = tracer if tracer is not None else Trace()
         self.mass = model.mass
         self.position = np.array(x0).reshape(model.ndim())
         self.velocity = np.array(p0).reshape(model.ndim()) / self.mass
@@ -52,12 +52,12 @@ class TrajectorySH(object):
 
         # read out of options
         self.dt = options["dt"]
-        self.outcome_type = options["outcome_type"]
+        self.outcome_type = options.get("outcome_type", "state")
 
-        self.random_state = np.random.RandomState(options["seed"])
+        self.random_state = np.random.RandomState(options.get("seed", None))
 
         self.electronics = None
-        self.hopping = 0.0
+        self.hopping = np.zeros(model.nstates())
 
     ## Return random number for hopping decisions
     def random(self):
@@ -395,8 +395,26 @@ class TrajectoryCum(TrajectorySH):
         self.prob_cum = 0.0
         self.zeta = self.random()
 
+    ## returns loggable data
+    def snapshot(self):
+        out = {
+            "time" : self.time,
+            "position"  : np.copy(self.position),
+            "momentum"  : self.mass * np.copy(self.velocity),
+            "potential" : self.potential_energy(),
+            "kinetic"   : self.kinetic_energy(),
+            "energy"    : self.total_energy(),
+            "density_matrix" : np.copy(self.rho),
+            "active"    : self.state,
+            "electronics" : self.electronics,
+            "hopping"   : self.hopping,
+            "prob_cum"  : self.prob_cum
+            }
+        return out
+
     ## given a set of probabilities, determines whether and where to hop
     # @param probs [nstates] numpy array of individual hopping probabilities
+    # TODO this is bad for multiple states: won't be reproducible
     #  returns (do_hop, target_state)
     def hopper(self, probs):
         accumulated = self.prob_cum
