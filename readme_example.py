@@ -4,7 +4,7 @@ import fssh
 
 simple_model = fssh.models.TullySimpleAvoidedCrossing()
 
-# Generates trajectories always with starting position -5, starting momentum 2, on ground state
+# Generates trajectories always with starting position -5, starting momentum 10.0, on ground state
 traj_gen = fssh.trajectory.TrajGenConst(-5.0, 10.0, "ground")
 
 simulator = fssh.trajectory.BatchedTraj(simple_model, traj_gen, fssh.TrajectorySH, samples = 4)

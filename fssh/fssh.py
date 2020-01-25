@@ -97,7 +97,23 @@ class TrajectorySH(object):
 
     ## add results from current time point to tracing function
     def trace(self):
-        self.tracer.collect(self)
+        self.tracer.collect(self.snapshot())
+
+    ## returns a dictionary with all the loggable data from the trajectory
+    def snapshot(self):
+        out = {
+            "time" : self.time,
+            "position"  : np.copy(self.position),
+            "momentum"  : self.mass * np.copy(self.velocity),
+            "potential" : self.potential_energy(),
+            "kinetic"   : self.kinetic_energy(),
+            "energy"    : self.total_energy(),
+            "density_matrix" : np.copy(self.rho),
+            "active"    : self.state,
+            "electronics" : self.electronics,
+            "hopping"   : self.hopping
+            }
+        return out
 
     ## current kinetic energy
     def kinetic_energy(self):
@@ -316,19 +332,8 @@ class Trace(object):
         self.hops = []
 
     ## collect and optionally process data
-    def collect(self, traj):
-        self.data.append({
-            "time" : traj.time,
-            "position"  : np.copy(traj.position),
-            "momentum"  : traj.mass * np.copy(traj.velocity),
-            "potential" : traj.potential_energy(),
-            "kinetic"   : traj.kinetic_energy(),
-            "energy"    : traj.total_energy(),
-            "density_matrix" : np.copy(traj.rho),
-            "active"    : traj.state,
-            "electronics" : traj.electronics,
-            "hopping"   : traj.hopping
-            })
+    def collect(self, trajectory_snapshot):
+        self.data.append(trajectory_snapshot)
 
     def hop(self, time, hop_from, hop_to):
         self.hops.append({
