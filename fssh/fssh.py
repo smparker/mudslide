@@ -419,7 +419,7 @@ class TrajectoryCum(TrajectorySH):
     def hopper(self, probs):
         accumulated = self.prob_cum
         for i, p in enumerate(probs):
-            accumulated = accumulated + (1 - accumulated) * p
+            accumulated = accumulated * (1.0 - p) + (1.0 - accumulated) * p
             if accumulated > self.zeta: # then hop
                 # reset prob_cum, zeta
                 self.prob_cum = 0.0
