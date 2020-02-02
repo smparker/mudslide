@@ -15,6 +15,7 @@ one dimensional potentials.
     - `TullyDualAvoidedCrossing`
     - `TullyExtendedCouplingReflection`
     - `SuperExchange`
+    - `ShinMetiu`
 * `fssh` script that runs simple model trajectories
 * `surface` script that prints 1D surface and couplings
 
@@ -42,10 +43,11 @@ and the python package, use
 
 ## FSSH
 Sets of simulations are run using the `BatchedTraj` class. A `BatchedTraj` object must be instantiated by passing a model object
-(handles electronic PESs and couplings), and a traj_gen
-generator that generators new initial conditions. Some simple canned examples are provided for traj_gen. All
-other options are passed as keyword arguments to the constructor. The `compute()` function of the 
-`BatchedTraj` object returns a `TraceManager` object that contains all the results. Custom `TraceManager`s can also be
+(handles electronic PESs and couplings), and a `traj_gen`
+generator that generates new initial conditions. Some simple canned examples are provided for `traj_gen`. All
+other options are passed as keyword arguments to the constructor. The `compute()` function of the
+`BatchedTraj` object returns a `TraceManager` object that contains all the results, but functionally behaves
+like a python dictionary. Custom `TraceManager`s can also be
 provided. For example:
 
     import fssh
@@ -86,11 +88,19 @@ will run 20 scattering simulations in parallel with a particle starting at -5.0 
 ## Models
 The model provided to the FSSH class needs to have three functions implemented:
 
-* `V(self, x)` --- returns (ndim,ndim)-shaped numpy array containing the Hamiltonian matrix at position `x`
-* `dV(self, x)` --- returns (ndim,ndim,1)-shaped numpy array containing the gradient of the Hamiltonian matrix at position `x`
-* `dim(self)` --- returns the number of states in the model
+* `V(self, x)` --- returns (nstates,nstates)-shaped numpy array containing the Hamiltonian matrix at nuclear position `x`
+* `dV(self, x)` --- returns (nstates,nstates,ndim)-shaped numpy array containing the gradient of the Hamiltonian matrix at nuclear position `x`
+* `nstates(self)` --- returns the number of electronic states in the model
+* `ndim(self)` --- returns the number nuclear degrees of freedom in the model
 
-In all cases, the input `x` ought to be a numpy array with 1 element.
+In all cases, the input `x` ought to be a numpy array with `ndim` elements.
+
+For simple diabatic models, there is a helper class, `DiabaticModel_` that will
+simplify construction of classes for new models. If you derive your class from
+`DiabaticModel_`, you only need to implement `V()` and `dV()` in the diabatic basis,
+and define class variables `ndim_` and `nstates_` that hold the number of
+nuclear degrees of freedom and the number of electronic states, respectively. See
+the file `fssh/models.py` for examples.
 
 The file tullymodels.py implements the three models in Tully's original paper. They are:
 
@@ -104,7 +114,7 @@ Additional models incldued are:
 
 ## Trajectory generator
 For batch runs, one must tell `BatchedTraj` how to decide on new initial conditions
-how to decide when a trajectory has finished. The basic requirements for each of those
+and how to decide when a trajectory has finished. The basic requirements for each of those
 is simple.
 
 The structure of these classes is somewhat strange because of the limitations of
