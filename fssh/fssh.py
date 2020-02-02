@@ -32,9 +32,9 @@ class TrajectorySH(object):
         self.model = model
         self.tracer = tracer if tracer is not None else Trace()
         self.mass = model.mass
-        self.position = np.array(x0).reshape(model.ndim())
-        self.velocity = np.array(p0).reshape(model.ndim()) / self.mass
-        self.last_velocity = np.zeros_like(self.velocity)
+        self.position = np.array(x0, dtype=np.float64).reshape(model.ndim())
+        self.velocity = np.array(p0, dtype=np.float64).reshape(model.ndim()) / self.mass
+        self.last_velocity = np.zeros_like(self.velocity, dtype=np.float64)
         if initial == "ground":
             self.rho = np.zeros([model.nstates(),model.nstates()], dtype=np.complex128)
             self.rho[0,0] = 1.0
@@ -57,7 +57,7 @@ class TrajectorySH(object):
         self.random_state = np.random.RandomState(options.get("seed", None))
 
         self.electronics = None
-        self.hopping = np.zeros(model.nstates())
+        self.hopping = np.zeros(model.nstates(), dtype=np.float64)
 
     ## Return random number for hopping decisions
     def random(self):
@@ -77,7 +77,8 @@ class TrajectorySH(object):
 
         bounds = options.get('bounds', None)
         if bounds:
-            self.box_bounds = ( np.array(bounds[0]), np.array(bounds[1]) )
+            self.box_bounds = ( np.array(bounds[0], dtype=np.float64),
+                    np.array(bounds[1], dtype=np.float64) )
         else:
             self.box_bounds = None
         self.max_steps = options.get('max_steps', 10000)
@@ -314,7 +315,7 @@ class TrajectorySH(object):
     #
     #  2*state + [0 for left, 1 for right]
     def outcome(self):
-        out = np.zeros([self.model.nstates(), 2])
+        out = np.zeros([self.model.nstates(), 2], dtype=np.float64)
         lr = 0 if self.position < 0.0 else 1
         if self.outcome_type == "populations":
             out[:,lr] = np.real(self.rho).diag()[:]

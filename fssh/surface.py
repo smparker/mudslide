@@ -39,7 +39,7 @@ def main():
     start, end = args.range
     samples = args.n
 
-    xr = np.linspace(start, end, samples)
+    xr = np.linspace(start, end, samples, dtype=np.float64)
 
     nstates = model.nstates()
     last_elec = None

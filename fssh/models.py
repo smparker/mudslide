@@ -90,24 +90,24 @@ class TullySimpleAvoidedCrossing(DiabaticModel_):
         self.B = b
         self.C = c
         self.D = d
-        self.mass = np.array(mass).reshape(self.ndim())
+        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndim())
 
     ## \f$V(x)\f$
     def V(self, x):
         v11 = float(np.copysign(self.A, x) * ( 1.0 - np.exp(-self.B * np.abs(x)) ))
         v22 = -v11
         v12 = float(self.C * np.exp(-self.D * x * x))
-        out = np.array([ [v11, v12], [v12, v22] ])
+        out = np.array([ [v11, v12], [v12, v22] ], dtype=np.float64)
         return out
 
     ## \f$\nabla V(x)\f$
     def dV(self, x):
-        xx = np.array(x)
+        xx = np.array(x, dtype=np.float64)
         v11 = self.A * self.B * np.exp(-self.B * abs(xx))
         v22 = -v11
         v12 = -2.0 * self.C * self.D * xx * np.exp(-self.D * xx * xx)
         out = np.array([ [v11, v12],
-                         [v12, v22] ])
+                         [v12, v22] ], dtype=np.float64)
         return out.reshape([1, 2, 2])
 
 ## Tunneling through a double avoided crossing used in Tully's 1990 JCP
@@ -128,7 +128,7 @@ class TullyDualAvoidedCrossing(DiabaticModel_):
         self.C = c
         self.D = d
         self.E0 = e
-        self.mass = np.array(mass).reshape(self.ndim())
+        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndim())
 
     ## \f$V(x)\f$
     def V(self, x):
@@ -136,17 +136,17 @@ class TullyDualAvoidedCrossing(DiabaticModel_):
         v22 = float(-self.A * np.exp(-self.B * x * x) + self.E0)
         v12 = float(self.C * np.exp(-self.D * x * x))
         out = np.array([ [v11, v12],
-                         [v12, v22] ])
+                         [v12, v22] ], dtype=np.float64)
         return out
 
     ## \f$\nabla V(x)\f$
     def dV(self, x):
-        xx = np.array(x)
+        xx = np.array(x, dtype=np.float64)
         v11 = np.zeros_like(xx)
         v22 = 2.0 * self.A * self.B * xx * np.exp(-self.B * xx * xx)
         v12 = -2.0 * self.C * self.D * xx * np.exp(-self.D * xx * xx)
         out = np.array([ [v11, v12],
-                         [v12, v22] ])
+                         [v12, v22] ], dtype=np.float64)
         return out.reshape([1, 2, 2])
 
 ## Model with extended coupling and the possibility of reflection. The most challenging of the
@@ -170,7 +170,7 @@ class TullyExtendedCouplingReflection(DiabaticModel_):
         self.A = a
         self.B = b
         self.C = c
-        self.mass = np.array(mass).reshape(self.ndim())
+        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndim())
 
     ## \f$V(x)\f$
     def V(self, x):
@@ -182,17 +182,17 @@ class TullyExtendedCouplingReflection(DiabaticModel_):
         else:
             v12 = self.B * (2.0 - v12)
         out = np.array([ [v11, v12],
-                         [v12, v22] ])
+                         [v12, v22] ], dtype=np.float64)
         return out
 
     ## \f$\nabla V(x)\f$
     def dV(self, x):
-        xx = np.array(x)
+        xx = np.array(x, dtype=np.float64)
         v11 = np.zeros_like(xx)
         v22 = np.zeros_like(xx)
         v12 = self.B * self.C * np.exp(-self.C * np.abs(xx))
         out = np.array([ [v11, v12],
-                         [v12, v22] ])
+                         [v12, v22] ], dtype=np.float64)
         return out.reshape([1, 2, 2])
 
 class SuperExchange(DiabaticModel_):
@@ -208,7 +208,7 @@ class SuperExchange(DiabaticModel_):
         self.v33 = v33
         self.v12 = v12
         self.v23 = v23
-        self.mass = np.array(mass).reshape(self.ndim())
+        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndim())
 
     ## \f$V(x)\f$
     def V(self, x):
@@ -217,7 +217,7 @@ class SuperExchange(DiabaticModel_):
 
         return np.array([ [self.v11, v12, 0.0],
                           [v12, self.v22, v23],
-                          [0.0, v23, self.v33] ])
+                          [0.0, v23, self.v33] ], dtype=np.float64)
 
     ## \f$ \nabla V(x)\f$
     def dV(self, x):
@@ -225,7 +225,7 @@ class SuperExchange(DiabaticModel_):
         v23 = -x * self.v23 * np.exp(-0.5*x*x)
         out = np.array([ [0.0, v12, 0.0],
                          [v12, 0.0, v23],
-                         [0.0, v23, 0.0] ])
+                         [0.0, v23, 0.0] ], dtype=np.float64)
 
         return out.reshape([1, 3, 3])
 
@@ -244,13 +244,14 @@ class ShinMetiu(AdiabaticModel_):
         self.Rf = Rf
         self.Rl = Rl
         self.Rr = Rr
-        self.mass = np.array(mass).reshape(self.ndim())
+        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndim())
         self.m_el = m_el
 
         if box is None:
             box = L
         box_left, box_right = -0.5 * box, 0.5 * box
-        self.rr = np.linspace(box_left + 1e-12, box_right - 1e-12, nel, endpoint=True)
+        self.rr = np.linspace(box_left + 1e-12, box_right - 1e-12, nel, endpoint=True,
+                dtype=np.float64)
 
         self.nstates_ = nstates
 
@@ -280,7 +281,8 @@ class ShinMetiu(AdiabaticModel_):
         nr = len(rr)
         dr = rr[1] - rr[0]
 
-        T = (-0.5/(self.m_el * dr * dr)) * (np.eye(nr, k=-1) - 2.0*np.eye(nr) + np.eye(nr,k=1))
+        T = (-0.5/(self.m_el * dr * dr)) * (np.eye(nr, k=-1, dtype=np.float64)
+                - 2.0*np.eye(nr, dtype=np.float64) + np.eye(nr,k=1, dtype=np.float64))
         H = T + np.diag(vv)
 
         return H

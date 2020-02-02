@@ -89,7 +89,7 @@ class DiabaticModel_(ElectronicModel_):
                     raise Exception("Failed to regularize new ElectronicStates from a reference object %s" % (reference))
             return coeff, np.diag(energies)
         elif self.representation == "diabatic":
-            return np.eye(self.nstates()), V
+            return np.eye(self.nstates(), dtype=np.float64), V
 
     ## returns \f$-\langle \phi_{\mbox{state}} | \nabla H | \phi_{\mbox{state}} \rangle\f$ of Hamiltonian
     def _compute_force(self, dV, coeff):
@@ -98,7 +98,7 @@ class DiabaticModel_(ElectronicModel_):
 
         half = np.einsum("xij,jp->ipx", dV, coeff)
 
-        out = np.zeros([nst, ndim])
+        out = np.zeros([nst, ndim], dtype=np.float64)
         for ist in range(self.nstates()):
             out[ist,:] += -np.einsum("i,ix->x", coeff[:,ist], half[:,ist,:])
         return out
@@ -111,7 +111,7 @@ class DiabaticModel_(ElectronicModel_):
     ## returns \f$\phi_{i} | \nabla_\alpha \phi_{j} = d^\alpha_{ij}\f$
     def _compute_derivative_coupling(self, coeff, dV, energies):
         if self.representation == "diabatic":
-            return np.zeros([self.nstates(), self.nstates(), self.ndim()])
+            return np.zeros([self.nstates(), self.nstates(), self.ndim()], dtype=np.float64)
 
         out = np.einsum("ip,xij,jq->pqx", coeff, dV, coeff)
 
@@ -195,7 +195,7 @@ class AdiabaticModel_(ElectronicModel_):
 
         half = np.einsum("xij,jp->ipx", dV, coeff)
 
-        out = np.zeros([nst, ndim])
+        out = np.zeros([nst, ndim], dtype=np.float64)
         for ist in range(self.nstates()):
             out[ist,:] += -np.einsum("i,ix->x", coeff[:,ist], half[:,ist,:])
         return out
@@ -208,7 +208,7 @@ class AdiabaticModel_(ElectronicModel_):
     ## returns \f$\phi_{i} | \nabla_\alpha \phi_{j} = d^\alpha_{ij}\f$
     def _compute_derivative_coupling(self, coeff, dV, energies):
         if self.representation == "diabatic":
-            return np.zeros([self.nstates(), self.nstates(), self.ndim()])
+            return np.zeros([self.nstates(), self.nstates(), self.ndim()], dtype=np.float64)
 
         out = np.einsum("ip,xij,jq->pqx", coeff, dV, coeff)
 

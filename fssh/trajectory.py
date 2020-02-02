@@ -122,7 +122,7 @@ class BatchedTraj(object):
     ## runs a set of trajectories and collects the results
     # @param n number of trajectories to run
     def run_trajectories(self, n):
-        outcomes = np.zeros([self.model.nstates(),2])
+        outcomes = np.zeros([self.model.nstates(),2], dtype=np.float64)
         traces = []
         try:
             for x0, p0, initial, params in self.traj_gen(n):
@@ -143,7 +143,7 @@ class BatchedTraj(object):
     ## run many trajectories and returns averaged results
     def compute(self):
         # for now, define four possible outcomes of the simulation
-        outcomes = np.zeros([self.model.nstates(),2])
+        outcomes = np.zeros([self.model.nstates(),2], dtype=np.float64)
         nsamples = int(self.options["samples"])
         energy_list = []
         nprocs = self.options["nprocs"]
