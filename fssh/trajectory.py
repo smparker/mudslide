@@ -19,6 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from __future__ import print_function, division
+import queue
 
 import numpy as np
 
@@ -145,38 +146,46 @@ class BatchedTraj(object):
         # for now, define four possible outcomes of the simulation
         outcomes = np.zeros([self.model.nstates(),2], dtype=np.float64)
         nsamples = int(self.options["samples"])
-        energy_list = []
         nprocs = self.options["nprocs"]
 
-        if nprocs > 1:
-            pool = mp.Pool(nprocs)
-            chunksize = min((nsamples - 1)//nprocs + 1, 5)
-            nchunks = (nsamples -1)//chunksize + 1
-            batches = [ min(chunksize, nsamples - chunksize*ip) for ip in range(nchunks) ]
-            poolresult = [ pool.apply_async(unwrapped_run_trajectories, (self, b)) for b in batches ]
-            try:
-                for r in poolresult:
-                    oc, tr = r.get()
-                    outcomes += oc
-                    self.tracemanager.add_batch(tr)
-            except KeyboardInterrupt:
-                return
-                pool.terminate()
-                pool.join()
-                exit(" Aborting!")
-            pool.close()
-            pool.join()
-        else:
-            try:
-                oc, tr = self.run_trajectories(nsamples)
-                outcomes += oc
-                self.tracemanager.add_batch(tr)
-            except KeyboardInterrupt:
-                exit(" Aborting!")
+        traj_queue = queue.Queue()
+        results_queue = queue.Queue()
 
-        outcomes /= np.sum(outcomes)
-        self.tracemanager.outcomes = outcomes
+        #traj_queue = mp.JoinableQueue()
+        #results_queue = mp.Queue()
+        #procs = [ mp.Process(target=traj_runner, args=(traj_queue, results_queue, )) for p in range(nprocs) ]
+        #for p in procs:
+        #    p.start()
+
+        for x0, p0, initial, params in self.traj_gen(nsamples):
+            traj_input = self.options
+            traj_input.update(params)
+            traj = self.trajectory(self.model, x0, p0, initial, self.tracemanager.spawn_tracer(), **traj_input)
+            traj_queue.put(traj)
+
+        while not traj_queue.empty():
+            traj = traj_queue.get()
+            results = traj.simulate()
+            results_queue.put(results)
+
+        #traj_queue.join()
+        #for p in procs:
+        #    p.terminate()
+
+        while not results_queue.empty():
+            r = results_queue.get()
+            self.tracemanager.merge_tracer(r)
+
+        self.tracemanager.outcomes = self.tracemanager.outcome()
         return self.tracemanager
+
+def traj_runner(traj_queue, results_queue):
+    while True:
+        traj = traj_queue.get()
+        if traj is not None:
+            results = traj.simulate()
+            results_queue.put(results)
+        traj_queue.task_done()
 
 ## global version of BatchedTraj.run_trajectories that is necessary because of the stupid way threading pools work in python
 def unwrapped_run_trajectories(fssh, n):

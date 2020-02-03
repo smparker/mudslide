@@ -330,9 +330,10 @@ class TrajectorySH(object):
 
 ## Collect results from a single trajectory
 class Trace(object):
-    def __init__(self):
+    def __init__(self, base_weight=1.0):
         self.data = []
         self.hops = []
+        self.base_weight = base_weight
 
     ## collect and optionally process data
     def collect(self, trajectory_snapshot):
@@ -354,6 +355,37 @@ class Trace(object):
     def __len__(self):
         return len(self.data)
 
+    ## Classifies end of simulation:
+    #
+    #  2*state + [0 for left, 1 for right]
+    def outcome(self):
+        last_snapshot = self.data[-1]
+        nst = last_snapshot["density_matrix"].shape[0]
+        position = last_snapshot["position"]
+        active = last_snapshot["active"]
+
+        out = np.zeros([nst, 2], dtype=np.float64)
+
+        lr = 0 if position < 0.0 else 1
+        # first bit is left (0) or right (1), second bit is electronic state
+        out[active, lr] = 1.0
+
+        #if self.outcome_type == "populations":
+        #    out[:,lr] = np.real(self.rho).diag()[:]
+        #elif self.outcome_type == "state":
+        #    out[self.state,lr] = 1.0
+        #else:
+        #    raise Exception("Unrecognized outcome recognition type")
+        return out
+
+    def as_dict(self):
+        return {
+                "hops" : self.hops,
+                "data" : self.data,
+                "base_weight" : self.base_weight
+                }
+
+
 ## Class to manage the collection of observables from a set of trajectories
 class TraceManager(object):
     def __init__(self):
@@ -366,7 +398,7 @@ class TraceManager(object):
 
     ## accepts a Tracer object and adds it to list of traces
     def merge_tracer(self, tracer):
-        self.traces.append(tracer.data)
+        self.traces.append(tracer)
 
     ## merge other manager into self
     def add_batch(self, traces):
@@ -377,6 +409,11 @@ class TraceManager(object):
 
     def __getitem__(self, i):
         return self.traces[i]
+
+    def outcome(self):
+        ntraj = len(self.traces)
+        outcome = np.sum((x.outcome() for x in self.traces))/float(ntraj)
+        return outcome
 
 ## Exception class indicating that a simulation was terminated while still inside the "interaction region"
 class StillInteracting(Exception):
