@@ -3,7 +3,7 @@
 #  Module responsible for propagating surface hopping trajectories
 
 # fssh: program to run surface hopping simulations for model problems
-# Copyright (C) 2018, Shane Parker <smparker@uci.edu>
+# Copyright (C) 2018-2020, Shane Parker <shane.parker@case.edu>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -414,6 +414,7 @@ class TraceManager(object):
         ntraj = len(self.traces)
         outcome = np.sum((x.outcome() for x in self.traces))/float(ntraj)
         return outcome
+
 
 ## Exception class indicating that a simulation was terminated while still inside the "interaction region"
 class StillInteracting(Exception):

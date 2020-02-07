@@ -4,7 +4,7 @@
 #  Implementations of the one-dimensional two-state models Tully demonstrated FSSH on in Tully, J.C. <I>J. Chem. Phys.</I> 1990 <B>93</B> 1061.
 
 # fssh: program to run surface hopping simulations for model problems
-# Copyright (C) 2018, Shane Parker <smparker@uci.edu>
+# Copyright (C) 2018-2020, Shane Parker <shane.parker@case.edu>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
