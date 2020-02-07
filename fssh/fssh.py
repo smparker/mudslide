@@ -20,6 +20,8 @@
 
 from __future__ import print_function, division
 
+import copy as cp
+
 import numpy as np
 
 ## Class to propagate a single SH Trajectory
@@ -28,9 +30,10 @@ class TrajectorySH(object):
     # @param model Model object defining problem
     # @param tracer spawn from TraceManager to collect results
     # @param options option dictionary
-    def __init__(self, model, x0, p0, initial, tracer=None, **options):
+    def __init__(self, model, x0, p0, initial, tracer=None, queue=None, **options):
         self.model = model
         self.tracer = tracer if tracer is not None else Trace()
+        self.queue = queue
         self.mass = model.mass
         self.position = np.array(x0, dtype=np.float64).reshape(model.ndim())
         self.velocity = np.array(p0, dtype=np.float64).reshape(model.ndim()) / self.mass
@@ -59,6 +62,17 @@ class TrajectorySH(object):
 
         self.electronics = None
         self.hopping = np.zeros(model.nstates(), dtype=np.float64)
+
+    ## Override deepcopy
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+        shallow_only = [ "queue" ]
+        for k, v in self.__dict__.items():
+            setattr(result, k,
+                cp.deepcopy(v, memo) if v not in shallow_only else cp.copy(v))
+        return result
 
     ## Return random number for hopping decisions
     def random(self):
@@ -433,8 +447,11 @@ class TrajectoryCum(TrajectorySH):
     def __init__(self, *args, **kwargs):
         TrajectorySH.__init__(self, *args, **kwargs)
 
-        self.prob_cum = 0.0
-        self.zeta = self.random()
+        self.prob_cum = np.zeros(self.model.nstates(), dtype=np.float64)
+        self.zeta = np.zeros_like(self.prob_cum)
+        for i in range(self.model.nstates()):
+            if i != self.state:
+                self.zeta[i] = self.random()
 
     ## returns loggable data
     def snapshot(self):
@@ -458,14 +475,17 @@ class TrajectoryCum(TrajectorySH):
     # TODO this is bad for multiple states: won't be reproducible
     #  returns (do_hop, target_state)
     def hopper(self, probs):
-        accumulated = self.prob_cum
+        accumulated = np.copy(self.prob_cum)
         for i, p in enumerate(probs):
-            accumulated = accumulated * (1.0 - p) + (1.0 - accumulated) * p
-            if accumulated > self.zeta: # then hop
-                # reset prob_cum, zeta
-                self.prob_cum = 0.0
-                self.zeta = self.random()
-                return True, i
+            if i != self.state:
+                accumulated[i] = accumulated[i] * (1.0 - p) + (1.0 - accumulated[i]) * p
+                if accumulated[i] > self.zeta[i]: # then hop
+                    # reset prob_cum, zeta
+                    self.prob_cum[:] = 0.0
+                    for j in range(i):
+                        if j != i:
+                            self.zeta[j] = self.random()
+                    return True, i
 
         self.prob_cum = accumulated
 

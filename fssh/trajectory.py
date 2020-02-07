@@ -160,7 +160,8 @@ class BatchedTraj(object):
         for x0, p0, initial, params in self.traj_gen(nsamples):
             traj_input = self.options
             traj_input.update(params)
-            traj = self.trajectory(self.model, x0, p0, initial, self.tracemanager.spawn_tracer(), **traj_input)
+            traj = self.trajectory(self.model, x0, p0, initial, self.tracemanager.spawn_tracer(),
+                    queue=traj_queue, **traj_input)
             traj_queue.put(traj)
 
         while not traj_queue.empty():
