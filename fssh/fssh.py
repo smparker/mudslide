@@ -166,18 +166,21 @@ class TrajectorySH(object):
             electronics = self.electronics
         return np.einsum("ijx,x->ij", electronics.derivative_coupling, velo)
 
-    ## kinetic energy along given mode
+    ## kinetic energy along given momentum mode
     # @param direction [ndim] numpy array defining direction
     def mode_kinetic_energy(self, direction):
-        component = np.dot(direction, self.velocity) / np.dot(direction, direction) * direction
-        return 0.5 * np.einsum('m,m,m', self.mass, component, component)
+        u = direction / np.linalg.norm(direction)
+        momentum = self.velocity * self.mass
+        component = np.dot(u, momentum) * u
+        return 0.5 * np.einsum('m,m,m', 1.0/self.mass, component, component)
 
     ## Return direction in which to rescale momentum
-    # @param tau derivative coupling vector
     # @param source active state before hop
     # @param target active state after hop
-    def rescale_direction(self, tau, source, target):
-        return tau
+    def direction_of_rescale(self, source, target, electronics=None):
+        elec_states = self.electronics if electronics is None else electronics
+        out = elec_states.derivative_coupling[source, target, :]
+        return out
 
     ## Rescales velocity in the specified direction and amount
     # @param direction array specifying the direction of the velocity to rescale
@@ -249,16 +252,7 @@ class TrajectorySH(object):
 
         do_hop, hop_to = self.hopper(probs)
         if (do_hop): # do switch
-            new_potential, old_potential = elec_states.hamiltonian[hop_to, hop_to], elec_states.hamiltonian[self.state, self.state]
-            delV = new_potential - old_potential
-            derivative_coupling = elec_states.derivative_coupling[hop_to, self.state, :]
-            component_kinetic = self.mode_kinetic_energy(derivative_coupling)
-            if delV <= component_kinetic:
-                hop_from = self.state
-                self.state = hop_to
-                u = self.rescale_direction(derivative_coupling, self.state, hop_to)
-                self.rescale_component(u, -delV)
-                self.tracer.hop(self.time, hop_from, hop_to)
+            self.hop_to_it(hop_to, elec_states)
 
         return sum(probs)
 
@@ -279,6 +273,22 @@ class TrajectorySH(object):
             return True, hop_to
         else:
             return False, -1
+
+    ## Performs the hop from the current active state to the given state, including
+    #  rescaling the momentum
+    #
+    #  @param hop_to final state to hop to
+    def hop_to_it(self, hop_to, electronics=None):
+        elec_states = electronics if electronics is not None else self.electronics
+        new_potential, old_potential = elec_states.hamiltonian[hop_to, hop_to], elec_states.hamiltonian[self.state, self.state]
+        delV = new_potential - old_potential
+        rescale_vector = self.direction_of_rescale(self.state, hop_to)
+        component_kinetic = self.mode_kinetic_energy(rescale_vector)
+        if delV <= component_kinetic:
+            hop_from = self.state
+            self.state = hop_to
+            self.rescale_component(rescale_vector, -delV)
+            self.tracer.hop(self.time, hop_from, hop_to)
 
     ## run simulation
     def simulate(self):
@@ -384,12 +394,6 @@ class Trace(object):
         # first bit is left (0) or right (1), second bit is electronic state
         out[active, lr] = 1.0
 
-        #if self.outcome_type == "populations":
-        #    out[:,lr] = np.real(self.rho).diag()[:]
-        #elif self.outcome_type == "state":
-        #    out[self.state,lr] = 1.0
-        #else:
-        #    raise Exception("Unrecognized outcome recognition type")
         return out
 
     def as_dict(self):
