@@ -49,6 +49,7 @@ class TrajectorySH(object):
         # fixed initial parameters
         self.time = options.get("t0", 0.0)
         self.nsteps = options.get("previous_steps", 0)
+        self.trace_every = options.get("trace_every", 1)
 
         # read out of options
         self.dt = options["dt"]
@@ -98,7 +99,8 @@ class TrajectorySH(object):
 
     ## add results from current time point to tracing function
     def trace(self):
-        self.tracer.collect(self.snapshot())
+        if (self.nsteps % self.trace_every) == 0:
+            self.tracer.collect(self.snapshot())
 
     ## returns a dictionary with all the loggable data from the trajectory
     def snapshot(self):

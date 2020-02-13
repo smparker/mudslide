@@ -84,6 +84,7 @@ will run 20 scattering simulations in parallel with a particle starting at -5.0 
 * `outcome_type` - how to count statistics at the end of a trajectory
     * "state" (default) - use the state attribute of the simulation only
     * "populations" - use the diagonals of the density matrix
+* `trace_every` - save snapshot data every nth step (i.e., when `nsteps%trace_every==0`)
 
 ## Models
 The model provided to the FSSH class needs to have three functions implemented:

@@ -56,6 +56,7 @@ def main():
     parser.add_argument('-t', '--dt', default=20.0, type=float, help="time step in a.u.(%(default)s)")
     parser.add_argument('-y', '--scale_dt', dest="scale_dt", action="store_true", help="scale (hack-like) time step using momentum (%(default)s)")
     parser.add_argument('-T', '--nt', default=50000, type=int, help="max number of steps (%(default)s)")
+    parser.add_argument('-e', '--every', default=1, type=int, help="store a snapshot every nth step (%(default)s)")
     parser.add_argument('-x', '--position', default=-10.0, type=float, help="starting position (%(default)s)")
     parser.add_argument('-b', '--bounds', default=5.0, type=float, help="bounding box to end simulation (%(default)s)")
     parser.add_argument('-o', '--output', default="averaged", type=str, choices=('averaged', 'single', 'pickle', 'swarm', 'hack'), help="what to produce as output (%(default)s)")
@@ -121,7 +122,8 @@ def main():
                            nprocs = args.nprocs,
                            dt = dt,
                            seed = args.seed,
-                           bounds = [ -abs(args.bounds), abs(args.bounds) ]
+                           bounds = [ -abs(args.bounds), abs(args.bounds) ],
+                           trace_every = args.every
                    )
         results = fssh.compute()
         outcomes = results.outcomes
