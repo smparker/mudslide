@@ -484,16 +484,21 @@ class TrajectoryCum(TrajectorySH):
             if i != self.state:
                 accumulated[i] = accumulated[i] * (1.0 - p) + (1.0 - accumulated[i]) * p
                 if accumulated[i] > self.zeta[i]: # then hop
-                    # reset prob_cum, zeta
-                    self.prob_cum[:] = 0.0
-                    for j in range(i):
-                        if j != i:
-                            self.zeta[j] = self.random()
                     return True, i
 
         self.prob_cum = accumulated
 
         return False, -1
+
+    ## reimplement hopping functionality, except also reset old
+    #  accumulated probabilities
+    def hop_to_it(self, hop_to, electronics=None):
+        TrajectorySH.hop_to_it(self, hop_to, electronics=None)
+
+        self.prob_cum[:] = 0.0
+        for j in range(self.model.nstates()):
+            if self.state != j:
+                self.zeta[j] = self.random()
 
 ## Ehrenfest dynamics
 class Ehrenfest(TrajectorySH):
