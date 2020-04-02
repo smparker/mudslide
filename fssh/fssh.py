@@ -250,15 +250,18 @@ class TrajectorySH(object):
         probs = np.maximum(probs, 0.0)
         self.hopping = probs
 
-        do_hop, hop_to = self.hopper(probs)
-        if (do_hop): # do switch
-            self.hop_to_it(hop_to, elec_states)
+        hop_targets = self.hopper(probs)
+        if hop_targets:
+            self.hop_to_it(hop_targets, elec_states)
 
         return sum(probs)
 
     ## given a set of probabilities, determines whether and where to hop
+    #
+    #  if no hop to be performaned, returns empty list
+    #
     # @param probs [nstates] numpy array of individual hopping probabilities
-    #  returns (do_hop, target_state)
+    #  returns [(target_state, weight)]
     def hopper(self, probs):
         zeta = self.random()
         acc_prob = np.cumsum(probs)
@@ -270,15 +273,16 @@ class TrajectorySH(object):
                     hop_to = i
                     break
 
-            return True, hop_to
+            return [(hop_to, 1.0)]
         else:
-            return False, -1
+            return []
 
     ## Performs the hop from the current active state to the given state, including
     #  rescaling the momentum
     #
     #  @param hop_to final state to hop to
-    def hop_to_it(self, hop_to, electronics=None):
+    def hop_to_it(self, hop_targets, electronics=None):
+        hop_to, weight = hop_targets[0]
         elec_states = electronics if electronics is not None else self.electronics
         new_potential, old_potential = elec_states.hamiltonian[hop_to, hop_to], elec_states.hamiltonian[self.state, self.state]
         delV = new_potential - old_potential
@@ -490,10 +494,10 @@ class TrajectoryCum(TrajectorySH):
             self.prob_cum = 0.0
             self.zeta = self.random()
 
-            return True, target
+            return [(target, 1.0)]
 
         self.prob_cum = accumulated
-        return False, -1
+        return []
 
 ## Ehrenfest dynamics
 class Ehrenfest(TrajectorySH):
