@@ -247,7 +247,7 @@ class TrajectorySH(object):
         probs[self.state] = 0.0
 
         # clip probabilities to make sure they are between zero and one
-        probs = probs.clip(0.0, 1.0)
+        probs = np.maximum(probs, 0.0)
         self.hopping = probs
 
         do_hop, hop_to = self.hopper(probs)
@@ -451,11 +451,8 @@ class TrajectoryCum(TrajectorySH):
     def __init__(self, *args, **kwargs):
         TrajectorySH.__init__(self, *args, **kwargs)
 
-        self.prob_cum = np.zeros(self.model.nstates(), dtype=np.float64)
-        self.zeta = np.zeros_like(self.prob_cum)
-        for i in range(self.model.nstates()):
-            if i != self.state:
-                self.zeta[i] = self.random()
+        self.prob_cum = 0.0
+        self.zeta = self.random()
 
     ## returns loggable data
     def snapshot(self):
@@ -476,29 +473,27 @@ class TrajectoryCum(TrajectorySH):
 
     ## given a set of probabilities, determines whether and where to hop
     # @param probs [nstates] numpy array of individual hopping probabilities
-    # TODO this is bad for multiple states: won't be reproducible
     #  returns (do_hop, target_state)
     def hopper(self, probs):
-        accumulated = np.copy(self.prob_cum)
-        for i, p in enumerate(probs):
-            if i != self.state:
-                accumulated[i] = accumulated[i] * (1.0 - p) + (1.0 - accumulated[i]) * p
-                if accumulated[i] > self.zeta[i]: # then hop
-                    return True, i
+        accumulated = self.prob_cum
+        probs[self.state] = 0.0 # ensure self-hopping is nonsense
+        gkdt = np.sum(probs)
+
+        accumulated = 1 - (1 - accumulated) * np.exp(-gk)
+        if accumulated > self.zeta: # then hop
+            # where to hop
+            hop_choice = probs / gk
+
+            target = self.random.choice(list(range(self.model.nstates())), p=hop_choice)
+
+            # reset probabilities and random
+            self.prob_cum = 0.0
+            self.zeta = self.random()
+
+            return True, target
 
         self.prob_cum = accumulated
-
         return False, -1
-
-    ## reimplement hopping functionality, except also reset old
-    #  accumulated probabilities
-    def hop_to_it(self, hop_to, electronics=None):
-        TrajectorySH.hop_to_it(self, hop_to, electronics=None)
-
-        self.prob_cum[:] = 0.0
-        for j in range(self.model.nstates()):
-            if self.state != j:
-                self.zeta[j] = self.random()
 
 ## Ehrenfest dynamics
 class Ehrenfest(TrajectorySH):
