@@ -33,20 +33,36 @@ class SpawnStack(object):
         self.base_weight = weight
         self.marginal_weight = 1.0
 
+        if sample_stack is not None:
+            mw = np.zeros(len(sample_stack))
+            mw[0] = 1.0
+            for i in range(1, len(sample_stack)):
+                mw[i] = 1.0 - sample_stack[i-1]["zeta"]
+            self.marginal_weights = mw
+        else:
+            self.margin_weights = np.ones(1)
+
         self.izeta = None
         self.zeta = None
+        self.last_dw = 0.0 # differential weight of last hop TODO I don't love this structure
 
     def zeta(self):
         return self.zeta
 
-    def next_zeta(self, random_state = np.random.RandomState()):
+    def next_zeta(self, current_value, random_state = np.random.RandomState()):
         if self.sample_stack is not None:
             if self.izeta is None:
                 self.izeta = 0
                 self.marginal_weight = 1.0
             else:
-                self.marginal_weight = 1.0 - self.zeta
-                self.izeta += 1
+                izeta = self.izeta
+                while self.sample_stack[izeta]["zeta"] < current_value:
+                    izeta += 1
+
+                self.marginal_weight = self.marginal_weights[izeta]
+                self.last_dw = self.marginal_weights[self.izeta] - self.marginal_weights[izeta]
+
+                self.izeta = izeta
 
             if self.izeta < len(self.sample_stack):
                 self.zeta = self.sample_stack[self.izeta]["zeta"]
@@ -64,7 +80,9 @@ class SpawnStack(object):
     def spawn(self, reweight = 1.0):
         if self.sample_stack:
             samp = self.sample_stack[self.izeta]
-            dw = samp["dw"]
+            dw = self.last_dw
+            if dw == 0:
+                raise Exception("What happened? A hop with no differential weight?")
             weight = self.base_weight * dw * reweight
             next_stack = samp["children"]
         else:
@@ -141,22 +159,25 @@ class EvenSamplingTrajectory(TrajectoryCum):
 
         accumulated = 1 - (1 - accumulated) * np.exp(-gkdt)
         if accumulated > self.zeta: # then hop
+            zeta = self.zeta
+            next_zeta = self.spawn_stack.next_zeta(accumulated, self.random_state)
+
             # where to hop
             hop_choice = probs / gkdt
-
             if self.spawn_stack.do_spawn():
                 targets = [ { "target" : i,
                               "weight" : hop_choice[i],
-                              "zeta" : self.zeta,
+                              "zeta" : zeta,
                               "prob" : accumulated,
                               "stack" : self.spawn_stack.spawn(hop_choice[i])} for i in range(self.model.nstates()) if i != self.state ]
             else:
                 target = self.random_state.choice(list(range(self.model.nstates())), p=hop_choice)
-                targets = [ {"target" : target, "weight" : 1.0, "zeta" : self.zeta, "prob" : accumulated, "stack" : self.spawn_stack.spawn() }]
+                targets = [ {"target" : target, "weight" : 1.0, "zeta" : zeta, "prob" : accumulated, "stack" : self.spawn_stack.spawn() }]
 
             # reset probabilities and random
-            self.zeta = self.spawn_stack.next_zeta(self.random_state)
+            self.zeta = next_zeta
 
+            self.prob_cum = accumulated
             return targets
 
         self.prob_cum = accumulated
@@ -175,10 +196,7 @@ class EvenSamplingTrajectory(TrajectoryCum):
     def hop_to_it(self, hop_to, electronics=None):
         if self.spawn_stack.do_spawn():
             for hop in hop_to:
-                istate = hop["target"]
-                weight = hop["weight"]
                 stack = hop["stack"]
-
                 spawn = self.clone(stack)
 
                 # trigger hop
@@ -189,4 +207,5 @@ class EvenSamplingTrajectory(TrajectoryCum):
                 self.queue.put(spawn)
             self.update_weight(self.spawn_stack.weight())
         else:
+            self.prob_cum = 0.0
             TrajectoryCum.hop_to_it(self, hop_to, electronics=self.electronics)
