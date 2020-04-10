@@ -127,6 +127,7 @@ class EvenSamplingTrajectory(TrajectoryCum):
                 outcome_type = self.outcome_type,
                 seed = None,
                 electronics = self.electronics,
+                duration = self.duration,
                 spawn_stack = spawn_stack)
         return out
 

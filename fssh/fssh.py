@@ -55,7 +55,10 @@ class TrajectorySH(object):
 
         # function duration_initialize should get us ready to for future continue_simulating calls
         # that decide whether the simulation has finished
-        self.duration_initialize(options)
+        if "duration" in options:
+            self.duration = options["duration"]
+        else:
+            self.duration_initialize(options)
 
         # fixed initial parameters
         self.time = options.get("t0", 0.0)
@@ -99,34 +102,38 @@ class TrajectorySH(object):
     ## Is trajectory still inside interaction region?
     def currently_interacting(self):
         """determines whether trajectory is currently inside an interaction region"""
-        if self.box_bounds is None:
+        if self.duration["box_bounds"] is None:
             return False
-        return np.all(self.box_bounds[0] < self.position) and np.all(self.position < self.box_bounds[1])
+        return np.all(self.duration["box_bounds"][0] < self.position) and np.all(self.position < self.duration["box_bounds"][1])
 
     ## Initializes variables related to continue_simulating
     def duration_initialize(self, options):
         """Initializes variables related to continue_simulating"""
-        self.found_box = False
+
+        duration = {}
+        duration["found_box"] = False
 
         bounds = options.get('bounds', None)
         if bounds:
-            self.box_bounds = ( np.array(bounds[0], dtype=np.float64),
+            duration["box_bounds"] = ( np.array(bounds[0], dtype=np.float64),
                     np.array(bounds[1], dtype=np.float64) )
         else:
-            self.box_bounds = None
-        self.max_steps = options.get('max_steps', 10000)
-        self.max_time = options.get('max_time', 1e25) # default is to hopefully never hit this
+            duration["box_bounds"] = None
+        duration["max_steps"] = options.get('max_steps', 10000)
+        duration["max_time"] = options.get('max_time', 1e25) # default is to hopefully never hit this
+
+        self.duration = duration
 
     ## Returns True if a trajectory ought to keep running, False if it should finish
     def continue_simulating(self):
         """Returns True if a trajectory ought to keep running, False if it should finish"""
-        if self.nsteps > self.max_steps or self.time > self.max_time:
+        if self.nsteps > self.duration["max_steps"] or self.time > self.duration["max_time"]:
             return False
-        elif self.found_box:
+        elif self.duration["found_box"]:
             return self.currently_interacting()
         else:
             if self.currently_interacting():
-                self.found_box = True
+                self.duration["found_box"] = True
             return True
 
     ## add results from current time point to tracing function
@@ -470,8 +477,8 @@ class TraceManager(object):
         return self.traces[i]
 
     def outcome(self):
-        ntraj = len(self.traces)
-        outcome = np.sum((x.outcome() for x in self.traces))/float(ntraj)
+        weight_norm = np.sum( (t.weight for t in self.traces) )
+        outcome = np.sum((t.weight * t.outcome() for t in self.traces))/weight_norm
         return outcome
 
     def summarize(self, f=sys.stdout):
