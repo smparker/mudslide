@@ -98,6 +98,8 @@ class SpawnStack(object):
 
     @classmethod
     def build_simple(cls, nsamples, sample_depth, include_first=False):
+        nsamples = int(nsamples)
+        sample_depth = int(sample_depth)
         samples = np.sort(np.linspace(1.0, 0.0, nsamples, endpoint=include_first, retstep=False))
         dw = samples[1] - samples[0]
 

@@ -537,13 +537,13 @@ class TrajectoryCum(TrajectorySH):
         probs[self.state] = 0.0 # ensure self-hopping is nonsense
         gkdt = np.sum(probs)
 
-        accumulated = 1 - (1 - accumulated) * np.exp(-gk)
+        accumulated = 1 - (1 - accumulated) * np.exp(-gkdt)
         if accumulated > self.zeta: # then hop
             # where to hop
-            hop_choice = probs / gk
+            hop_choice = probs / gkdt
 
             zeta = self.zeta
-            target = self.random.choice(list(range(self.model.nstates())), p=hop_choice)
+            target = self.random_state.choice(list(range(self.model.nstates())), p=hop_choice)
 
             # reset probabilities and random
             self.prob_cum = 0.0
