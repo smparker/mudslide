@@ -20,9 +20,11 @@
 
 from __future__ import print_function, division
 
-import copy as cp
+from .version import __version__
 
+import copy as cp
 import numpy as np
+import sys
 
 ## Class to propagate a single SH Trajectory
 class TrajectorySH(object):
@@ -383,6 +385,21 @@ class Trace(object):
     def __len__(self):
         return len(self.data)
 
+    def print(self, f=sys.stdout):
+        nst = self.data[0]["density_matrix"].shape[0]
+        headerlist =  [ "%12s" % x for x in [ "time", "x", "p", "V", "T", "E" ] ]
+        headerlist += [ "%12s" % x for x in [ "rho_{%d,%d}" % (i,i) for i in range(nst) ] ]
+        headerlist += [ "%12s" % x for x in [ "H_{%d,%d}" % (i,i) for i in range(nst) ] ]
+        headerlist += [ "%12s" % "active" ]
+        headerlist += [ "%12s" % "hopping" ]
+        print("#" + " ".join(headerlist), file=f)
+        for i in self.data:
+            line = " {time:12.6f} {position[0]:12.6f} {momentum[0]:12.6f} {potential:12.6f} {kinetic:12.6f} {energy:12.6f} ".format(**i)
+            line += " ".join(["%12.6f" % x for x in np.real(np.diag(i["density_matrix"]))])
+            line += " " + " ".join(["%12.6f" % x for x in np.real(np.diag(i["electronics"].hamiltonian))])
+            line += " {active:12d} {hopping:12e}".format(**i)
+            print(line, file=f)
+
     ## Classifies end of simulation:
     #
     #  2*state + [0 for left, 1 for right]
@@ -436,6 +453,16 @@ class TraceManager(object):
         ntraj = len(self.traces)
         outcome = np.sum((x.outcome() for x in self.traces))/float(ntraj)
         return outcome
+
+    def summarize(self, f=sys.stdout):
+        norm = sum((t.weight for t in self.traces))
+        print("Running the FSSH package ({})".format(__version__), file=f)
+        print("------------------------------------", file=f)
+        print("# of trajectories: {}".format(len(self.traces)), file=f)
+        print(file=f)
+        print("{:>6s} {:>16s} {:>6s} {:>12s}".format("trace", "runtime", "nhops", "weight"), file=f)
+        for i, t in enumerate(self.traces):
+            print("{:6d} {:16.4f} {:6d} {:12.6f}".format(i, t.data[-1]["time"], len(t.hops), t.weight/norm), file=f)
 
 
 ## Exception class indicating that a simulation was terminated while still inside the "interaction region"

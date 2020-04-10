@@ -129,19 +129,7 @@ def main():
         outcomes = results.outcomes
 
         if (args.output == "single"):
-            nst = results.traces[0][0]["density_matrix"].shape[0]
-            headerlist =  [ "%12s" % x for x in [ "time", "x", "p", "V", "T", "E" ] ]
-            headerlist += [ "%12s" % x for x in [ "rho_{%d,%d}" % (i,i) for i in range(nst) ] ]
-            headerlist += [ "%12s" % x for x in [ "H_{%d,%d}" % (i,i) for i in range(nst) ] ]
-            headerlist += [ "%12s" % "active" ]
-            headerlist += [ "%12s" % "hopping" ]
-            print("#" + " ".join(headerlist))
-            for i in results.traces[0]:
-                line = " {time:12.6f} {position[0]:12.6f} {momentum[0]:12.6f} {potential:12.6f} {kinetic:12.6f} {energy:12.6f} ".format(**i)
-                line += " ".join(["%12.6f" % x for x in np.real(np.diag(i["density_matrix"]))])
-                line += " " + " ".join(["%12.6f" % x for x in np.real(np.diag(i["electronics"].hamiltonian))])
-                line += " {active:12d} {hopping:12e}".format(**i)
-                print(line)
+            results.traces[0].print()
         elif (args.output == "swarm"):
             maxsteps = max([ len(t) for t in results.traces ])
             outfiles = [ "state_%d.trace" % i for i in range(model.nstates()) ]
