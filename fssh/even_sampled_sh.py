@@ -30,7 +30,8 @@ from .fssh import TrajectoryCum
 class SpawnStack(object):
     def __init__(self, sample_stack, weight):
         self.sample_stack = sample_stack
-        self.weight = weight
+        self.base_weight = weight
+        self.marginal_weight = 1.0
 
         self.izeta = None
         self.zeta = None
@@ -42,7 +43,9 @@ class SpawnStack(object):
         if self.sample_stack is not None:
             if self.izeta is None:
                 self.izeta = 0
+                self.marginal_weight = 1.0
             else:
+                self.marginal_weight = 1.0 - self.zeta
                 self.izeta += 1
 
             if self.izeta < len(self.sample_stack):
@@ -55,16 +58,25 @@ class SpawnStack(object):
 
         return self.zeta
 
-    def spawn(self):
+    def weight(self):
+        return self.base_weight * self.marginal_weight
+
+    def spawn(self, reweight = 1.0):
         if self.sample_stack:
             samp = self.sample_stack[self.izeta]
             dw = samp["dw"]
-            weight = self.weight * dw
+            weight = self.base_weight * dw * reweight
             next_stack = samp["children"]
         else:
-            weight = self.weight
+            weight = self.base_weight * reweight
             next_stack = None
         return self.__class__(next_stack, weight)
+
+    ## Test whether the stack indicates we should keep spawning trajectories
+    #  versus just following one. An empty stack means we should behave like
+    #  a normal cumulative surface hopping run.
+    def do_spawn(self):
+        return self.sample_stack is not None
 
     @classmethod
     def build_simple(cls, nsamples, sample_depth, include_first=False):
@@ -131,14 +143,18 @@ class EvenSamplingTrajectory(TrajectoryCum):
             # where to hop
             hop_choice = probs / gkdt
 
-            targets = [ { "target" : i,
-                          "weight" : hop_choice[i],
-                          "zeta" : self.zeta,
-                          "prob" : accumulated,
-                          "stack" : self.spawn_stack.spawn()} for i in range(self.model.nstates()) if i != self.state ]
+            if self.spawn_stack.do_spawn():
+                targets = [ { "target" : i,
+                              "weight" : hop_choice[i],
+                              "zeta" : self.zeta,
+                              "prob" : accumulated,
+                              "stack" : self.spawn_stack.spawn(hop_choice[i])} for i in range(self.model.nstates()) if i != self.state ]
+            else:
+                target = self.random_state.choice(list(range(self.model.nstates())), p=hop_choice)
+                targets = [ {"target" : target, "weight" : 1.0, "zeta" : self.zeta, "prob" : accumulated, "stack" : self.spawn_stack.spawn() }]
 
             # reset probabilities and random
-            self.zeta = self.spawn_stack.next_zeta()
+            self.zeta = self.spawn_stack.next_zeta(self.random_state)
 
             return targets
 
@@ -156,16 +172,20 @@ class EvenSamplingTrajectory(TrajectoryCum):
     # @param hop_to [nspawn] list of states and associated weights on which
     # @param electronics model class
     def hop_to_it(self, hop_to, electronics=None):
-        spawned = [ self.clone() for x in hop_to ]
-        for hop, spawn in zip(hop_to, spawned):
-            istate = hop["target"]
-            weight = hop["weight"]
-            stack = hop["stack"]
+        if self.spawn_stack.do_spawn():
+            for hop in hop_to:
+                istate = hop["target"]
+                weight = hop["weight"]
+                stack = hop["stack"]
 
-            spawn.spawn_stack = stack
+                spawn = self.clone(stack)
 
-            # trigger hop
-            TrajectoryCum.hop_to_it(spawn, [ hop ], electronics=spawn.electronics)
+                # trigger hop
+                TrajectoryCum.hop_to_it(spawn, [ hop ], electronics=spawn.electronics)
+                spawn.update_weight(stack.weight())
 
-            # add to total trajectory queue
-            self.queue.put(spawn)
+                # add to total trajectory queue
+                self.queue.put(spawn)
+            self.update_weight(self.spawn_stack.weight())
+        else:
+            TrajectoryCum.hop_to_it(self, hop_to, electronics=self.electronics)

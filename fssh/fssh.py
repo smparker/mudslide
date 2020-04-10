@@ -71,6 +71,13 @@ class TrajectorySH(object):
         self.electronics = options.get("electronics", None)
         self.hopping = np.zeros(model.nstates(), dtype=np.float64)
 
+        self.weight = options.get("weight", 1.0)
+
+    ## Update weight held by trajectory and by trace
+    def update_weight(self, weight):
+        self.weight = weight
+        self.tracer.weight = weight
+
     ## Override deepcopy
     def __deepcopy__(self, memo):
         cls = self.__class__
@@ -434,7 +441,7 @@ class Trace(object):
         return {
                 "hops" : self.hops,
                 "data" : self.data,
-                "base_weight" : self.base_weight
+                "weight" : self.weight
                 }
 
 
