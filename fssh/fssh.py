@@ -32,7 +32,7 @@ class TrajectorySH(object):
     # @param model Model object defining problem
     # @param tracer spawn from TraceManager to collect results
     # @param options option dictionary
-    def __init__(self, model, x0, p0, initial, tracer=None, queue=None, **options):
+    def __init__(self, model, x0, p0, rho0, tracer=None, queue=None, **options):
         self.model = model
         self.tracer = tracer if tracer is not None else Trace()
         self.queue = queue
@@ -40,12 +40,18 @@ class TrajectorySH(object):
         self.position = np.array(x0, dtype=np.float64).reshape(model.ndim())
         self.velocity = np.array(p0, dtype=np.float64).reshape(model.ndim()) / self.mass
         self.last_velocity = np.zeros_like(self.velocity, dtype=np.float64)
-        if initial == "ground":
+        if "last_velocity" in options:
+            self.last_velocity[:] = options["last_velocity"]
+        if rho0 == "ground":
             self.rho = np.zeros([model.nstates(),model.nstates()], dtype=np.complex128)
             self.rho[0,0] = 1.0
             self.state = 0
         else:
-            raise Exception("Unrecognized initial state option")
+            try:
+                self.rho = np.copy(rho0)
+                self.state = options["state0"]
+            except:
+                raise Exception("Unrecognized initial state option")
 
         # function duration_initialize should get us ready to for future continue_simulating calls
         # that decide whether the simulation has finished
@@ -62,7 +68,7 @@ class TrajectorySH(object):
 
         self.random_state = np.random.RandomState(options.get("seed", None))
 
-        self.electronics = None
+        self.electronics = options.get("electronics", None)
         self.hopping = np.zeros(model.nstates(), dtype=np.float64)
 
     ## Override deepcopy
@@ -75,6 +81,9 @@ class TrajectorySH(object):
             setattr(result, k,
                 cp.deepcopy(v, memo) if v not in shallow_only else cp.copy(v))
         return result
+
+    def clone(self):
+        return cp.deepcopy(self)
 
     ## Return random number for hopping decisions
     def random(self):
@@ -275,7 +284,7 @@ class TrajectorySH(object):
                     hop_to = i
                     break
 
-            return [(hop_to, 1.0)]
+            return [{ "target" : hop_to, "weight" : 1.0, "zeta" : zeta, "prob" : hops[i] }]
         else:
             return []
 
@@ -284,7 +293,9 @@ class TrajectorySH(object):
     #
     #  @param hop_to final state to hop to
     def hop_to_it(self, hop_targets, electronics=None):
-        hop_to, weight = hop_targets[0]
+        hop_dict = hop_targets[0]
+        hop_to = hop_dict["target"]
+        weight = hop_dict["weight"]
         elec_states = electronics if electronics is not None else self.electronics
         new_potential, old_potential = elec_states.hamiltonian[hop_to, hop_to], elec_states.hamiltonian[self.state, self.state]
         delV = new_potential - old_potential
@@ -294,7 +305,7 @@ class TrajectorySH(object):
             hop_from = self.state
             self.state = hop_to
             self.rescale_component(rescale_vector, -delV)
-            self.tracer.hop(self.time, hop_from, hop_to)
+            self.tracer.hop(self.time, hop_from, hop_to, hop_dict["zeta"], hop_dict["prob"])
 
     ## run simulation
     def simulate(self):
@@ -360,20 +371,22 @@ class TrajectorySH(object):
 
 ## Collect results from a single trajectory
 class Trace(object):
-    def __init__(self, base_weight=1.0):
+    def __init__(self, weight=1.0):
         self.data = []
         self.hops = []
-        self.base_weight = base_weight
+        self.weight = weight
 
     ## collect and optionally process data
     def collect(self, trajectory_snapshot):
         self.data.append(trajectory_snapshot)
 
-    def hop(self, time, hop_from, hop_to):
+    def hop(self, time, hop_from, hop_to, zeta, prob):
         self.hops.append({
             "time" : time,
             "from" : hop_from,
-            "to"   : hop_to
+            "to"   : hop_to,
+            "zeta" : zeta,
+            "prob" : prob
             })
 
     def __iter__(self):
@@ -515,13 +528,14 @@ class TrajectoryCum(TrajectorySH):
             # where to hop
             hop_choice = probs / gk
 
+            zeta = self.zeta
             target = self.random.choice(list(range(self.model.nstates())), p=hop_choice)
 
             # reset probabilities and random
             self.prob_cum = 0.0
             self.zeta = self.random()
 
-            return [(target, 1.0)]
+            return [ {"target" : target, "weight" : 1.0, "zeta" : zeta, "prob" : accumulated} ]
 
         self.prob_cum = accumulated
         return []
