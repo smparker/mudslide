@@ -96,9 +96,12 @@ class BatchedTraj(object):
     # | seed               | None (date)                |
     # | nprocs             | MultiProcessing.cpu_count  |
     # | outcome_type       | "state"                    |
-    def __init__(self, model, traj_gen, trajectory_type, tracemanager = TraceManager(), **inp):
+    def __init__(self, model, traj_gen, trajectory_type, tracemanager = None, **inp):
         self.model = model
-        self.tracemanager = tracemanager
+        if tracemanager is None:
+            self.tracemanager = TraceManager()
+        else:
+            self.tracemanager = tracemanager
         self.trajectory = trajectory_type
         self.traj_gen = traj_gen
         self.options = {}

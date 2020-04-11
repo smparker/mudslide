@@ -49,7 +49,7 @@ class TrajectorySH(object):
         else:
             try:
                 self.rho = np.copy(rho0)
-                self.state = options["state0"]
+                self.state = int(options["state0"])
             except:
                 raise Exception("Unrecognized initial state option")
 
@@ -61,12 +61,12 @@ class TrajectorySH(object):
             self.duration_initialize(options)
 
         # fixed initial parameters
-        self.time = options.get("t0", 0.0)
-        self.nsteps = options.get("previous_steps", 0)
-        self.trace_every = options.get("trace_every", 1)
+        self.time = float(options.get("t0", 0.0))
+        self.nsteps = int(options.get("previous_steps", 0))
+        self.trace_every = int(options.get("trace_every", 1))
 
         # read out of options
-        self.dt = options["dt"]
+        self.dt = float(options["dt"])
         self.outcome_type = options.get("outcome_type", "state")
 
         self.random_state = np.random.RandomState(options.get("seed", None))
@@ -74,7 +74,9 @@ class TrajectorySH(object):
         self.electronics = options.get("electronics", None)
         self.hopping = np.zeros(model.nstates(), dtype=np.float64)
 
-        self.weight = options.get("weight", 1.0)
+        self.weight = float(options.get("weight", 1.0))
+
+        self.restart = options.get("restart", False)
 
     ## Update weight held by trajectory and by trace
     def update_weight(self, weight):
@@ -119,7 +121,7 @@ class TrajectorySH(object):
                     np.array(bounds[1], dtype=np.float64) )
         else:
             duration["box_bounds"] = None
-        duration["max_steps"] = options.get('max_steps', 10000)
+        duration["max_steps"] = options.get('max_steps', 100000)
         duration["max_time"] = options.get('max_time', 1e25) # default is to hopefully never hit this
 
         self.duration = duration
@@ -324,16 +326,19 @@ class TrajectorySH(object):
     ## run simulation
     def simulate(self):
         last_electronics = None
-        self.electronics = self.model.update(self.position)
 
-        # start by taking half step in velocity
-        initial_acc = self.force(self.electronics) / self.mass
-        veloc = self.velocity
-        dv = 0.5 * initial_acc * self.dt
-        self.last_velocity, self.velocity = veloc - dv, veloc + dv
+        if not self.restart:
+            self.electronics = self.model.update(self.position)
 
-        # propagate wavefunction a half-step forward to match velocity
-        self.propagate_electronics(self.electronics, 0.5*self.dt)
+            # start by taking half step in velocity
+            initial_acc = self.force(self.electronics) / self.mass
+            veloc = self.velocity
+            dv = 0.5 * initial_acc * self.dt
+            self.last_velocity, self.velocity = veloc - dv, veloc + dv
+
+            # propagate wavefunction a half-step forward to match velocity
+            self.propagate_electronics(self.electronics, 0.5*self.dt)
+
         potential_energy = self.potential_energy(self.electronics)
 
         self.hopping = 0.0
@@ -481,15 +486,23 @@ class TraceManager(object):
         outcome = np.sum((t.weight * t.outcome() for t in self.traces))/weight_norm
         return outcome
 
-    def summarize(self, f=sys.stdout):
+    def summarize(self, f=sys.stdout, verbose=False):
         norm = sum((t.weight for t in self.traces))
         print("Running the FSSH package ({})".format(__version__), file=f)
         print("------------------------------------", file=f)
         print("# of trajectories: {}".format(len(self.traces)), file=f)
-        print(file=f)
-        print("{:>6s} {:>16s} {:>6s} {:>12s}".format("trace", "runtime", "nhops", "weight"), file=f)
-        for i, t in enumerate(self.traces):
-            print("{:6d} {:16.4f} {:6d} {:12.6f}".format(i, t.data[-1]["time"], len(t.hops), t.weight/norm), file=f)
+
+        nhops = [ len(t.hops) for t in self.traces ]
+        hop_stats = [ np.sum( (t.weight for t in self.traces if len(t.hops)==i) )/norm for i in range(max(nhops)+1) ]
+        print("{:5s} {:16s}".format("nhops", "percentage"), file=f)
+        for i, w in enumerate(hop_stats):
+            print("{:5d} {:16.12f}".format(i, w), file=f)
+
+        if verbose:
+            print(file=f)
+            print("{:>6s} {:>16s} {:>6s} {:>12s}".format("trace", "runtime", "nhops", "weight"), file=f)
+            for i, t in enumerate(self.traces):
+                print("{:6d} {:16.4f} {:6d} {:12.6f}".format(i, t.data[-1]["time"], len(t.hops), t.weight/norm), file=f)
 
 
 ## Exception class indicating that a simulation was terminated while still inside the "interaction region"
