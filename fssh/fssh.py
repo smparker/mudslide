@@ -42,10 +42,13 @@ class TrajectorySH(object):
         self.last_velocity = np.zeros_like(self.velocity, dtype=np.float64)
         if "last_velocity" in options:
             self.last_velocity[:] = options["last_velocity"]
-        if rho0 == "ground":
-            self.rho = np.zeros([model.nstates(),model.nstates()], dtype=np.complex128)
-            self.rho[0,0] = 1.0
-            self.state = 0
+        if np.isscalar(rho0):
+            if rho0 == "ground":
+                self.rho = np.zeros([model.nstates(),model.nstates()], dtype=np.complex128)
+                self.rho[0,0] = 1.0
+                self.state = 0
+            else:
+                Exception("Unrecognized initial state option")
         else:
             try:
                 self.rho = np.copy(rho0)

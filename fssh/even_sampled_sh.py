@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-## @package fssh
+## @package even_sampling
 #  Module responsible for propagating surface hopping trajectories
 
 # fssh: program to run surface hopping simulations for model problems
@@ -25,6 +25,7 @@ import copy as cp
 import numpy as np
 
 from .fssh import TrajectoryCum
+from .integration import clenshaw_curtis
 
 ## Data structure to inform how new traces are spawned and weighted
 class SpawnStack(object):
@@ -34,41 +35,40 @@ class SpawnStack(object):
         self.marginal_weight = 1.0
 
         if sample_stack is not None:
-            mw = np.zeros(len(sample_stack))
-            mw[0] = 1.0
-            for i in range(1, len(sample_stack)):
-                mw[i] = 1.0 - sample_stack[i-1]["zeta"]
+            weights = np.array( [ s["dw"] for s in sample_stack ] )
+            mw = np.ones(len(sample_stack))
+            mw[1:] -= np.cumsum(weights[:len(weights)-1])
             self.marginal_weights = mw
+            self.last_dw = weights[0]
         else:
             self.margin_weights = np.ones(1)
+            self.last_dw = 0.0
 
-        self.izeta = None
+        self.izeta = 0
         self.zeta = None
-        self.last_dw = 0.0 # differential weight of last hop TODO I don't love this structure
 
     def zeta(self):
         return self.zeta
 
     def next_zeta(self, current_value, random_state = np.random.RandomState()):
         if self.sample_stack is not None:
-            if self.izeta is None:
-                self.izeta = 0
-                self.marginal_weight = 1.0
-            else:
-                izeta = self.izeta
-                while self.sample_stack[izeta]["zeta"] < current_value:
-                    izeta += 1
+            izeta = self.izeta
+            while self.sample_stack[izeta]["zeta"] < current_value:
+                izeta += 1
 
-                self.marginal_weight = self.marginal_weights[izeta]
-                self.last_dw = self.marginal_weights[self.izeta] - self.marginal_weights[izeta]
+            if izeta != self.izeta: # it means there was a hop, so update last_dw
+                weights = np.array( [ s["dw"] for s in self.sample_stack ] )
+                self.last_dw = np.sum(weights[self.izeta:izeta])
 
-                self.izeta = izeta
+            self.marginal_weight = self.marginal_weights[izeta]
+            self.izeta = izeta
 
             if self.izeta < len(self.sample_stack):
                 self.zeta = self.sample_stack[self.izeta]["zeta"]
             else:
                 raise Exception("Should I be returning None?")
                 self.zeta = None
+
         else:
             self.zeta = random_state.uniform()
 
@@ -111,6 +111,21 @@ class SpawnStack(object):
 
         return cls(forest, 1.0)
 
+    @classmethod
+    def build_quadrature(cls, nsamples, sample_depth, include_first=False):
+        nsamples = int(nsamples)
+        sample_depth = int(sample_depth)
+
+        samples, weights = clenshaw_curtis(nsamples-1, 0.0, 1.0)
+
+        forest = [ { "zeta" : s, "dw" : dw, "children" : None } for s, dw in zip(samples, weights) ]
+
+        for d in range(1, sample_depth):
+            leaves = cp.copy(forest)
+            forest = [ { "zeta" : s, "dw" : dw, "children" : cp.deepcopy(leaves) }
+                    for s, dw in zip(samples, weights) ]
+
+        return cls(forest, 1.0)
 
 ## Trajectory surface hopping using an even sampling approach
 #
@@ -125,7 +140,7 @@ class EvenSamplingTrajectory(TrajectoryCum):
 
         self.spawn_stack = cp.deepcopy(options["spawn_stack"])
 
-        self.zeta = self.spawn_stack.next_zeta(self.random_state)
+        self.zeta = self.spawn_stack.next_zeta(0.0, self.random_state)
 
     def clone(self, spawn_stack=None):
         if spawn_stack is None:
