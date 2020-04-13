@@ -229,6 +229,107 @@ class SuperExchange(DiabaticModel_):
 
         return out.reshape([1, 3, 3])
 
+class SubotnikModelX(DiabaticModel_):
+    nstates_ = 3
+    ndim_ = 1
+
+    ## Constructor defaults to Subotnik JPCA 2011 paper on decoherence
+    def __init__(self, representation="adiabatic", reference=None,
+            a = 0.03, b=1.6, c=0.005, xp=7.0, mass=2000.0):
+        DiabaticModel_.__init__(self, representation=representation, reference=reference)
+        self.a = float(a)
+        self.b = float(b)
+        self.c = float(c)
+        self.xp = float(xp)
+        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndim())
+
+    ## \f$V(x)\f$
+    def V(self, x):
+        xx = np.array( [ x - self.xp, x, x + self.xp ] )
+        tan = self.a * np.tanh(self.b * xx)
+        ex = self.c * np.exp(-xx**2)
+
+        v11 = tan[1] + tan[2]
+        v22 = -(tan[0] + tan[1])
+        v33 = -(tan[2] - tan[0])
+        v12 = ex[1]
+        v13 = ex[2]
+        v23 = ex[0]
+
+        return np.array([ [v11, v12, v13],
+                          [v12, v22, v23],
+                          [v13, v23, v33] ], dtype=np.float64)
+
+    ## \f$ \nabla V(x)\f$
+    def dV(self, x):
+        xx = np.array( [ x - self.xp, x, x + self.xp ] )
+        tan = self.a * self.b * np.cosh(self.b * xx)**(-2)
+        ex = -2.0 * xx * self.c * np.exp(-xx**2)
+
+        v11 = tan[1] + tan[2]
+        v22 = -(tan[0] + tan[1])
+        v33 = -(tan[2] - tan[0])
+        v12 = ex[1]
+        v13 = ex[2]
+        v23 = ex[0]
+
+        out =  np.array([ [v11, v12, v13],
+                          [v12, v22, v23],
+                          [v13, v23, v33] ], dtype=np.float64)
+
+        return out.reshape([1, 3, 3])
+
+class SubotnikModelS(DiabaticModel_):
+    nstates_ = 3
+    ndim_ = 1
+
+    ## Constructor defaults to Subotnik JPCA 2011 paper on decoherence
+    def __init__(self, representation="adiabatic", reference=None,
+            a = 0.015, b=1.0, c=0.005, d=0.5, xp=7.0, mass=2000.0):
+        DiabaticModel_.__init__(self, representation=representation, reference=reference)
+        self.a = float(a)
+        self.b = float(b)
+        self.c = float(c)
+        self.d = float(d)
+        self.xp = float(xp)
+        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndim())
+
+    ## \f$V(x)\f$
+    def V(self, x):
+        xx = np.array( [ x - self.xp, x, x + self.xp ] )
+        tan = self.a * np.tanh(self.b * xx)
+        ex = self.c * np.exp(-xx**2)
+
+        v11 = tan[0] - tan[2] + self.a
+        v22 = -(tan[0] - tan[2]) - self.a
+        v33 = 2.0 * self.a * np.tanh(self.d * x)
+        v12 = ex[2] + ex[0]
+        v13 = ex[1]
+        v23 = ex[1]
+
+        return np.array([ [v11, v12, v13],
+                          [v12, v22, v23],
+                          [v13, v23, v33] ], dtype=np.float64)
+
+    ## \f$ \nabla V(x)\f$
+    def dV(self, x):
+        xx = np.array( [ x - self.xp, x, x + self.xp ] )
+        tan = self.a * self.b * np.cosh(self.b * xx)**(-2)
+        ex = -2.0 * xx * self.c * np.exp(-xx**2)
+
+        v11 = tan[0] - tan[2]
+        v22 = -(tan[0] - tan[2])
+        v33 = 2 * self.a * self.d * np.cosh(self.d * x)**(-2)
+        v12 = ex[2] + ex[0]
+        v13 = ex[1]
+        v23 = ex[1]
+
+        out =  np.array([ [v11, v12, v13],
+                          [v12, v22, v23],
+                          [v13, v23, v33] ], dtype=np.float64)
+
+        return out.reshape([1, 3, 3])
+
 class ShinMetiu(AdiabaticModel_):
     ## Constructor defaults to classic Shin-Metiu as described in
     ## Gossel, Liacombe, Maitra JCP 2019
@@ -313,4 +414,7 @@ models =    { "simple" : TullySimpleAvoidedCrossing,
               "dual"   : TullyDualAvoidedCrossing,
               "extended" : TullyExtendedCouplingReflection,
               "super"  : SuperExchange,
-              "shin-metiu" : ShinMetiu }
+              "shin-metiu" : ShinMetiu,
+              "modelx" : SubotnikModelX,
+              "models" : SubotnikModelS
+              }
