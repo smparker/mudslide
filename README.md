@@ -15,7 +15,11 @@ one dimensional potentials.
     - `TullyDualAvoidedCrossing`
     - `TullyExtendedCouplingReflection`
     - `SuperExchange`
+    - `SubotnikModelX`
+    - `SubotnikModelS`
     - `ShinMetiu`
+  - now some 2D models
+    - `Subotnik2D`
 * `fssh` script that runs simple model trajectories
 * `surface` script that prints 1D surface and couplings
 
@@ -55,9 +59,9 @@ provided. For example:
     simple_model = fssh.models.TullySimpleAvoidedCrossing()
 
     # Generates trajectories always with starting position -5, starting momentum 10.0, on ground state
-    traj_gen = fssh.trajectory.TrajGenConst(-5.0, 10.0, "ground")
+    traj_gen = fssh.TrajGenConst(-5.0, 10.0, "ground")
 
-    simulator = fssh.trajectory.BatchedTraj(simple_model, traj_gen, fssh.TrajectorySH, samples = 4)
+    simulator = fssh.BatchedTraj(simple_model, traj_gen, fssh.TrajectorySH, samples = 4)
     results = simulator.compute()
     outcomes = results.outcomes
 
