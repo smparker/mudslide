@@ -38,7 +38,7 @@ import argparse as ap
 # Add a method into this dictionary to register it with argparse
 methods = {
         "fssh": TrajectorySH,
-        "fssh-cumulative": TrajectoryCum,
+        "cumulative-sh": TrajectoryCum,
         "ehrenfest": Ehrenfest
         }
 
