@@ -336,7 +336,7 @@ class Subotnik2D(DiabaticModel_):
 
     ## Constructor defaults to Subotnik JPCA 2011 paper on decoherence
     def __init__(self, representation="adiabatic", reference=None,
-            a=0.2, b=0.6, c=0.015, d=0.3, f=0.05, g=0.3, w=2.0 mass=2000.0):
+            a=0.2, b=0.6, c=0.015, d=0.3, f=0.05, g=0.3, w=2.0, mass=2000.0):
         DiabaticModel_.__init__(self, representation=representation, reference=reference)
         self.a = float(a)
         self.b = float(b)
