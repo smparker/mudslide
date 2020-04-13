@@ -24,7 +24,7 @@ import copy as cp
 
 import numpy as np
 
-from .fssh import TrajectoryCum
+from .cumulative_sh import TrajectoryCum
 from .integration import clenshaw_curtis
 
 ## Data structure to inform how new traces are spawned and weighted

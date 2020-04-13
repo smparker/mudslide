@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-## @package trajectory
+## @package fssh
+#  @file batch
 #  Module responsible for propagating surface hopping trajectories
 
 # fssh: program to run surface hopping simulations for model problems
@@ -23,7 +24,8 @@ import queue
 
 import numpy as np
 
-from .fssh import StillInteracting, TraceManager
+from .exceptions import StillInteracting
+from .tracer import TraceManager
 
 #####################################################################################
 # Canned classes act as generator functions for initial conditions                  #

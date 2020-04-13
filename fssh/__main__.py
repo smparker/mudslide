@@ -26,8 +26,11 @@ import pickle
 
 import sys
 
-from .fssh import TrajectorySH, TrajectoryCum, Ehrenfest
-from .trajectory import TrajGenConst, TrajGenNormal, BatchedTraj
+from .trajectory_sh import TrajectorySH
+from .cumulative_sh import TrajectoryCum
+from .ehrenfest import Ehrenfest
+from .batch import TrajGenConst, TrajGenNormal, BatchedTraj
+
 from .models import models
 
 import argparse as ap

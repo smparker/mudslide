@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-## @package __init__
+## @package fssh
 #  Module responsible for propagating surface hopping trajectories
 
 # fssh: program to run surface hopping simulations for model problems
@@ -18,13 +18,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from .electronics import *
+from __future__ import print_function, division
 
-from .trajectory_sh import *
-from .cumulative_sh import *
-from .even_sampling import *
-from .ehrenfest import *
+from .version import __version__
 
-from .batch import *
+import copy as cp
+import numpy as np
 
-from . import models
+## Exception class indicating that a simulation was terminated while still inside the "interaction region"
+class StillInteracting(Exception):
+    def __init__(self):
+        Exception.__init__(self, "A simulation ended while still inside the interaction region.")
+
