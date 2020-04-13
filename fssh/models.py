@@ -330,6 +330,57 @@ class SubotnikModelS(DiabaticModel_):
 
         return out.reshape([1, 3, 3])
 
+class Subotnik2D(DiabaticModel_):
+    nstates_ = 2
+    ndim_ = 2
+
+    ## Constructor defaults to Subotnik JPCA 2011 paper on decoherence
+    def __init__(self, representation="adiabatic", reference=None,
+            a=0.2, b=0.6, c=0.015, d=0.3, f=0.05, g=0.3, w=2.0 mass=2000.0):
+        DiabaticModel_.__init__(self, representation=representation, reference=reference)
+        self.a = float(a)
+        self.b = float(b)
+        self.c = float(c)
+        self.d = float(d)
+        self.f = float(f)
+        self.g = float(g)
+        self.w = float(w)
+        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndim())
+
+    ## \f$V(x)\f$
+    def V(self, r):
+        x, y = r[0], r[1]
+        v11 = -self.f * np.tanh(self.b * x)
+        z = self.b * (x - 1.0) + self.w * np.cos(self.g * y + np.pi * 0.5)
+        v22 = self.a * np.tanh(z) + 0.75 * self.a
+        v12 = self.c * np.exp(- self.d * x * x)
+
+        return np.array([ [v11, v12],
+                          [v12, v22] ], dtype=np.float64)
+
+    ## \f$ \nabla V(x)\f$
+    def dV(self, r):
+        x, y = r[0], r[1]
+
+        z = self.b * (x - 1.0) + self.w * np.cos(self.G * y + np.pi * 0.5)
+
+        v11x = -self.f * self.b * self.cosh(self.b * x)**(-2)
+        zx = self.b
+        v22x = self.a * zx * np.cosh(z)**(-2)
+        v12x = - 2.0 * self.d * self.x * self.c * np.exp(-self.d * x * x)
+
+        v11y = 0.0
+        zy = -self.w * self.g * np.sin(self.g * y + np.pi * 0.5)
+        v22y = self.a * zy * np.cosh(z)**(-2)
+        v12y = 0.0
+
+        vx = [ [v11x, v12x], [v12x, v22x] ]
+        vy = [ [v11y, v12y], [v12y, v22y] ]
+
+        out =  np.array([ vx, vy ], dtype=np.float64)
+
+        return out.reshape([2, 3, 3])
+
 class ShinMetiu(AdiabaticModel_):
     ## Constructor defaults to classic Shin-Metiu as described in
     ## Gossel, Liacombe, Maitra JCP 2019
