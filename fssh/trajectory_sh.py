@@ -72,7 +72,8 @@ class TrajectorySH(object):
         self.dt = float(options["dt"])
         self.outcome_type = options.get("outcome_type", "state")
 
-        self.random_state = np.random.RandomState(options.get("seed", None))
+        self.initial_seed = options.get("seed", None)
+        self.random_state = np.random.RandomState(self.initial_seed)
 
         self.electronics = options.get("electronics", None)
         self.hopping = np.zeros(model.nstates(), dtype=np.float64)

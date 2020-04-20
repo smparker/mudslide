@@ -97,7 +97,7 @@ class SpawnStack(object):
         return self.sample_stack is not None
 
     @classmethod
-    def from_quadrature(cls, nsamples, method="cc"):
+    def from_quadrature(cls, nsamples, weight=1.0, method="cc"):
         if not isinstance(nsamples, list):
             nsamples = [ int(nsamples) ]
 
@@ -108,7 +108,7 @@ class SpawnStack(object):
             forest = [ { "zeta" : s, "dw" : dw, "children" : cp.deepcopy(leaves) }
                     for s, dw in zip(samples, weights) ]
 
-        return cls(forest, 1.0)
+        return cls(forest, weight)
 
 ## Trajectory surface hopping using an even sampling approach
 #
@@ -143,7 +143,7 @@ class EvenSamplingTrajectory(TrajectoryCum):
                 trace_every = self.trace_every,
                 dt = self.dt,
                 outcome_type = self.outcome_type,
-                seed = None,
+                seed = None if self.initial_seed is None else self.initial_seed+1,
                 electronics = self.electronics,
                 restart = True,
                 duration = self.duration,

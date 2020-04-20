@@ -28,6 +28,7 @@ import sys
 
 from .trajectory_sh import TrajectorySH
 from .cumulative_sh import TrajectoryCum
+from .even_sampling import EvenSamplingTrajectory, SpawnStack
 from .ehrenfest import Ehrenfest
 from .batch import TrajGenConst, TrajGenNormal, BatchedTraj
 
@@ -39,7 +40,8 @@ import argparse as ap
 methods = {
         "fssh": TrajectorySH,
         "cumulative-sh": TrajectoryCum,
-        "ehrenfest": Ehrenfest
+        "ehrenfest": Ehrenfest,
+        "even-sampling" : EvenSamplingTrajectory
         }
 
 def main():
@@ -54,6 +56,7 @@ def main():
     parser.add_argument('-K', '--ksampling', default="none", type=str, choices=('none', 'normal'), help="how to sample momenta for a set of simulations (%(default)s)")
     parser.add_argument('-f', '--normal', default=20, type=float, help="standard deviation as a proportion of inverse momentum for normal samping (%(default)s)")
     parser.add_argument('-s', '--samples', default=200, type=int, help="number of samples (%(default)d)")
+    parser.add_argument('--sample-stack', default=[10], nargs='*', type=int, help="number of samples at each sampling depth for even sampling algorithm (%(default)s)")
     parser.add_argument('-j', '--nprocs', default=2, type=int, help="number of processors (%(default)d)")
     parser.add_argument('-M', '--mass', default=2000.0, type=float, help="particle mass (%(default)s)")
     parser.add_argument('-t', '--dt', default=20.0, type=float, help="time step in a.u.(%(default)s)")
@@ -126,7 +129,8 @@ def main():
                            dt = dt,
                            seed = args.seed,
                            bounds = [ -abs(args.bounds), abs(args.bounds) ],
-                           trace_every = args.every
+                           trace_every = args.every,
+                           spawn_stack = SpawnStack.from_quadrature(args.sample_stack)
                    )
         results = fssh.compute()
         outcomes = results.outcomes
