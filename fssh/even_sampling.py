@@ -25,7 +25,7 @@ import copy as cp
 import numpy as np
 
 from .cumulative_sh import TrajectoryCum
-from .integration import clenshaw_curtis
+from .integration import quadrature
 
 ## Data structure to inform how new traces are spawned and weighted
 class SpawnStack(object):
@@ -97,31 +97,14 @@ class SpawnStack(object):
         return self.sample_stack is not None
 
     @classmethod
-    def build_simple(cls, nsamples, sample_depth, include_first=False):
-        nsamples = int(nsamples)
-        sample_depth = int(sample_depth)
-        samples = np.sort(np.linspace(1.0, 0.0, nsamples, endpoint=include_first, retstep=False))
-        dw = samples[1] - samples[0]
+    def from_quadrature(cls, nsamples, method="cc"):
+        if not isinstance(nsamples, list):
+            nsamples = [ int(nsamples) ]
 
-        forest = [ { "zeta" : s, "dw" : dw, "children" : None } for s in samples ]
-
-        for d in range(1, sample_depth):
+        forest = None
+        for ns in nsamples:
             leaves = cp.copy(forest)
-            forest = [ { "zeta" : s, "dw" : dw, "children" : cp.deepcopy(leaves) } for s in samples ]
-
-        return cls(forest, 1.0)
-
-    @classmethod
-    def build_quadrature(cls, nsamples, sample_depth, include_first=False):
-        nsamples = int(nsamples)
-        sample_depth = int(sample_depth)
-
-        samples, weights = clenshaw_curtis(nsamples-1, 0.0, 1.0)
-
-        forest = [ { "zeta" : s, "dw" : dw, "children" : None } for s, dw in zip(samples, weights) ]
-
-        for d in range(1, sample_depth):
-            leaves = cp.copy(forest)
+            samples, weights = quadrature(ns, 0.0, 1.0, method=method)
             forest = [ { "zeta" : s, "dw" : dw, "children" : cp.deepcopy(leaves) }
                     for s, dw in zip(samples, weights) ]
 

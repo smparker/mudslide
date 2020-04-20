@@ -67,3 +67,12 @@ def clenshaw_curtis(n, a=-1.0, b=1.0):
     out *= 0.5 * (b - a)
 
     return xx, out
+
+def quadrature(n, a=-1.0, b=1.0, method="cc"):
+    """
+    Returns a quadrature rule for the specified method and bounds
+    """
+    if method.lower() == "cc" or method.lower() == "clenshaw-curtis":
+        return clenshaw_curtis(n, a, b)
+    else:
+        raise Exception("Unrecognized quadrature choice")
