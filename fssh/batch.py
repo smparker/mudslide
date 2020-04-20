@@ -110,6 +110,7 @@ class BatchedTraj(object):
 
         # time parameters
         self.options["initial_time"]  = inp.get("initial_time", 0.0)
+
         # statistical parameters
         self.options["samples"]       = inp.get("samples", 2000)
         self.options["dt"]            = inp.get("dt", 20.0) # default to roughly half a femtosecond

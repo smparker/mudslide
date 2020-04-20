@@ -130,7 +130,7 @@ def main():
                            seed = args.seed,
                            bounds = [ -abs(args.bounds), abs(args.bounds) ],
                            trace_every = args.every,
-                           spawn_stack = SpawnStack.from_quadrature(args.sample_stack)
+                           spawn_stack = args.sample_stack
                    )
         results = fssh.compute()
         outcomes = results.outcomes

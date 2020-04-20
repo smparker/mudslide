@@ -29,7 +29,7 @@ from .integration import quadrature
 
 ## Data structure to inform how new traces are spawned and weighted
 class SpawnStack(object):
-    def __init__(self, sample_stack, weight):
+    def __init__(self, sample_stack, weight=1.0):
         self.sample_stack = sample_stack
         self.base_weight = weight
         self.marginal_weight = 1.0
@@ -121,7 +121,13 @@ class EvenSamplingTrajectory(TrajectoryCum):
     def __init__(self, *args, **options):
         TrajectoryCum.__init__(self, *args, **options)
 
-        self.spawn_stack = cp.deepcopy(options["spawn_stack"])
+        ss = options["spawn_stack"]
+        if isinstance(ss, SpawnStack):
+            self.spawn_stack = cp.deepcopy(options["spawn_stack"])
+        elif isinstance(ss, list):
+            self.spawn_stack = SpawnStack.from_quadrature(ss)
+        else:
+            self.spawn_stack = SpawnStack(ss)
 
         self.zeta = self.spawn_stack.next_zeta(0.0, self.random_state)
 
