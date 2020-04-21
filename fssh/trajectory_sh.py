@@ -143,8 +143,8 @@ class TrajectorySH(object):
             return True
 
     ## add results from current time point to tracing function
-    def trace(self):
-        if (self.nsteps % self.trace_every) == 0:
+    def trace(self, force=False):
+        if force or (self.nsteps % self.trace_every) == 0:
             self.tracer.collect(self.snapshot())
 
     ## returns a dictionary with all the loggable data from the trajectory
@@ -373,7 +373,7 @@ class TrajectorySH(object):
 
             self.trace()
 
-        self.trace()
+        self.trace(force=True)
 
         return self.tracer
 
