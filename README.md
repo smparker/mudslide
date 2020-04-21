@@ -107,14 +107,17 @@ and define class variables `ndim_` and `nstates_` that hold the number of
 nuclear degrees of freedom and the number of electronic states, respectively. See
 the file `fssh/models.py` for examples.
 
-The file tullymodels.py implements the three models in Tully's original paper. They are:
+The file models.py implements the three models in Tully's original paper. They are:
 
 * TullySimpleAvoidedCrossing
 * TullyDualAvoidedCrossing
 * TullyExtendedCouplingReflection
 
-Additional models incldued are:
-* `SuperExchange` - Oleg Prezhdo's three-state super exchange model.
+Additional models included are:
+* `SuperExchange` - Oleg Prezhdo's three-state super exchange model from Wang, Trivedi, Prezhdo JCTC (2014) doi:10.1021/ct5003835
+* `SubotnikModelX` - 'Model X' from Subotnik JPCA (2011) doi: 10.1021/jp206557h
+* `SubotnikModelS` - 'Model S' from Subotnik JPCA (2011) doi: 10.1021/jp206557h
+* `Subotnik2D` - 2D model from Subotnik JPCA (2011) doi: 10.1021/jp206557h
 * `Shin-Metiu`
 
 ## Trajectory generator
