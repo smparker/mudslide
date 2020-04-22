@@ -68,11 +68,16 @@ def clenshaw_curtis(n, a=-1.0, b=1.0):
 
     return xx, out
 
-def quadrature(n, a=-1.0, b=1.0, method="cc"):
+def quadrature(n, a=-1.0, b=1.0, method="gl"):
     """
     Returns a quadrature rule for the specified method and bounds
     """
     if method.lower() == "cc" or method.lower() == "clenshaw-curtis":
         return clenshaw_curtis(n, a, b)
+    elif method.lower() == "gl" or method.lower() == "gauss-legendre":
+        points, weights = np.polynomial.legendre.leggauss(n)
+        points = points * 0.5 * (b - a) + 0.5 * (a + b)
+        weights *= 0.5
+        return points, weights
     else:
         raise Exception("Unrecognized quadrature choice")

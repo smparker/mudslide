@@ -97,7 +97,7 @@ class SpawnStack(object):
         return self.sample_stack is not None
 
     @classmethod
-    def from_quadrature(cls, nsamples, weight=1.0, method="cc"):
+    def from_quadrature(cls, nsamples, weight=1.0, method="gl"):
         if not isinstance(nsamples, list):
             nsamples = [ int(nsamples) ]
 
