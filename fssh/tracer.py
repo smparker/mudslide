@@ -54,20 +54,20 @@ class Trace(object):
     def __len__(self):
         return len(self.data)
 
-    def print(self, f=sys.stdout):
+    def print(self, file=sys.stdout):
         nst = self.data[0]["density_matrix"].shape[0]
         headerlist =  [ "%12s" % x for x in [ "time", "x", "p", "V", "T", "E" ] ]
         headerlist += [ "%12s" % x for x in [ "rho_{%d,%d}" % (i,i) for i in range(nst) ] ]
         headerlist += [ "%12s" % x for x in [ "H_{%d,%d}" % (i,i) for i in range(nst) ] ]
         headerlist += [ "%12s" % "active" ]
         headerlist += [ "%12s" % "hopping" ]
-        print("#" + " ".join(headerlist), file=f)
+        print("#" + " ".join(headerlist), file=file)
         for i in self.data:
             line = " {time:12.6f} {position[0]:12.6f} {momentum[0]:12.6f} {potential:12.6f} {kinetic:12.6f} {energy:12.6f} ".format(**i)
             line += " ".join(["%12.6f" % x for x in np.real(np.diag(i["density_matrix"]))])
             line += " " + " ".join(["%12.6f" % x for x in np.real(np.diag(i["electronics"].hamiltonian))])
             line += " {active:12d} {hopping:12e}".format(**i)
-            print(line, file=f)
+            print(line, file=file)
 
     ## Classifies end of simulation:
     #
@@ -123,21 +123,21 @@ class TraceManager(object):
         outcome = np.sum((t.weight * t.outcome() for t in self.traces))/weight_norm
         return outcome
 
-    def summarize(self, f=sys.stdout, verbose=False):
+    def summarize(self, verbose=False, file=sys.stdout):
         norm = sum((t.weight for t in self.traces))
-        print("Running the FSSH package ({})".format(__version__), file=f)
-        print("------------------------------------", file=f)
-        print("# of trajectories: {}".format(len(self.traces)), file=f)
+        print("Running the FSSH package ({})".format(__version__), file=file)
+        print("------------------------------------", file=file)
+        print("# of trajectories: {}".format(len(self.traces)), file=file)
 
         nhops = [ len(t.hops) for t in self.traces ]
         hop_stats = [ np.sum( (t.weight for t in self.traces if len(t.hops)==i) )/norm for i in range(max(nhops)+1) ]
-        print("{:5s} {:16s}".format("nhops", "percentage"), file=f)
+        print("{:5s} {:16s}".format("nhops", "percentage"), file=file)
         for i, w in enumerate(hop_stats):
-            print("{:5d} {:16.12f}".format(i, w), file=f)
+            print("{:5d} {:16.12f}".format(i, w), file=file)
 
         if verbose:
-            print(file=f)
-            print("{:>6s} {:>16s} {:>6s} {:>12s}".format("trace", "runtime", "nhops", "weight"), file=f)
+            print(file=file)
+            print("{:>6s} {:>16s} {:>6s} {:>12s}".format("trace", "runtime", "nhops", "weight"), file=file)
             for i, t in enumerate(self.traces):
-                print("{:6d} {:16.4f} {:6d} {:12.6f}".format(i, t.data[-1]["time"], len(t.hops), t.weight/norm), file=f)
+                print("{:6d} {:16.4f} {:6d} {:12.6f}".format(i, t.data[-1]["time"], len(t.hops), t.weight/norm), file=file)
 
