@@ -78,6 +78,8 @@ class TrajectorySH(object):
         self.electronics = options.get("electronics", None)
         self.hopping = np.zeros(model.nstates(), dtype=np.float64)
 
+        self.electronic_integration = options.get("electronic_integration", "exp").lower()
+
         self.weight = float(options.get("weight", 1.0))
 
         self.restart = options.get("restart", False)
@@ -239,8 +241,9 @@ class TrajectorySH(object):
     ## Compute the Hamiltonian used to propagate the electronic wavefunction
     #  returns nonadiabatic coupling H - i W
     #  @param elec_states ElectronicStates at \f$t\f$
-    def hamiltonian_propagator(self, elec_states):
-        velo = 0.5*(self.last_velocity + self.velocity)
+    def hamiltonian_propagator(self, elec_states, velo=None):
+        if velo is None:
+            velo = 0.5*(self.last_velocity + self.velocity)
 
         out = elec_states.hamiltonian - 1j * self.NAC_matrix(elec_states, velo)
         return out
@@ -251,14 +254,19 @@ class TrajectorySH(object):
     #
     # The propagation assumes the electronic energies and couplings are static throughout.
     # This will only be true for fairly small time steps
-    def propagate_electronics(self, elec_states, dt):
-        W = self.hamiltonian_propagator(elec_states)
+    def propagate_electronics(self, last_electronics, this_electronics, dt):
+        W = self.hamiltonian_propagator(this_electronics)
 
-        diags, coeff = np.linalg.eigh(W)
+        if self.electronic_integration == "exp":
+            diags, coeff = np.linalg.eigh(W)
 
-        # use W as temporary storage
-        U = np.linalg.multi_dot([ coeff, np.diag(np.exp(-1j * diags * dt)), coeff.T.conj() ])
-        np.dot(U, np.dot(self.rho, U.T.conj(), out=W), out=self.rho)
+            # use W as temporary storage
+            U = np.linalg.multi_dot([ coeff, np.diag(np.exp(-1j * diags * dt)), coeff.T.conj() ])
+            np.dot(U, np.dot(self.rho, U.T.conj(), out=W), out=self.rho)
+        elif self.electronic_integration == "linear-rk4":
+            raise Exception("linear RK4 not yet implemented")
+        else:
+            raise Exception("Unrecognized electronic integration option")
 
     ## move classical position forward one step
     # @param electronics ElectronicStates from current step
@@ -349,7 +357,7 @@ class TrajectorySH(object):
             self.last_velocity, self.velocity = veloc - dv, veloc + dv
 
             # propagate wavefunction a half-step forward to match velocity
-            self.propagate_electronics(self.electronics, 0.5*self.dt)
+            self.propagate_electronics(self.electronics, self.electronics, 0.5*self.dt)
 
         potential_energy = self.potential_energy(self.electronics)
 
@@ -369,7 +377,7 @@ class TrajectorySH(object):
             self.advance_velocity(self.electronics)
 
             # now propagate the electronic wavefunction to the new time
-            self.propagate_electronics(self.electronics, self.dt)
+            self.propagate_electronics(last_electronics, self.electronics, self.dt)
             self.hopping = self.surface_hopping(self.electronics)
 
             self.time += self.dt
