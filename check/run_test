@@ -78,7 +78,7 @@ for k in 10 20; do
 
   printf "    %-80s\r" "Running simple model cumulative SH with k = $k a.u."
 
-  $fssh -s 1 -m simple -k $k $k -x -10 --dt 5 -n 1 -z 756396545 -o "single" -j 1 -a cumulative-sh > $outfile
+  $fssh -s 1 -m simple -k $k $k -x -10 --dt 5 -n 1 --electronic linear-rk4 -z 756396545 -o "single" -j 1 -a cumulative-sh > $outfile
   $check_trace $outfile $reffile ffffffffffd > $checkfile
   ktest=$(trim $(cat $checkfile))
 

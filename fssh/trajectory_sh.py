@@ -271,15 +271,18 @@ class TrajectorySH(object):
             last_tau = last_electronics.derivative_coupling
             this_v = self.velocity
             last_v = self.last_velocity
+
+            W00 = np.einsum("ijx,x->ij", last_tau, last_v)
+            W11 = np.einsum("ijx,x->ij", this_tau, this_v)
+            W01 = np.einsum("ijx,x->ij", last_tau, this_v) + np.einsum("ijx,x->ij", this_tau, last_v)
+
             def ydot(rho, t):
                 assert t >= 0.0 and t <= dt
                 w0 = 1.0 - t/dt
                 w1 = t/dt
-                H = last_H * w0 + this_H * w1
-                tau = last_tau * w0 + this_tau * w1
-                vel = last_v * w0 + this_v * w1
 
-                Hbar = H - 1j * np.einsum("ijx,x->ij", tau, vel)
+                H = last_H * w0 + this_H * w1
+                Hbar = H - 1j * (w0*w0*W00 + w1*w1*W11 + w0*w1*W01)
 
                 out = -1j * ( np.dot(Hbar, rho) - np.dot(rho, Hbar) )
                 return out

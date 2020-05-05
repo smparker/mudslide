@@ -50,6 +50,7 @@ def main():
 
     parser.add_argument('-a', '--method', default="fssh", choices=methods.keys(), type=str.lower, help="Variant of SH")
     parser.add_argument('-m', '--model', default='simple', choices=models.keys(), type=str, help="Tully model to plot (%(default)s)")
+    parser.add_argument('--electronic', default='exp', choices=("exp", "linear-rk4"), type=str, help="Electronic Propagation method (%(default)s)")
     parser.add_argument('-k', '--krange', default=(0.1,30.0), nargs=2, type=float, help="range of momenta to consider (%(default)s)")
     parser.add_argument('-n', '--nk', default=20, type=int, help="number of momenta to compute (%(default)d)")
     parser.add_argument('-l', '--kspacing', default="linear", type=str, choices=('linear', 'log'), help="linear or log spacing for momenta (%(default)s)")
@@ -130,7 +131,8 @@ def main():
                            seed = args.seed,
                            bounds = [ -abs(args.bounds), abs(args.bounds) ],
                            trace_every = args.every,
-                           spawn_stack = args.sample_stack
+                           spawn_stack = args.sample_stack,
+                           electronic_integration=args.electronic
                    )
         results = fssh.compute()
         outcomes = results.outcomes
