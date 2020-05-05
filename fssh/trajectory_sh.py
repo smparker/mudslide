@@ -21,6 +21,7 @@
 from __future__ import print_function, division
 
 from .version import __version__
+from .propagation import rk4
 
 import copy as cp
 import numpy as np
@@ -283,7 +284,7 @@ class TrajectorySH(object):
                 out = -1j * ( np.dot(Hbar, rho) - np.dot(rho, Hbar) )
                 return out
 
-            propagate_rk4(self.rho, ydot, 0.0, dt, 128)
+            self.rho = rk4(self.rho, ydot, 0.0, dt, 128)
         else:
             raise Exception("Unrecognized electronic integration option")
 
