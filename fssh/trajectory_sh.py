@@ -129,15 +129,19 @@ class TrajectorySH(object):
                     np.array(bounds[1], dtype=np.float64) )
         else:
             duration["box_bounds"] = None
-        duration["max_steps"] = options.get('max_steps', 100000)
-        duration["max_time"] = options.get('max_time', 1e25) # default is to hopefully never hit this
+        duration["max_steps"] = options.get('max_steps', 100000) # < 0 interpreted as no limit
+        duration["max_time"] = options.get('max_time', 1e25) # set to an outrageous number by default
 
         self.duration = duration
 
     ## Returns True if a trajectory ought to keep running, False if it should finish
     def continue_simulating(self):
         """Returns True if a trajectory ought to keep running, False if it should finish"""
-        if self.force_quit or self.nsteps > self.duration["max_steps"] or self.time > self.duration["max_time"]:
+        if self.force_quit:
+            return False
+        elif self.duration["max_steps"] >= 0 and self.nsteps > self.duration["max_steps"]:
+            return False
+        elif self.time > self.duration["max_time"]:
             return False
         elif self.duration["found_box"]:
             return self.currently_interacting()
