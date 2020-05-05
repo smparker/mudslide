@@ -243,7 +243,7 @@ class TrajectorySH(object):
     #  @param elec_states ElectronicStates at \f$t\f$
     def hamiltonian_propagator(self, elec_states, velo=None):
         if velo is None:
-            velo = 0.5*(self.last_velocity + self.velocity)
+            velo = self.velocity
 
         out = elec_states.hamiltonian - 1j * self.NAC_matrix(elec_states, velo)
         return out
@@ -264,28 +264,51 @@ class TrajectorySH(object):
             U = np.linalg.multi_dot([ coeff, np.diag(np.exp(-1j * diags * dt)), coeff.T.conj() ])
             np.dot(U, np.dot(self.rho, U.T.conj(), out=W), out=self.rho)
         elif self.electronic_integration == "linear-rk4":
-            raise Exception("linear RK4 not yet implemented")
+            this_H = this_electronics.hamiltonian
+            last_H = last_electronics.hamiltonian
+            this_tau = this_electronics.derivative_coupling
+            last_tau = last_electronics.derivative_coupling
+            this_v = self.velocity
+            last_v = self.last_velocity
+            def ydot(rho, t):
+                assert t >= 0.0 and t <= dt
+                w0 = 1.0 - t/dt
+                w1 = t/dt
+                H = last_H * w0 + this_H * w1
+                tau = last_tau * w0 + this_tau * w1
+                vel = last_v * w0 + this_v * w1
+
+                Hbar = H - 1j * np.einsum("ijx,x->ij", tau, vel)
+
+                out = -1j * ( np.dot(Hbar, rho) - np.dot(rho, Hbar) )
+                return out
+
+            propagate_rk4(self.rho, ydot, 0.0, dt, 128)
         else:
             raise Exception("Unrecognized electronic integration option")
 
     ## move classical position forward one step
     # @param electronics ElectronicStates from current step
-    def advance_position(self, electronics):
-        self.position += self.velocity * self.dt
+    def advance_position(self, last_electronics, this_electronics):
+        acceleration = self.force(this_electronics) / self.mass
+        self.last_position = self.position
+        self.position += self.velocity * self.dt + 0.5 * acceleration * self.dt * self.dt
 
     ## move classical velocity forward one step
     # @param electronics ElectronicStates from current step
-    def advance_velocity(self, electronics):
-        acceleration = self.force(electronics) / self.mass
+    def advance_velocity(self, last_electronics, this_electronics):
+        last_acceleration = self.force(last_electronics) / self.mass
+        this_acceleration = self.force(this_electronics) / self.mass
 
-        self.last_velocity, self.velocity = self.velocity, self.velocity + acceleration * self.dt
+        self.last_velocity = self.velocity
+        self.velocity += 0.5 * (last_acceleration + this_acceleration) * self.dt
 
     ## Compute probability of hopping, generate random number, and perform hops
     # @param elec_states ElectronicStates from current step
     def surface_hopping(self, elec_states):
         nstates = self.model.nstates()
 
-        velo = 0.5 * (self.last_velocity + self.velocity) # interpolate velocities to get value at integer step
+        velo = self.velocity
         W = self.NAC_matrix(elec_states, velo)[self.state, :]
 
         probs = 2.0 * np.real(self.rho[self.state,:]) * W[:] * self.dt / np.real(self.rho[self.state,self.state])
@@ -350,15 +373,6 @@ class TrajectorySH(object):
         if not self.restart:
             self.electronics = self.model.update(self.position)
 
-            # start by taking half step in velocity
-            initial_acc = self.force(self.electronics) / self.mass
-            veloc = self.velocity
-            dv = 0.5 * initial_acc * self.dt
-            self.last_velocity, self.velocity = veloc - dv, veloc + dv
-
-            # propagate wavefunction a half-step forward to match velocity
-            self.propagate_electronics(self.electronics, self.electronics, 0.5*self.dt)
-
         potential_energy = self.potential_energy(self.electronics)
 
         self.hopping = 0.0
@@ -368,13 +382,13 @@ class TrajectorySH(object):
         # propagation
         while (True):
             # first update nuclear coordinates
-            self.advance_position(self.electronics)
+            self.advance_position(last_electronics, self.electronics)
 
             # calculate electronics at new position
             last_electronics, self.electronics = self.electronics, self.electronics.update(self.position)
 
             # update velocity
-            self.advance_velocity(self.electronics)
+            self.advance_velocity(last_electronics, self.electronics)
 
             # now propagate the electronic wavefunction to the new time
             self.propagate_electronics(last_electronics, self.electronics, self.dt)
