@@ -40,9 +40,11 @@ class SpawnStack(object):
             mw[1:] -= np.cumsum(weights[:len(weights)-1])
             self.marginal_weights = mw
             self.last_dw = weights[0]
+            self.last_stack = None
         else:
             self.margin_weights = np.ones(1)
             self.last_dw = 0.0
+            self.last_stack = None
 
         self.izeta = 0
         self.zeta = None
@@ -53,21 +55,21 @@ class SpawnStack(object):
     def next_zeta(self, current_value, random_state = np.random.RandomState()):
         if self.sample_stack is not None:
             izeta = self.izeta
-            while self.sample_stack[izeta]["zeta"] < current_value:
+            while izeta < len(self.sample_stack) and self.sample_stack[izeta]["zeta"] < current_value:
                 izeta += 1
 
             if izeta != self.izeta: # it means there was a hop, so update last_dw
                 weights = np.array( [ s["dw"] for s in self.sample_stack ] )
                 self.last_dw = np.sum(weights[self.izeta:izeta])
+                self.last_stack = self.sample_stack[self.izeta] # should actually probably be a merge operation
 
-            self.marginal_weight = self.marginal_weights[izeta]
+            self.marginal_weight = self.marginal_weights[izeta] if izeta != len(self.sample_stack) else 0.0
             self.izeta = izeta
 
             if self.izeta < len(self.sample_stack):
                 self.zeta = self.sample_stack[self.izeta]["zeta"]
             else:
-                raise Exception("Should I be returning None?")
-                self.zeta = None
+                self.zeta = 10.0 # should be impossible
 
         else:
             self.zeta = random_state.uniform()
@@ -79,7 +81,7 @@ class SpawnStack(object):
 
     def spawn(self, reweight = 1.0):
         if self.sample_stack:
-            samp = self.sample_stack[self.izeta]
+            samp = self.last_stack
             dw = self.last_dw
             if dw == 0:
                 raise Exception("What happened? A hop with no differential weight?")

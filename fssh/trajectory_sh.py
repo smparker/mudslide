@@ -81,11 +81,15 @@ class TrajectorySH(object):
         self.weight = float(options.get("weight", 1.0))
 
         self.restart = options.get("restart", False)
+        self.force_quit = False
 
     ## Update weight held by trajectory and by trace
     def update_weight(self, weight):
         self.weight = weight
         self.tracer.weight = weight
+
+        if self.weight == 0.0:
+            self.force_quit = True
 
     ## Override deepcopy
     def __deepcopy__(self, memo):
@@ -133,7 +137,7 @@ class TrajectorySH(object):
     ## Returns True if a trajectory ought to keep running, False if it should finish
     def continue_simulating(self):
         """Returns True if a trajectory ought to keep running, False if it should finish"""
-        if self.nsteps > self.duration["max_steps"] or self.time > self.duration["max_time"]:
+        if self.force_quit or self.nsteps > self.duration["max_steps"] or self.time > self.duration["max_time"]:
             return False
         elif self.duration["found_box"]:
             return self.currently_interacting()
