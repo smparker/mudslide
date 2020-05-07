@@ -22,7 +22,7 @@ for k in 8 14 20; do
   printf "    %-80s\r" "Running Tully's simple avoided crossing with k = $k a.u."
 
   $fssh -s 1 -m simple -k $k $k -x -10 --dt 5 -n 1 -z 200 -o "single" -j 1 > $outfile
-  $check_trace $outfile $reffile ffffffffffd > $checkfile
+  $check_trace $outfile $reffile ffffffffffdf > $checkfile
   ktest=$(trim $(cat $checkfile))
 
   if [ "$ktest" != "pass" ]; then
@@ -41,7 +41,7 @@ for k in 20 50 100; do
   printf "    %-80s\r" "Running Tully's dual avoided crossing with k = $k a.u."
 
   $fssh -s 1 -m dual -k $k $k -x -10 --dt 5 -n 1 -z 200 -o "single" -j 1 > $outfile
-  $check_trace $outfile $reffile ffffffffffd > $checkfile
+  $check_trace $outfile $reffile ffffffffffdf > $checkfile
   ktest=$(trim $(cat $checkfile))
 
   if [ "$ktest" != "pass" ]; then
@@ -60,7 +60,7 @@ for k in 10 15 20; do
   printf "    %-80s\r" "Running Tully's extended model with k = $k a.u."
 
   $fssh -s 1 -m extended -k $k $k -x -10 --dt 5 -n 1 -z 200 -o "single" -j 1 > $outfile
-  $check_trace $outfile $reffile ffffffffffd > $checkfile
+  $check_trace $outfile $reffile ffffffffffdf > $checkfile
   ktest=$(trim $(cat $checkfile))
 
   if [ "$ktest" != "pass" ]; then
@@ -79,7 +79,7 @@ for k in 10 20; do
   printf "    %-80s\r" "Running simple model cumulative SH with k = $k a.u."
 
   $fssh -s 1 -m simple -k $k $k -x -10 --dt 5 -n 1 --electronic linear-rk4 -z 756396545 -o "single" -j 1 -a cumulative-sh > $outfile
-  $check_trace $outfile $reffile ffffffffffd > $checkfile
+  $check_trace $outfile $reffile ffffffffffdf > $checkfile
   ktest=$(trim $(cat $checkfile))
 
   if [ "$ktest" != "pass" ]; then

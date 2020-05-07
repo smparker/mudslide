@@ -240,14 +240,16 @@ class TrajectorySH(object):
         self.velocity += scal * M_inv * direction
 
     ## Compute the Hamiltonian used to propagate the electronic wavefunction
-    #  returns nonadiabatic coupling H - i W
+    #  returns nonadiabatic coupling H - i W at midpoint between current and previous time steps
     #  @param elec_states ElectronicStates at \f$t\f$
-    def hamiltonian_propagator(self, elec_states, velo=None):
+    def hamiltonian_propagator(self, last_electronics, this_electronics, velo=None):
         if velo is None:
-            velo = self.velocity
+            velo = 0.5 * (self.velocity + self.last_velocity)
 
-        out = elec_states.hamiltonian - 1j * self.NAC_matrix(elec_states, velo)
-        return out
+        H = 0.5 * (this_electronics.hamiltonian + last_electronics.hamiltonian)
+        TV = 0.5 * np.einsum("ijx,x->ij", this_electronics.derivative_coupling + last_electronics.derivative_coupling,
+                velo)
+        return H -1j * TV
 
     ## Propagates \f$\rho(t)\f$ to \f$\rho(t + dt)\f$
     # @param elec_states ElectronicStates at \f$t\f$
@@ -256,9 +258,9 @@ class TrajectorySH(object):
     # The propagation assumes the electronic energies and couplings are static throughout.
     # This will only be true for fairly small time steps
     def propagate_electronics(self, last_electronics, this_electronics, dt):
-        W = self.hamiltonian_propagator(this_electronics)
-
         if self.electronic_integration == "exp":
+            # Use midpoint propagator
+            W = self.hamiltonian_propagator(last_electronics, this_electronics)
             diags, coeff = np.linalg.eigh(W)
 
             # use W as temporary storage
@@ -272,22 +274,38 @@ class TrajectorySH(object):
             this_v = self.velocity
             last_v = self.last_velocity
 
-            W00 = np.einsum("ijx,x->ij", last_tau, last_v)
-            W11 = np.einsum("ijx,x->ij", this_tau, this_v)
-            W01 = np.einsum("ijx,x->ij", last_tau, this_v) + np.einsum("ijx,x->ij", this_tau, last_v)
+            TV00 = np.einsum("ijx,x->ij", last_tau, last_v)
+            TV11 = np.einsum("ijx,x->ij", this_tau, this_v)
+            TV01 = np.einsum("ijx,x->ij", last_tau, this_v) + np.einsum("ijx,x->ij", this_tau, last_v)
+
+            HH = last_H
+            eigs, vecs = np.linalg.eigh(HH)
+
+            H0  = np.linalg.multi_dot([vecs.T, last_H, vecs])
+            H1  = np.linalg.multi_dot([vecs.T, this_H, vecs])
+            W00 = np.linalg.multi_dot([vecs.T, TV00, vecs])
+            W11 = np.linalg.multi_dot([vecs.T, TV11, vecs])
+            W01 = np.linalg.multi_dot([vecs.T, TV01, vecs])
 
             def ydot(rho, t):
                 assert t >= 0.0 and t <= dt
                 w0 = 1.0 - t/dt
                 w1 = t/dt
 
-                H = last_H * w0 + this_H * w1
+                ergs = np.exp(1j * eigs * t).reshape([1, -1])
+                phases = np.dot(ergs.T.conj(), ergs)
+
+                H = H0 * (w0 - 1.0) + H1 * w1
                 Hbar = H - 1j * (w0*w0*W00 + w1*w1*W11 + w0*w1*W01)
+                HI = Hbar * phases
 
                 out = -1j * ( np.dot(Hbar, rho) - np.dot(rho, Hbar) )
                 return out
 
-            self.rho = rk4(self.rho, ydot, 0.0, dt, 128)
+            tmprho = rk4(self.rho, ydot, 0.0, dt, 128)
+            ergs = np.exp(-1j * eigs * dt).reshape([1, -1])
+            phases = np.dot(ergs.T.conj(), ergs)
+            self.rho = np.linalg.multi_dot([vecs, tmprho * phases, vecs.T])
         else:
             raise Exception("Unrecognized electronic integration option")
 
@@ -309,13 +327,12 @@ class TrajectorySH(object):
 
     ## Compute probability of hopping, generate random number, and perform hops
     # @param elec_states ElectronicStates from current step
-    def surface_hopping(self, elec_states):
+    def surface_hopping(self, last_electronics, this_electronics):
         nstates = self.model.nstates()
 
-        velo = self.velocity
-        W = self.NAC_matrix(elec_states, velo)[self.state, :]
+        H = self.hamiltonian_propagator(last_electronics, this_electronics)
 
-        probs = 2.0 * np.real(self.rho[self.state,:]) * W[:] * self.dt / np.real(self.rho[self.state,self.state])
+        probs = 2.0 * np.imag(self.rho[self.state,:] * H[:,self.state]) * self.dt / np.real(self.rho[self.state,self.state])
 
         # zero out 'self-hop' for good measure (numerical safety)
         probs[self.state] = 0.0
@@ -326,7 +343,7 @@ class TrajectorySH(object):
 
         hop_targets = self.hopper(probs)
         if hop_targets:
-            self.hop_to_it(hop_targets, elec_states)
+            self.hop_to_it(hop_targets, this_electronics)
 
         return sum(probs)
 
@@ -396,7 +413,7 @@ class TrajectorySH(object):
 
             # now propagate the electronic wavefunction to the new time
             self.propagate_electronics(last_electronics, self.electronics, self.dt)
-            self.hopping = self.surface_hopping(self.electronics)
+            self.hopping = self.surface_hopping(last_electronics, self.electronics)
 
             self.time += self.dt
             self.nsteps += 1
