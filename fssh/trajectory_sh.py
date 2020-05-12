@@ -80,6 +80,8 @@ class TrajectorySH(object):
         self.hopping = np.zeros(model.nstates(), dtype=np.float64)
 
         self.electronic_integration = options.get("electronic_integration", "exp").lower()
+        self.max_electronic_dt = options.get("max_electronic_dt", 0.1)
+        self.starting_electronic_intervals = options.get("starting_electronic_intervals", 4)
 
         self.weight = float(options.get("weight", 1.0))
 
@@ -293,7 +295,7 @@ class TrajectorySH(object):
                 w1 = t/dt
 
                 ergs = np.exp(1j * eigs * t).reshape([1, -1])
-                phases = np.dot(ergs.T.conj(), ergs)
+                phases = np.dot(ergs.T, ergs.conj())
 
                 H = H0 * (w0 - 1.0) + H1 * w1
                 Hbar = H - 1j * (w0*w0*W00 + w1*w1*W11 + w0*w1*W01)
@@ -302,8 +304,12 @@ class TrajectorySH(object):
                 out = -1j * ( np.dot(Hbar, rho) - np.dot(rho, Hbar) )
                 return out
 
-            tmprho = rk4(self.rho, ydot, 0.0, dt, 128)
-            ergs = np.exp(-1j * eigs * dt).reshape([1, -1])
+            nsteps = self.starting_electronic_intervals
+            while (dt/nsteps > self.max_electronic_dt):
+                nsteps *= 2
+
+            tmprho = rk4(self.rho, ydot, 0.0, dt, nsteps)
+            ergs = np.exp(1j * eigs * dt).reshape([1, -1])
             phases = np.dot(ergs.T.conj(), ergs)
             self.rho = np.linalg.multi_dot([vecs, tmprho * phases, vecs.T])
         else:
