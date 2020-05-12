@@ -269,12 +269,14 @@ class TrajectorySH(object):
             U = np.linalg.multi_dot([ coeff, np.diag(np.exp(-1j * diags * dt)), coeff.T.conj() ])
             np.dot(U, np.dot(self.rho, U.T.conj(), out=W), out=self.rho)
         elif self.electronic_integration == "linear-rk4":
-            this_H = this_electronics.hamiltonian
             last_H = last_electronics.hamiltonian
-            this_tau = this_electronics.derivative_coupling
+            this_H = this_electronics.hamiltonian
+
             last_tau = last_electronics.derivative_coupling
-            this_v = self.velocity
+            this_tau = this_electronics.derivative_coupling
+
             last_v = self.last_velocity
+            this_v = self.velocity
 
             TV00 = np.einsum("ijx,x->ij", last_tau, last_v)
             TV11 = np.einsum("ijx,x->ij", this_tau, this_v)
@@ -301,7 +303,7 @@ class TrajectorySH(object):
                 Hbar = H - 1j * (w0*w0*W00 + w1*w1*W11 + w0*w1*W01)
                 HI = Hbar * phases
 
-                out = -1j * ( np.dot(Hbar, rho) - np.dot(rho, Hbar) )
+                out = -1j * ( np.dot(HI, rho) - np.dot(rho, HI) )
                 return out
 
             nsteps = self.starting_electronic_intervals
