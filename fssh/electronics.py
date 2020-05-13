@@ -123,6 +123,7 @@ class DiabaticModel_(ElectronicModel_):
 
                 out[i,j,:] /= dE
                 out[j,i,:] /= -dE
+            out[j,j,:] = 0.0
 
         return out
 
