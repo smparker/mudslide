@@ -310,7 +310,8 @@ class TrajectorySH(object):
             while (dt/nsteps > self.max_electronic_dt):
                 nsteps *= 2
 
-            tmprho = rk4(self.rho, ydot, 0.0, dt, nsteps)
+            rho0 = np.linalg.multi_dot([vecs.T, self.rho, vecs])
+            tmprho = rk4(rho0, ydot, 0.0, dt, nsteps)
             ergs = np.exp(1j * eigs * dt).reshape([1, -1])
             phases = np.dot(ergs.T.conj(), ergs)
             self.rho = np.linalg.multi_dot([vecs, tmprho * phases, vecs.T])
