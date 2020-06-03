@@ -151,7 +151,7 @@ class EvenSamplingTrajectory(TrajectoryCum):
                 trace_every = self.trace_every,
                 dt = self.dt,
                 outcome_type = self.outcome_type,
-                seed = None if self.initial_seed is None else self.initial_seed+1,
+                seed_sequence = self.seed_sequence.spawn(1)[0],
                 electronics = self.electronics,
                 restart = True,
                 duration = self.duration,

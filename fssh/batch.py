@@ -33,16 +33,18 @@ from .tracer import TraceManager
 
 ## Canned class whose call function acts as a generator for static initial conditions
 class TrajGenConst(object):
-    def __init__(self, position, momentum, initial_state):
+    def __init__(self, position, momentum, initial_state, seed=None):
         self.position = position
         self.momentum = momentum
         self.initial_state = initial_state
+        self.seed_sequence = np.random.SeedSequence(seed)
 
     ## generate nsamples initial conditions
     #  @param nsamples number of initial conditions requested
     def __call__(self, nsamples):
+        seedseqs = self.seed_sequence.spawn(nsamples)
         for i in range(nsamples):
-            yield (self.position, self.momentum, self.initial_state, {})
+            yield (self.position, self.momentum, self.initial_state, { "seed_sequence" : seedseqs[i] })
 
 ## Canned class whose call function acts as a generator for normally distributed initial conditions
 class TrajGenNormal(object):
@@ -52,14 +54,14 @@ class TrajGenNormal(object):
     # @param initial_state initial state designation
     # @param sigma standard deviation of distribution
     # @param seed initial seed to give to trajectory
-    def __init__(self, position, momentum, initial_state, sigma, seed = None):
+    def __init__(self, position, momentum, initial_state, sigma, seed=None, seed_traj=None):
         self.position = position
         self.position_deviation = 0.5 * sigma
         self.momentum = momentum
         self.momentum_deviation = 1.0 / sigma
         self.initial_state = initial_state
-
-        self.random_state = np.random.RandomState(seed)
+        self.seed_sequence = np.random.SeedSequence(seed)
+        self.random_state = np.random.np.random.default_rng(seed_traj)
 
     ## Whether to skip given momentum
     #  @param ktest momentum
@@ -69,12 +71,13 @@ class TrajGenNormal(object):
     ## generate nsamples initial conditions
     #  @param nsamples number of initial conditions requested
     def __call__(self, nsamples):
+        seedseqs = self.seed_sequence.spawn(nsamples)
         for i in range(nsamples):
             x = self.random_state.normal(self.position, self.position_deviation)
             k = self.random_state.normal(self.momentum, self.momentum_deviation)
 
             if (self.kskip(k)): continue
-            yield (x, k, self.initial_state, {})
+            yield (x, k, self.initial_state, { "seed_sequence" : seedseqs[i] })
 
 ## Class to manage many TrajectorySH trajectories
 #
@@ -114,9 +117,6 @@ class BatchedTraj(object):
         # statistical parameters
         self.options["samples"]       = inp.get("samples", 2000)
         self.options["dt"]            = inp.get("dt", 20.0) # default to roughly half a femtosecond
-
-        # random seed
-        self.options["seed"]          = inp.get("seed", None)
 
         self.options["nprocs"]        = inp.get("nprocs", 1)
         self.options["outcome_type"]  = inp.get("outcome_type", "state")

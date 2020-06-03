@@ -75,9 +75,6 @@ def main():
 
     model = models[args.model](mass=args.mass)
 
-    if (args.seed is not None):
-        np.random.seed(args.seed)
-
     nk = args.nk
     min_k, max_k = args.krange
 
@@ -114,9 +111,9 @@ def main():
 
     for k in kpoints:
         if args.ksampling == "none":
-            traj_gen = TrajGenConst(args.position, k, "ground")
+            traj_gen = TrajGenConst(args.position, k, "ground", seed = args.seed)
         elif args.ksampling == "normal":
-            traj_gen = TrajGenNormal(args.position, k, "ground", sigma = args.normal/k)
+            traj_gen = TrajGenNormal(args.position, k, "ground", sigma = args.normal/k, seed = args.seed)
 
         # hack-y scale of time step so that the input amount roughly makes sense for 10.0 a.u.
         dt = args.dt * (10.0 / k) if args.scale_dt else args.dt
@@ -128,7 +125,6 @@ def main():
                            samples = args.samples,
                            nprocs = args.nprocs,
                            dt = dt,
-                           seed = args.seed,
                            bounds = [ -abs(args.bounds), abs(args.bounds) ],
                            trace_every = args.every,
                            spawn_stack = args.sample_stack,
