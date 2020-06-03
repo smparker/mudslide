@@ -38,7 +38,7 @@ class TrajectoryCum(TrajectorySH):
     def __init__(self, *args, **kwargs):
         TrajectorySH.__init__(self, *args, **kwargs)
 
-        self.prob_cum = 0.0
+        self.prob_cum = np.longdouble(0.0)
         self.zeta = self.random()
 
     ## returns loggable data
@@ -62,11 +62,11 @@ class TrajectoryCum(TrajectorySH):
     # @param probs [nstates] numpy array of individual hopping probabilities
     #  returns (do_hop, target_state)
     def hopper(self, probs):
-        accumulated = self.prob_cum
+        accumulated = np.longdouble(self.prob_cum)
         probs[self.state] = 0.0 # ensure self-hopping is nonsense
         gkdt = np.sum(probs)
 
-        accumulated = 1 - (1 - accumulated) * np.exp(-gkdt)
+        accumulated += (accumulated - 1.0) * np.expm1(-gkdt)
         if accumulated > self.zeta: # then hop
             # where to hop
             hop_choice = probs / gkdt
