@@ -123,6 +123,10 @@ class TraceManager(object):
         outcome = np.sum((t.weight * t.outcome() for t in self.traces))/weight_norm
         return outcome
 
+    def counts(self):
+        out = np.sum((t.outcome() for t in self.traces))
+        return out
+
     def summarize(self, verbose=False, file=sys.stdout):
         norm = sum((t.weight for t in self.traces))
         print("Running the FSSH package ({})".format(__version__), file=file)
