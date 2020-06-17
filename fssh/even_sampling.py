@@ -127,7 +127,8 @@ class EvenSamplingTrajectory(TrajectoryCum):
         if isinstance(ss, SpawnStack):
             self.spawn_stack = cp.deepcopy(options["spawn_stack"])
         elif isinstance(ss, list):
-            self.spawn_stack = SpawnStack.from_quadrature(ss)
+            quadrature = options.get("quadrature", "gl")
+            self.spawn_stack = SpawnStack.from_quadrature(ss, quadrature)
         else:
             self.spawn_stack = SpawnStack(ss)
 
