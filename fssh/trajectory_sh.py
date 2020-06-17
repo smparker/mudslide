@@ -89,6 +89,8 @@ class TrajectorySH(object):
         self.restart = options.get("restart", False)
         self.force_quit = False
 
+        self.zeta = 0.0
+
     ## Update weight held by trajectory and by trace
     def update_weight(self, weight):
         self.weight = weight
@@ -173,7 +175,8 @@ class TrajectorySH(object):
             "density_matrix" : np.copy(self.rho),
             "active"    : self.state,
             "electronics" : self.electronics,
-            "hopping"   : self.hopping
+            "hopping"   : self.hopping,
+            "zeta"   : self.zeta
             }
         return out
 
@@ -364,9 +367,9 @@ class TrajectorySH(object):
     # @param probs [nstates] numpy array of individual hopping probabilities
     #  returns [(target_state, weight)]
     def hopper(self, probs):
-        zeta = self.random()
+        self.zeta = self.random()
         acc_prob = np.cumsum(probs)
-        hops = np.less(zeta, acc_prob)
+        hops = np.less(self.zeta, acc_prob)
         if any(hops):
             hop_to = -1
             for i in range(self.model.nstates()):
@@ -374,7 +377,7 @@ class TrajectorySH(object):
                     hop_to = i
                     break
 
-            return [{ "target" : hop_to, "weight" : 1.0, "zeta" : zeta, "prob" : hops[i] }]
+            return [{ "target" : hop_to, "weight" : 1.0, "zeta" : self.zeta, "prob" : hops[i] }]
         else:
             return []
 

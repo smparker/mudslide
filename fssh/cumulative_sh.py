@@ -54,6 +54,7 @@ class TrajectoryCum(TrajectorySH):
             "active"    : self.state,
             "electronics" : self.electronics,
             "hopping"   : self.hopping,
+            "zeta"      : self.zeta,
             "prob_cum"  : self.prob_cum
             }
         return out
