@@ -68,6 +68,42 @@ def clenshaw_curtis(n, a=-1.0, b=1.0):
 
     return xx, out
 
+def midpoint(n, a=-1.0, b=1.0):
+    """
+    Returns the points and weights for a midpoint integration
+    from a to b. In other words, for the approximation to the integral
+
+    \int_a^b f(x) dx \approx \frac{b-a}{n} \sum_{i=0}^n f((x_0 + x_1)/2)
+    """
+    assert b > a and n > 1
+
+    weights = np.ones(n) * (b - a) / n
+    points = np.zeros(n)
+    for i in range(n):
+        points[i] = a + ((b - a) / n) * (i + 0.5)
+
+    return points, weights
+
+def trapezoid(n, a=-1.0, b=1.0):
+    """
+    Returns the points and weights for a trapezoid integration
+    from a to b. In other words, for the approximation to the integral
+
+    \int_a^b f(x) dx \approx \frac{b-a}{n} \sum_{i=0}^n f((x_0 + x_1)/2)
+    """
+    assert b > a and n > 1
+
+    ninterval = n - 1
+
+    weights = np.ones(n) * (b - a) / ninterval
+    weights[0] *= 0.5
+    weights[-1] *= 0.5
+    points = np.zeros(n)
+    for i in range(n):
+        points[i] = a + ((b - a) / ninterval) * i
+
+    return points, weights
+
 def quadrature(n, a=-1.0, b=1.0, method="gl"):
     """
     Returns a quadrature rule for the specified method and bounds
@@ -79,5 +115,9 @@ def quadrature(n, a=-1.0, b=1.0, method="gl"):
         points = points * 0.5 * (b - a) + 0.5 * (a + b)
         weights *= 0.5
         return points, weights
+    elif method.lower() == "midpoint" or method.lower() == "mp":
+        return midpoint(n, a, b)
+    elif method.lower() == "trapezoid":
+        return trapezoid(n, a, b)
     else:
         raise Exception("Unrecognized quadrature choice")
