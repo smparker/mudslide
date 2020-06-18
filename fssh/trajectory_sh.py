@@ -149,7 +149,7 @@ class TrajectorySH(object):
             return False
         elif self.duration["max_steps"] >= 0 and self.nsteps >= self.duration["max_steps"]:
             return False
-        elif self.time >= self.duration["max_time"] or np.isclose(self.time, self.duration["max_time"], atol=1e-10):
+        elif self.time >= self.duration["max_time"] or np.isclose(self.time, self.duration["max_time"], atol=1e-8, rtol=0.0):
             return False
         elif self.duration["found_box"]:
             return self.currently_interacting()
