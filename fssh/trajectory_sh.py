@@ -147,9 +147,9 @@ class TrajectorySH(object):
         """Returns True if a trajectory ought to keep running, False if it should finish"""
         if self.force_quit:
             return False
-        elif self.duration["max_steps"] >= 0 and self.nsteps > self.duration["max_steps"]:
+        elif self.duration["max_steps"] >= 0 and self.nsteps >= self.duration["max_steps"]:
             return False
-        elif self.time > self.duration["max_time"]:
+        elif self.time >= self.duration["max_time"] or np.isclose(self.time, self.duration["max_time"], atol=1e-10):
             return False
         elif self.duration["found_box"]:
             return self.currently_interacting()
