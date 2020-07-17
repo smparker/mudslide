@@ -24,6 +24,7 @@ author = 'Shane M. Parker'
 # The full version, including alpha/beta/rc tags
 release = '0.9'
 
+master_doc = 'index'
 
 # -- General configuration ---------------------------------------------------
 
