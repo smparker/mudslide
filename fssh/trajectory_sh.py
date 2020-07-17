@@ -92,7 +92,7 @@ class TrajectorySH(object):
         if self.weight == 0.0:
             self.force_quit = True
 
-    def __deepcopy__(self, memo) -> Type[self]:
+    def __deepcopy__(self, memo):
         """Override deepcopy"""
         cls = self.__class__
         result = cls.__new__(cls)
@@ -103,7 +103,7 @@ class TrajectorySH(object):
                 cp.deepcopy(v, memo) if v not in shallow_only else cp.copy(v))
         return result
 
-    def clone(self) -> Type[self]:
+    def clone(self):
         """Clone existing trajectory for spawning
 
         :return: copy of current object
