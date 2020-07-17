@@ -52,7 +52,7 @@ def main():
     parser.add_argument('-b', '--bounds', default=5.0, type=float, help="bounding box to end simulation (%(default)s)")
     parser.add_argument('-o', '--output', default="averaged", type=str, choices=('averaged', 'single', 'pickle', 'swarm', 'hack'), help="what to produce as output (%(default)s)")
     parser.add_argument('-O', '--outfile', default="sh.pickle", type=str, help="name of pickled file to produce (%(default)s)")
-    parser.add_argument('-z', '--seed', default=None, type=int, help="random seed (current date)")
+    parser.add_argument('-z', '--seed', default=None, type=int, help="random seed (None)")
     parser.add_argument('--published', dest="published", action="store_true", help="override ranges to use those found in relevant papers (%(default)s)")
 
     args = parser.parse_args()
@@ -95,9 +95,9 @@ def main():
 
     for k in kpoints:
         if args.ksampling == "none":
-            traj_gen = TrajGenConst(args.position, k, "ground", seed = args.seed)
+            traj_gen = TrajGenConst(args.position, k, "ground", seed=args.seed)
         elif args.ksampling == "normal":
-            traj_gen = TrajGenNormal(args.position, k, "ground", sigma = args.normal/k, seed = args.seed)
+            traj_gen = TrajGenNormal(args.position, k, "ground", sigma=args.normal/k, seed = args.seed)
 
         # hack-y scale of time step so that the input amount roughly makes sense for 10.0 a.u.
         dt = args.dt * (10.0 / k) if args.scale_dt else args.dt
