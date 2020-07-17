@@ -15,7 +15,7 @@ setup(name='fssh',
     description='Quantum-Classical Mudslides',
     packages=['fssh'],
     install_requires=[
-        'numpy>=1.17',
+        'numpy>=1.19',
         'scipy'
         ],
     test_suite='nose.collector',
