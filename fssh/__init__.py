@@ -1,6 +1,9 @@
-#!/usr/bin/env python
-## @package __init__
-#  Module responsible for propagating surface hopping trajectories
+# -*- coding: utf-8 -*-
+"""Mudslide
+
+This module contains code for mixed quantum-classical
+nonadiabatic molecular dynamics.
+"""
 
 from .electronics import *
 

@@ -1,6 +1,7 @@
-latex
-html
 *.out
 *.check
 *.pyc
 *.egg-info
+_build
+_static
+_templates

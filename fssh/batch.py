@@ -1,7 +1,5 @@
-#!/usr/bin/env python
-## @package fssh
-#  @file batch
-#  Module responsible for propagating surface hopping trajectories
+# -*- coding: utf-8 -*-
+"""Code for running batches of trajectories"""
 
 from __future__ import print_function, division
 import queue
@@ -15,30 +13,39 @@ from .tracer import TraceManager
 # Canned classes act as generator functions for initial conditions                  #
 #####################################################################################
 
-## Canned class whose call function acts as a generator for static initial conditions
 class TrajGenConst(object):
+    """Canned class whose call function acts as a generator for static initial conditions
+
+    :param position: initial position
+    :param momentum: initial momentum
+    :param initial_state: initial state specification should be either an integer or "ground"
+    :param seed: entropy seed for random generator (unused)
+    """
     def __init__(self, position, momentum, initial_state, seed=None):
         self.position = position
         self.momentum = momentum
         self.initial_state = initial_state
         self.seed_sequence = np.random.SeedSequence(seed)
 
-    ## generate nsamples initial conditions
-    #  @param nsamples number of initial conditions requested
     def __call__(self, nsamples):
+        """Generate nsamples initial conditions
+
+        :param nsamples: number of initial conditions to generate
+        """
         seedseqs = self.seed_sequence.spawn(nsamples)
         for i in range(nsamples):
             yield (self.position, self.momentum, self.initial_state, { "seed_sequence" : seedseqs[i] })
 
-## Canned class whose call function acts as a generator for normally distributed initial conditions
 class TrajGenNormal(object):
-    ## Constructor
-    # @param position center of normal distribution for position
-    # @param momentum center of normal distribution for momentum
-    # @param initial_state initial state designation
-    # @param sigma standard deviation of distribution
-    # @param seed initial seed to give to trajectory
+    """Canned class whose call function acts as a generator for normally distributed initial conditions"""
     def __init__(self, position, momentum, initial_state, sigma, seed=None, seed_traj=None):
+        """
+        :param position: center of normal distribution for position
+        :param momentum: center of normal distribution for momentum
+        :param initial_state: initial state designation
+        :param sigma: standard deviation of distribution
+        :param seed: initial seed to give to trajectory
+        """
         self.position = position
         self.position_deviation = 0.5 * sigma
         self.momentum = momentum
@@ -47,14 +54,18 @@ class TrajGenNormal(object):
         self.seed_sequence = np.random.SeedSequence(seed)
         self.random_state = np.random.np.random.default_rng(seed_traj)
 
-    ## Whether to skip given momentum
-    #  @param ktest momentum
     def kskip(self, ktest):
+        """Whether to skip given momentum
+        :param ktest: momentum
+
+        :returns: True/False
+        """
         return ktest < 0.0
 
-    ## generate nsamples initial conditions
-    #  @param nsamples number of initial conditions requested
     def __call__(self, nsamples):
+        """Generate nsamples initial conditions
+        :param nsamples: number of initial conditions requested
+        """
         seedseqs = self.seed_sequence.spawn(nsamples)
         for i in range(nsamples):
             x = self.random_state.normal(self.position, self.position_deviation)
@@ -63,29 +74,32 @@ class TrajGenNormal(object):
             if (self.kskip(k)): continue
             yield (x, k, self.initial_state, { "seed_sequence" : seedseqs[i] })
 
-## Class to manage many TrajectorySH trajectories
-#
-# Requires a model object which is a class that has functions V(x), dV(x), nstates(), and ndim()
-# that return the Hamiltonian at position x, gradient of the Hamiltonian at position x
-# number of electronic states, and dimension of nuclear space, respectively.
+
 class BatchedTraj(object):
-    ## Constructor requires model and options input as kwargs
-    # @param model object used to describe the model system
-    # @param traj_gen generator object to generate initial conditions
-    # @param trajectory_type surface hopping trajectory class
-    # @param tracemanager object to collect results
-    # @param inp input options
-    #
-    # Accepted keyword arguments and their defaults:
-    # | key                |   default                  |
-    # ---------------------|----------------------------|
-    # | initial_time       | 0.0                        |
-    # | samples            | 2000                       |
-    # | dt                 | 20.0  ~ 0.5 fs             |
-    # | seed               | None (date)                |
-    # | nprocs             | MultiProcessing.cpu_count  |
-    # | outcome_type       | "state"                    |
+    """Class to manage many TrajectorySH trajectories
+
+    Requires a model object which is a class that has functions V(x), dV(x), nstates(), and ndim()
+    that return the Hamiltonian at position x, gradient of the Hamiltonian at position x
+    number of electronic states, and dimension of nuclear space, respectively.
+    """
     def __init__(self, model, traj_gen, trajectory_type, tracemanager = None, **inp):
+        """Constructor requires model and options input as kwargs
+        :param model: object used to describe the model system
+        :param traj_gen: generator object to generate initial conditions
+        :param trajectory_type: surface hopping trajectory class
+        :param tracemanager: object to collect results
+        :param inp: input options
+
+         Accepted keyword arguments and their defaults:
+         | key                |   default                  |
+         ---------------------|----------------------------|
+         | initial_time       | 0.0                        |
+         | samples            | 2000                       |
+         | dt                 | 20.0  ~ 0.5 fs             |
+         | nprocs             | MultiProcessing.cpu_count  |
+         | outcome_type       | "state"                    |
+         | seed               | None (date)                |
+        """
         self.model = model
         if tracemanager is None:
             self.tracemanager = TraceManager()
@@ -110,9 +124,11 @@ class BatchedTraj(object):
             if x not in self.options:
                 self.options[x] = inp[x]
 
-    ## runs a set of trajectories and collects the results
-    # @param n number of trajectories to run
     def run_trajectories(self, n):
+        """Runs a set of trajectories and collects the results
+
+        :param n: number of trajectories to run
+        """
         outcomes = np.zeros([self.model.nstates(),2], dtype=np.float64)
         traces = []
         try:
@@ -131,8 +147,11 @@ class BatchedTraj(object):
         except KeyboardInterrupt:
             raise
 
-    ## run many trajectories and returns averaged results
     def compute(self):
+        """Run batch of trajectories and return aggregate results
+
+        :returns: TraceManager containing the results
+        """
         # for now, define four possible outcomes of the simulation
         outcomes = np.zeros([self.model.nstates(),2], dtype=np.float64)
         nsamples = int(self.options["samples"])
@@ -171,6 +190,11 @@ class BatchedTraj(object):
         return self.tracemanager
 
 def traj_runner(traj_queue, results_queue):
+    """Runner for computing jobs from queue
+
+    :param traj_queue: queue containing trajectories with a `simulate()` function
+    :param results_queue: queue to store results of each call to `simulate()`
+    """
     while True:
         traj = traj_queue.get()
         if traj is not None:
@@ -178,8 +202,13 @@ def traj_runner(traj_queue, results_queue):
             results_queue.put(results)
         traj_queue.task_done()
 
-## global version of BatchedTraj.run_trajectories that is necessary because of the stupid way threading pools work in python
 def unwrapped_run_trajectories(fssh, n):
+    """global version of BatchedTraj.run_trajectories that
+    is necessary because of the stupid way threading pools work in python
+
+    :param fssh: BatchedTraj object
+    :param n: number of trajectories to run
+    """
     try:
         return BatchedTraj.run_trajectories(fssh, n)
     except KeyboardInterrupt:

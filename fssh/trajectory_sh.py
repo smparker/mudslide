@@ -9,15 +9,22 @@ from .propagation import rk4
 
 import copy as cp
 import numpy as np
-import sys
 
-## Class to propagate a single SH Trajectory
+from typing import List, Dict, Type
+
 class TrajectorySH(object):
-    ## Constructor
-    # @param model Model object defining problem
-    # @param tracer spawn from TraceManager to collect results
-    # @param options option dictionary
-    def __init__(self, model, x0, p0, rho0, tracer=None, queue=None, **options):
+    """Class to propagate a single FSSH trajectory"""
+
+    def __init__(self, model, x0: np.ndarray, p0: np.ndarray, rho0: np.ndarray, tracer=None, queue=None, **options):
+        """Constructor
+        :param model: Model object defining problem
+        :param x0: Initial position
+        :param p0: Initial momentum
+        :param rho0: Initial density matrix
+        :param tracer: spawn from TraceManager to collect results
+        :param queue: Trajectory queue
+        :param options: option dictionary
+        """
         self.model = model
         self.tracer = tracer if tracer is not None else Trace()
         self.queue = queue
@@ -73,18 +80,20 @@ class TrajectorySH(object):
         self.restart = options.get("restart", False)
         self.force_quit = False
 
+        self.hopping_probability = options.get("hopping_probability", "exp")
+
         self.zeta = 0.0
 
-    ## Update weight held by trajectory and by trace
-    def update_weight(self, weight):
+    def update_weight(self, weight: float) -> None:
+        """Update weight held by trajectory and by trace"""
         self.weight = weight
         self.tracer.weight = weight
 
         if self.weight == 0.0:
             self.force_quit = True
 
-    ## Override deepcopy
-    def __deepcopy__(self, memo):
+    def __deepcopy__(self, memo) -> Type[self]:
+        """Override deepcopy"""
         cls = self.__class__
         result = cls.__new__(cls)
         memo[id(self)] = result
@@ -94,23 +103,34 @@ class TrajectorySH(object):
                 cp.deepcopy(v, memo) if v not in shallow_only else cp.copy(v))
         return result
 
-    def clone(self):
+    def clone(self) -> Type[self]:
+        """Clone existing trajectory for spawning
+
+        :return: copy of current object
+        """
         return cp.deepcopy(self)
 
-    ## Return random number for hopping decisions
-    def random(self):
+    def random(self) -> np.float64:
+        """Get random number for hopping decisions
+
+        :return: uniform random number between 0 and 1
+        """
         return self.random_state.uniform()
 
-    ## Is trajectory still inside interaction region?
-    def currently_interacting(self):
-        """determines whether trajectory is currently inside an interaction region"""
+    def currently_interacting(self) -> bool:
+        """Determines whether trajectory is currently inside an interaction region
+
+        :return: boolean
+        """
         if self.duration["box_bounds"] is None:
             return False
         return np.all(self.duration["box_bounds"][0] < self.position) and np.all(self.position < self.duration["box_bounds"][1])
 
-    ## Initializes variables related to continue_simulating
     def duration_initialize(self, options):
-        """Initializes variables related to continue_simulating"""
+        """Initializes variables related to continue_simulating
+
+        :param options: dictionary with options
+        """
 
         duration = {}
         duration["found_box"] = False
@@ -126,9 +146,11 @@ class TrajectorySH(object):
 
         self.duration = duration
 
-    ## Returns True if a trajectory ought to keep running, False if it should finish
-    def continue_simulating(self):
-        """Returns True if a trajectory ought to keep running, False if it should finish"""
+    def continue_simulating(self) -> bool:
+        """Decide whether trajectory should keep running
+
+        :return: True if trajectory should keep running, False if it should finish
+        """
         if self.force_quit:
             return False
         elif self.duration["max_steps"] >= 0 and self.nsteps >= self.duration["max_steps"]:
@@ -142,13 +164,20 @@ class TrajectorySH(object):
                 self.duration["found_box"] = True
             return True
 
-    ## add results from current time point to tracing function
-    def trace(self, force=False):
+    def trace(self, force=False) -> None:
+        """Add results from current time point to tracing function
+        Only adds snapshot if nsteps%trace_every == 0, unless force=True
+
+        :param force: force snapshot
+        """
         if force or (self.nsteps % self.trace_every) == 0:
             self.tracer.collect(self.snapshot())
 
-    ## returns a dictionary with all the loggable data from the trajectory
-    def snapshot(self):
+    def snapshot(self) -> 'dict':
+        """Collect data from run for logging
+
+        :return: dictionary with all data from current time step
+        """
         out = {
             "time" : self.time,
             "position"  : np.copy(self.position),
@@ -164,60 +193,93 @@ class TrajectorySH(object):
             }
         return out
 
-    ## current kinetic energy
-    def kinetic_energy(self):
+    def kinetic_energy(self) -> np.float64:
+        """Kinetic energy
+
+        :return: kinetic energy
+        """
         return 0.5 * np.einsum('m,m,m', self.mass, self.velocity, self.velocity)
 
-    ## current potential energy
-    # @param electronics ElectronicStates from current step
-    def potential_energy(self, electronics=None):
+    def potential_energy(self, electronics=None) -> np.float64:
+        """Potential energy
+
+        :param electronics: ElectronicStates from current step
+        :return: potential energy
+        """
         if electronics is None:
             electronics = self.electronics
         return electronics.hamiltonian[self.state,self.state]
 
-    ## current kinetic + potential energy
-    # @param electronics ElectronicStates from current step
-    def total_energy(self, electronics=None):
+    def total_energy(self, electronics=None) -> np.float64:
+        """
+        Kinetic energy + Potential energy
+
+        :param electronics: ElectronicStates from current step
+        :return: total energy
+        """
         potential = self.potential_energy(electronics)
         kinetic = self.kinetic_energy()
         return potential + kinetic
 
-    ## force on active state
-    # @param electronics ElectronicStates from current step
-    def force(self, electronics=None):
+    def force(self, electronics=None) -> np.ndarray:
+        """
+        Compute force on active state
+
+        :param electronics: ElectronicStates from current step
+
+        :return: [ndim] force on active electronic state
+        """
         if electronics is None:
             electronics = self.electronics
         return electronics.force[self.state,:]
 
-    ## Nonadiabatic coupling matrix
-    # @param electronics ElectronicStates from current step
-    # @param velocity velocity used to compute NAC (defaults to self.velocity)
-    def NAC_matrix(self, electronics=None, velocity=None):
+    def NAC_matrix(self, electronics=None, velocity=None) -> np.ndarray:
+        """
+        Nonadiabatic coupling matrix
+
+        :param electronics: ElectronicStates from current step
+        :param velocity: velocity used to compute NAC (defaults to self.velocity)
+
+        :return: [nstates, nstates] NAC matrix
+        """
         velo = velocity if velocity is not None else self.velocity
         if electronics is None:
             electronics = self.electronics
         return np.einsum("ijx,x->ij", electronics.derivative_coupling, velo)
 
-    ## kinetic energy along given momentum mode
-    # @param direction [ndim] numpy array defining direction
-    def mode_kinetic_energy(self, direction):
+    def mode_kinetic_energy(self, direction) -> np.float64:
+        """
+        Kinetic energy along given momentum mode
+
+        :param direction: [ndim] numpy array defining direction
+
+        :return: kinetic energy along specified direction
+        """
         u = direction / np.linalg.norm(direction)
         momentum = self.velocity * self.mass
         component = np.dot(u, momentum) * u
         return 0.5 * np.einsum('m,m,m', 1.0/self.mass, component, component)
 
-    ## Return direction in which to rescale momentum
-    # @param source active state before hop
-    # @param target active state after hop
-    def direction_of_rescale(self, source, target, electronics=None):
+    def direction_of_rescale(self, source, target, electronics=None) -> np.ndarray:
+        """
+        Return direction in which to rescale momentum
+
+        :param source: active state before hop
+        :param target: active state after hop
+
+        :return: unit vector pointing in direction of rescale
+        """
         elec_states = self.electronics if electronics is None else electronics
         out = elec_states.derivative_coupling[source, target, :]
         return out
 
-    ## Rescales velocity in the specified direction and amount
-    # @param direction array specifying the direction of the velocity to rescale
-    # @param reduction scalar specifying how much kinetic energy should be damped
-    def rescale_component(self, direction, reduction):
+    def rescale_component(self, direction, reduction) -> None:
+        """
+        Rescales velocity in the specified direction and amount
+
+        :param direction: the direction of the velocity to rescale
+        :param reduction: how much kinetic energy should be damped
+        """
         # normalize
         direction /= np.sqrt(np.dot(direction, direction))
         M_inv = 1.0 / self.mass
@@ -229,10 +291,12 @@ class TrajectorySH(object):
         scal = min(roots, key=lambda x: abs(x))
         self.velocity += scal * M_inv * direction
 
-    ## Compute the Hamiltonian used to propagate the electronic wavefunction
-    #  returns nonadiabatic coupling H - i W at midpoint between current and previous time steps
-    #  @param elec_states ElectronicStates at \f$t\f$
-    def hamiltonian_propagator(self, last_electronics, this_electronics, velo=None):
+    def hamiltonian_propagator(self, last_electronics, this_electronics, velo=None) -> np.ndarray:
+        """Compute the Hamiltonian used to propagate the electronic wavefunction
+
+        :param elec_states: ElectronicStates at current time step
+        :return: nonadiabatic coupling H - i W at midpoint between current and previous time steps
+        """
         if velo is None:
             velo = 0.5 * (self.velocity + self.last_velocity)
 
@@ -241,13 +305,15 @@ class TrajectorySH(object):
                 velo)
         return H -1j * TV
 
-    ## Propagates \f$\rho(t)\f$ to \f$\rho(t + dt)\f$
-    # @param elec_states ElectronicStates at \f$t\f$
-    # @param dt time step
-    #
-    # The propagation assumes the electronic energies and couplings are static throughout.
-    # This will only be true for fairly small time steps
-    def propagate_electronics(self, last_electronics, this_electronics, dt):
+    def propagate_electronics(self, last_electronics, this_electronics, dt) -> None:
+        """Propagates density matrix from t to t+dt
+
+        The propagation assumes the electronic energies and couplings are static throughout.
+        This will only be true for fairly small time steps
+
+        :param elec_states: ElectronicStates at t
+        :param dt: time step
+        """
         if self.electronic_integration == "exp":
             # Use midpoint propagator
             W = self.hamiltonian_propagator(last_electronics, this_electronics)
@@ -306,25 +372,35 @@ class TrajectorySH(object):
         else:
             raise Exception("Unrecognized electronic integration option")
 
-    ## move classical position forward one step
-    # @param electronics ElectronicStates from current step
-    def advance_position(self, last_electronics, this_electronics):
+    def advance_position(self, last_electronics, this_electronics) -> None:
+        """
+        Move classical position forward one step
+
+        :param last_electronics: ElectronicStates from previous step
+        :param this_electronics: ElectronicStates from current step
+        """
         acceleration = self.force(this_electronics) / self.mass
         self.last_position = self.position
         self.position += self.velocity * self.dt + 0.5 * acceleration * self.dt * self.dt
 
-    ## move classical velocity forward one step
-    # @param electronics ElectronicStates from current step
-    def advance_velocity(self, last_electronics, this_electronics):
+    def advance_velocity(self, last_electronics, this_electronics) -> None:
+        """
+        Move classical velocity forward one step
+
+        :param electronics: ElectronicStates from current step
+        """
         last_acceleration = self.force(last_electronics) / self.mass
         this_acceleration = self.force(this_electronics) / self.mass
 
         self.last_velocity = self.velocity
         self.velocity += 0.5 * (last_acceleration + this_acceleration) * self.dt
 
-    ## Compute probability of hopping, generate random number, and perform hops
-    # @param elec_states ElectronicStates from current step
-    def surface_hopping(self, last_electronics, this_electronics):
+    def surface_hopping(self, last_electronics, this_electronics) -> np.float64:
+        """Compute probability of hopping, generate random number, and perform hops
+
+        :param elec_states: ElectronicStates from current step
+        :return: total probability of any hop occuring
+        """
         nstates = self.model.nstates()
 
         H = self.hamiltonian_propagator(last_electronics, this_electronics)
@@ -336,7 +412,15 @@ class TrajectorySH(object):
 
         # clip probabilities to make sure they are between zero and one
         probs = np.maximum(probs, 0.0)
-        self.hopping = probs
+        if self.hopping_probability == "tully":
+            self.hopping = probs
+        elif self.hopping_probability == "exp":
+            sum_prob = np.sum(probs)
+            if sum_prob != 0.0:
+                total_prob = -np.expm1(sum_prob)
+                self.hopping = (probs / sum_prob) * total_prob
+            else:
+                self.hopping = probs
 
         hop_targets = self.hopper(probs)
         if hop_targets:
@@ -344,13 +428,13 @@ class TrajectorySH(object):
 
         return sum(probs)
 
-    ## given a set of probabilities, determines whether and where to hop
-    #
-    #  if no hop to be performaned, returns empty list
-    #
-    # @param probs [nstates] numpy array of individual hopping probabilities
-    #  returns [(target_state, weight)]
-    def hopper(self, probs):
+    def hopper(self, probs: np.ndarray) -> List[Dict[str, float]]:
+        """
+        Determine whether and where to hop
+
+        :param probs: [nstates] numpy array of individual hopping probabilities
+        :return: [(target_state, weight)] list of (target_state, weight) pairs
+        """
         self.zeta = self.random()
         acc_prob = np.cumsum(probs)
         hops = np.less(self.zeta, acc_prob)
@@ -365,11 +449,14 @@ class TrajectorySH(object):
         else:
             return []
 
-    ## Performs the hop from the current active state to the given state, including
-    #  rescaling the momentum
-    #
-    #  @param hop_to final state to hop to
-    def hop_to_it(self, hop_targets, electronics=None):
+    def hop_to_it(self, hop_targets: List[Dict[str, float]], electronics=None) -> None:
+        """
+        Hop from the current active state to the given state, including
+        rescaling the momentum
+
+        :param hop_targets: list of (target, weight) pairs
+        :param electronics: ElectronicStates for current step
+        """
         hop_dict = hop_targets[0]
         hop_to = hop_dict["target"]
         weight = hop_dict["weight"]
@@ -384,8 +471,12 @@ class TrajectorySH(object):
             self.rescale_component(rescale_vector, -delV)
             self.tracer.hop(self.time, hop_from, hop_to, hop_dict["zeta"], hop_dict["prob"])
 
-    ## run simulation
     def simulate(self):
+        """
+        Simulate
+
+        :return: Trace of trajectory
+        """
         last_electronics = None
 
         if not self.restart:
@@ -425,10 +516,12 @@ class TrajectorySH(object):
 
         return self.tracer
 
-    ## Classifies end of simulation:
-    #
-    #  2*state + [0 for left, 1 for right]
-    def outcome(self):
+    def outcome(self) -> np.ndarray:
+        """
+        Classifies end of simulation:
+
+        :return: 2*state + [0 for left, 1 for right]
+        """
         out = np.zeros([self.model.nstates(), 2], dtype=np.float64)
         lr = 0 if self.position < 0.0 else 1
         if self.outcome_type == "populations":
