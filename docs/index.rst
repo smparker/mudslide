@@ -10,18 +10,12 @@ Mudslide!
    :maxdepth: 2
    :caption: Contents:
 
+   intro
    usage
    installation
    library
    modules
-
-Mudslide is a Python implementation of mixed quantum-classical nonadiabatic molecular dynamics methods
-including the Ehrenfest and Fewest Switches Surface Hopping (FSSH) methods. Mudslide includes
-the original implementation of cumulative FSSH (FSSH-c) and even sampling methods (ES-FSSH).
-Mudslide has been developed for use with diabatic model Hamiltonians, but has been developed
-to be compatible with ab initio Hamiltonians (eventually).
-
-
+   zreferences
 
 Indices and tables
 ==================
