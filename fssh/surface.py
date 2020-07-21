@@ -8,7 +8,10 @@ import argparse
 import numpy as np
 import fssh.models as tm
 
-def main():
+from typing import Any
+from .typing import ArrayLike
+
+def main() -> None:
     parser = argparse.ArgumentParser(description="Generate potential energy surface scans of two-state models")
     parser.add_argument('-m', '--model', default='simple', choices=[m for m in tm.models], help="Tully model to plot")
     parser.add_argument('-r', '--range', default=(-10.0,10.0), nargs=2, type=float, help="range over which to plot PES (default: %(default)s)")
@@ -29,7 +32,7 @@ def main():
     last_elec = None
     elec = model.update(start)
 
-    def headprinter():
+    def headprinter() -> str:
         diabats = [ "V_%1d" % i for i in range(nstates) ]
         energies = [ "E_%1d" % i for i in range(nstates) ]
         dc = [ "d_%1d%1d" % (j, i) for i in range(nstates) for j in range(i) ]
@@ -38,7 +41,7 @@ def main():
         plist = [ "x" ] + diabats + energies + dc + forces
         return "#" + " ".join([ "%16s" % x for x in plist ])
 
-    def lineprinter(x, model, estates):
+    def lineprinter(x: ArrayLike, model: Any, estates: Any) -> str:
         V = model.V(x)
         diabats = [ V[i,i] for i in range(nstates) ]
         energies = [ estates.hamiltonian[i,i] for i in range(nstates) ]

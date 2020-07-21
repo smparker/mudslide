@@ -11,6 +11,9 @@ import numpy as np
 
 from .trajectory_sh import TrajectorySH
 
+from typing import Any, List, Dict
+from .typing import ArrayLike
+
 ## Trajectory surface hopping using a cumulative approach rather than instantaneous
 #
 #  Instead of using a random number generator at every time step to test for a hop,
@@ -19,14 +22,14 @@ from .trajectory_sh import TrajectorySH
 #  should be a bit easier to reproduce since far fewer random numbers are ever needed.
 class TrajectoryCum(TrajectorySH):
     ## Constructor (see TrajectorySH constructor)
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         TrajectorySH.__init__(self, *args, **kwargs)
 
         self.prob_cum = np.longdouble(0.0)
         self.zeta = self.random()
 
     ## returns loggable data
-    def snapshot(self):
+    def snapshot(self) -> Dict:
         out = {
             "time" : self.time,
             "position"  : np.copy(self.position),
@@ -46,7 +49,7 @@ class TrajectoryCum(TrajectorySH):
     ## given a set of probabilities, determines whether and where to hop
     # @param probs [nstates] numpy array of individual hopping probabilities
     #  returns (do_hop, target_state)
-    def hopper(self, probs):
+    def hopper(self, probs: ArrayLike) -> List[Dict]:
         accumulated = np.longdouble(self.prob_cum)
         probs[self.state] = 0.0 # ensure self-hopping is nonsense
         gkdt = np.sum(probs)

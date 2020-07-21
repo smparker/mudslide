@@ -9,18 +9,21 @@ from .version import __version__
 import numpy as np
 import sys
 
+from typing import List, Any, Dict, Iterator
+from .typing import ArrayLike, DtypeLike
+
 ## Collect results from a single trajectory
 class Trace(object):
-    def __init__(self, weight=1.0):
-        self.data = []
-        self.hops = []
-        self.weight = weight
+    def __init__(self, weight: float = 1.0):
+        self.data: List = []
+        self.hops: List = []
+        self.weight: float = weight
 
     ## collect and optionally process data
-    def collect(self, trajectory_snapshot):
+    def collect(self, trajectory_snapshot: Any):
         self.data.append(trajectory_snapshot)
 
-    def hop(self, time, hop_from, hop_to, zeta, prob):
+    def hop(self, time: float, hop_from: int, hop_to: int, zeta: float, prob: float):
         self.hops.append({
             "time" : time,
             "from" : hop_from,
@@ -29,16 +32,16 @@ class Trace(object):
             "prob" : prob
             })
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator:
         return self.data.__iter__()
 
-    def __getitem__(self, i):
+    def __getitem__(self, i: int) -> Any:
         return self.data[i]
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.data)
 
-    def print(self, file=sys.stdout):
+    def print(self, file: Any = sys.stdout) -> None:
         nst = self.data[0]["density_matrix"].shape[0]
         headerlist =  [ "%12s" % x for x in [ "time", "x", "p", "V", "T", "E" ] ]
         headerlist += [ "%12s" % x for x in [ "rho_{%d,%d}" % (i,i) for i in range(nst) ] ]
@@ -56,7 +59,7 @@ class Trace(object):
     ## Classifies end of simulation:
     #
     #  2*state + [0 for left, 1 for right]
-    def outcome(self):
+    def outcome(self) -> ArrayLike:
         last_snapshot = self.data[-1]
         nst = last_snapshot["density_matrix"].shape[0]
         position = last_snapshot["position"]
@@ -70,7 +73,7 @@ class Trace(object):
 
         return out
 
-    def as_dict(self):
+    def as_dict(self) -> Dict:
         return {
                 "hops" : self.hops,
                 "data" : self.data,
@@ -81,37 +84,38 @@ class Trace(object):
 ## Class to manage the collection of observables from a set of trajectories
 class TraceManager(object):
     def __init__(self):
-        self.traces = []
+        self.traces: List = []
+        self.outcomes: ArrayLike = None
 
     ## returns a Tracer object that will collect all of the observables for a given
     #  trajectory
-    def spawn_tracer(self):
+    def spawn_tracer(self) -> Trace:
         return Trace()
 
     ## accepts a Tracer object and adds it to list of traces
-    def merge_tracer(self, tracer):
+    def merge_tracer(self, tracer: Trace) -> None:
         self.traces.append(tracer)
 
     ## merge other manager into self
-    def add_batch(self, traces):
+    def add_batch(self, traces: List[Trace]) -> None:
         self.traces.extend(traces)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator:
         return self.traces.__iter__()
 
-    def __getitem__(self, i):
+    def __getitem__(self, i: int) -> Trace:
         return self.traces[i]
 
-    def outcome(self):
+    def outcome(self) -> ArrayLike:
         weight_norm = np.sum( (t.weight for t in self.traces) )
         outcome = np.sum((t.weight * t.outcome() for t in self.traces))/weight_norm
         return outcome
 
-    def counts(self):
+    def counts(self) -> ArrayLike:
         out = np.sum((t.outcome() for t in self.traces))
         return out
 
-    def summarize(self, verbose=False, file=sys.stdout):
+    def summarize(self, verbose: bool = False, file: Any = sys.stdout) -> None:
         norm = sum((t.weight for t in self.traces))
         print("Running the FSSH package ({})".format(__version__), file=file)
         print("------------------------------------", file=file)

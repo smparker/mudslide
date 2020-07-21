@@ -7,7 +7,6 @@ from __future__ import print_function, division
 import numpy as np
 
 import pickle
-
 import sys
 
 from .trajectory_sh import TrajectorySH
@@ -15,10 +14,11 @@ from .cumulative_sh import TrajectoryCum
 from .even_sampling import EvenSamplingTrajectory, SpawnStack
 from .ehrenfest import Ehrenfest
 from .batch import TrajGenConst, TrajGenNormal, BatchedTraj
-
 from .models import models
 
 import argparse as ap
+
+from typing import Any
 
 # Add a method into this dictionary to register it with argparse
 methods = {
@@ -28,7 +28,7 @@ methods = {
         "even-sampling" : EvenSamplingTrajectory
         }
 
-def main():
+def main() -> None:
 
     parser = ap.ArgumentParser(description="FSSH driver")
 
@@ -66,7 +66,7 @@ def main():
         if (args.model == "simple"):
             min_k, max_k = 1.0, 35.0
         elif (args.model == "dual"):
-            min_k, max_k = m.log10(m.sqrt(2.0 * args.mass * m.exp(-4.0))), m.log10(m.sqrt(2.0 * args.mass * m.exp(1.0)))
+            min_k, max_k = np.log10(np.sqrt(2.0 * args.mass * np.exp(-4.0))), np.log10(np.sqrt(2.0 * args.mass * np.exp(1.0)))
         elif (args.model == "extended"):
             min_k, max_k = 1.0, 35.0
         elif (args.model == "super"):
@@ -94,6 +94,7 @@ def main():
         print()
 
     for k in kpoints:
+        traj_gen: Any = None
         if args.ksampling == "none":
             traj_gen = TrajGenConst(args.position, k, "ground", seed=args.seed)
         elif args.ksampling == "normal":

@@ -16,7 +16,8 @@ setup(name='fssh',
     packages=['fssh'],
     install_requires=[
         'numpy>=1.19',
-        'scipy'
+        'scipy',
+        'typing_extensions'
         ],
     test_suite='nose.collector',
     tests_require=['nose'],

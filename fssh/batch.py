@@ -3,11 +3,15 @@
 
 from __future__ import print_function, division
 import queue
+import sys
 
 import numpy as np
 
 from .exceptions import StillInteracting
 from .tracer import TraceManager
+
+from typing import Any, Iterator, Tuple
+from .typing import ModelT, TrajGenT, ArrayLike, DtypeLike
 
 #####################################################################################
 # Canned classes act as generator functions for initial conditions                  #
@@ -21,13 +25,13 @@ class TrajGenConst(object):
     :param initial_state: initial state specification should be either an integer or "ground"
     :param seed: entropy seed for random generator (unused)
     """
-    def __init__(self, position, momentum, initial_state, seed=None):
+    def __init__(self, position: ArrayLike, momentum: ArrayLike, initial_state: Any, seed: Any = None):
         self.position = position
         self.momentum = momentum
         self.initial_state = initial_state
         self.seed_sequence = np.random.SeedSequence(seed)
 
-    def __call__(self, nsamples):
+    def __call__(self, nsamples: int) -> Iterator:
         """Generate nsamples initial conditions
 
         :param nsamples: number of initial conditions to generate
@@ -38,7 +42,7 @@ class TrajGenConst(object):
 
 class TrajGenNormal(object):
     """Canned class whose call function acts as a generator for normally distributed initial conditions"""
-    def __init__(self, position, momentum, initial_state, sigma, seed=None, seed_traj=None):
+    def __init__(self, position: ArrayLike, momentum: ArrayLike, initial_state: Any, sigma: ArrayLike, seed: Any = None, seed_traj: Any = None):
         """
         :param position: center of normal distribution for position
         :param momentum: center of normal distribution for momentum
@@ -54,7 +58,7 @@ class TrajGenNormal(object):
         self.seed_sequence = np.random.SeedSequence(seed)
         self.random_state = np.random.np.random.default_rng(seed_traj)
 
-    def kskip(self, ktest):
+    def kskip(self, ktest: float) -> bool:
         """Whether to skip given momentum
         :param ktest: momentum
 
@@ -62,7 +66,7 @@ class TrajGenNormal(object):
         """
         return ktest < 0.0
 
-    def __call__(self, nsamples):
+    def __call__(self, nsamples: int) -> Iterator:
         """Generate nsamples initial conditions
         :param nsamples: number of initial conditions requested
         """
@@ -82,7 +86,7 @@ class BatchedTraj(object):
     that return the Hamiltonian at position x, gradient of the Hamiltonian at position x
     number of electronic states, and dimension of nuclear space, respectively.
     """
-    def __init__(self, model, traj_gen, trajectory_type, tracemanager = None, **inp):
+    def __init__(self, model: ModelT, traj_gen: TrajGenT, trajectory_type: Any, tracemanager: Any = None, **inp: Any):
         """Constructor requires model and options input as kwargs
         :param model: object used to describe the model system
         :param traj_gen: generator object to generate initial conditions
@@ -124,7 +128,7 @@ class BatchedTraj(object):
             if x not in self.options:
                 self.options[x] = inp[x]
 
-    def run_trajectories(self, n):
+    def run_trajectories(self, n: int) -> Tuple:
         """Runs a set of trajectories and collects the results
 
         :param n: number of trajectories to run
@@ -147,7 +151,7 @@ class BatchedTraj(object):
         except KeyboardInterrupt:
             raise
 
-    def compute(self):
+    def compute(self) -> TraceManager:
         """Run batch of trajectories and return aggregate results
 
         :returns: TraceManager containing the results
@@ -157,8 +161,8 @@ class BatchedTraj(object):
         nsamples = int(self.options["samples"])
         nprocs = self.options["nprocs"]
 
-        traj_queue = queue.Queue()
-        results_queue = queue.Queue()
+        traj_queue: Any = queue.Queue()
+        results_queue: Any = queue.Queue()
 
         #traj_queue = mp.JoinableQueue()
         #results_queue = mp.Queue()
@@ -189,7 +193,7 @@ class BatchedTraj(object):
         self.tracemanager.outcomes = self.tracemanager.outcome()
         return self.tracemanager
 
-def traj_runner(traj_queue, results_queue):
+def traj_runner(traj_queue: Any, results_queue: Any) -> None:
     """Runner for computing jobs from queue
 
     :param traj_queue: queue containing trajectories with a `simulate()` function
@@ -202,7 +206,7 @@ def traj_runner(traj_queue, results_queue):
             results_queue.put(results)
         traj_queue.task_done()
 
-def unwrapped_run_trajectories(fssh, n):
+def unwrapped_run_trajectories(fssh: Any, n: int) -> Tuple:
     """global version of BatchedTraj.run_trajectories that
     is necessary because of the stupid way threading pools work in python
 
@@ -212,4 +216,4 @@ def unwrapped_run_trajectories(fssh, n):
     try:
         return BatchedTraj.run_trajectories(fssh, n)
     except KeyboardInterrupt:
-        pass
+        raise

@@ -7,20 +7,13 @@ from __future__ import print_function, division
 from .version import __version__
 from .propagation import rk4
 from .tracer import Trace
+from .typing import ElectronicT, ModelT
 
 import copy as cp
 import numpy as np
 
-from np.typing import ArrayLike, DtypeLike
-
-from typing import List, Dict, Type, Union, Any, Protocol
-
-ModelT = Any
-
-class ElectronicT(Protocol):
-    hamiltonian: ArrayLike
-    force: ArrayLike
-    derivative_coupling: ArrayLike
+from typing import List, Dict, Type, Union, Any
+from .typing import ArrayLike, DtypeLike
 
 class TrajectorySH(object):
     """Class to propagate a single FSSH trajectory"""
@@ -37,7 +30,7 @@ class TrajectorySH(object):
         """
         self.model = model
         self.tracer = tracer if tracer is not None else Trace()
-        self.queue = queue
+        self.queue: Any = queue
         self.mass = model.mass
         self.position = np.array(x0, dtype=np.float64).reshape(model.ndim())
         self.velocity = np.array(p0, dtype=np.float64).reshape(model.ndim()) / self.mass
@@ -143,6 +136,7 @@ class TrajectorySH(object):
         """
 
         duration = {} # type: Dict[str, Any]
+        duration['found_box'] = False
 
         bounds = options.get('bounds', None)
         if bounds:
@@ -209,7 +203,7 @@ class TrajectorySH(object):
         """
         return 0.5 * np.einsum('m,m,m', self.mass, self.velocity, self.velocity)
 
-    def potential_energy(self, electronics: ElectronicT = None) -> np.float64:
+    def potential_energy(self, electronics: ElectronicT = None) -> DtypeLike:
         """Potential energy
 
         :param electronics: ElectronicStates from current step
@@ -219,7 +213,7 @@ class TrajectorySH(object):
             electronics = self.electronics
         return electronics.hamiltonian[self.state,self.state]
 
-    def total_energy(self, electronics: ElectronicT = None) -> np.float64:
+    def total_energy(self, electronics: ElectronicT = None) -> DtypeLike:
         """
         Kinetic energy + Potential energy
 
@@ -230,7 +224,7 @@ class TrajectorySH(object):
         kinetic = self.kinetic_energy()
         return potential + kinetic
 
-    def force(self, electronics: ElectronicT = None) -> np.ndarray:
+    def force(self, electronics: ElectronicT = None) -> ArrayLike:
         """
         Compute force on active state
 
@@ -309,8 +303,8 @@ class TrajectorySH(object):
         if velo is None:
             velo = 0.5 * (self.velocity + self.last_velocity)
 
-        H = 0.5 * (this_electronics.hamiltonian + last_electronics.hamiltonian)
-        TV = 0.5 * np.einsum("ijx,x->ij", this_electronics.derivative_coupling + last_electronics.derivative_coupling,
+        H = 0.5 * (this_electronics.hamiltonian + last_electronics.hamiltonian) # type: ignore
+        TV = 0.5 * np.einsum("ijx,x->ij", this_electronics.derivative_coupling + last_electronics.derivative_coupling, #type: ignore
                 velo)
         return H -1j * TV
 

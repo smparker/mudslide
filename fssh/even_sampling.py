@@ -11,33 +11,36 @@ import numpy as np
 from .cumulative_sh import TrajectoryCum
 from .integration import quadrature
 
+from typing import Optional, List, Any, Dict, Union
+from .typing import ArrayLike, ElectronicT
+
 ## Data structure to inform how new traces are spawned and weighted
 class SpawnStack(object):
-    def __init__(self, sample_stack, weight=1.0):
+    def __init__(self, sample_stack: List, weight: float = 1.0):
         self.sample_stack = sample_stack
-        self.base_weight = weight
-        self.marginal_weight = 1.0
+        self.base_weight: float = weight
+        self.marginal_weight: float = 1.0
+        self.last_stack: Dict = {}
+        self.last_dw: float
 
-        if sample_stack is not None:
+        if sample_stack:
             weights = np.array( [ s["dw"] for s in sample_stack ] )
             mw = np.ones(len(sample_stack))
             mw[1:] -= np.cumsum(weights[:len(weights)-1])
             self.marginal_weights = mw
             self.last_dw = weights[0]
-            self.last_stack = None
         else:
             self.margin_weights = np.ones(1)
             self.last_dw = 0.0
-            self.last_stack = None
 
-        self.izeta = 0
-        self.zeta = None
+        self.izeta: int = 0
+        self.zeta_: float = -1.0
 
-    def zeta(self):
-        return self.zeta
+    def zeta(self) -> float:
+        return self.zeta_
 
-    def next_zeta(self, current_value, random_state = np.random.RandomState()):
-        if self.sample_stack is not None:
+    def next_zeta(self, current_value: float, random_state: Any = np.random.RandomState()) -> float:
+        if self.sample_stack:
             izeta = self.izeta
             while izeta < len(self.sample_stack) and self.sample_stack[izeta]["zeta"] < current_value:
                 izeta += 1
@@ -51,19 +54,19 @@ class SpawnStack(object):
             self.izeta = izeta
 
             if self.izeta < len(self.sample_stack):
-                self.zeta = self.sample_stack[self.izeta]["zeta"]
+                self.zeta_ = self.sample_stack[self.izeta]["zeta"]
             else:
-                self.zeta = 10.0 # should be impossible
+                self.zeta_ = 10.0 # should be impossible
 
         else:
-            self.zeta = random_state.uniform()
+            self.zeta_ = random_state.uniform()
 
-        return self.zeta
+        return self.zeta_
 
-    def weight(self):
+    def weight(self) -> float:
         return self.base_weight * self.marginal_weight
 
-    def spawn(self, reweight = 1.0):
+    def spawn(self, reweight: float = 1.0) -> 'SpawnStack':
         if self.sample_stack:
             samp = self.last_stack
             dw = self.last_dw
@@ -79,15 +82,15 @@ class SpawnStack(object):
     ## Test whether the stack indicates we should keep spawning trajectories
     #  versus just following one. An empty stack means we should behave like
     #  a normal cumulative surface hopping run.
-    def do_spawn(self):
-        return self.sample_stack is not None
+    def do_spawn(self) -> bool:
+        return bool(self.sample_stack)
 
     @classmethod
-    def from_quadrature(cls, nsamples, weight=1.0, method="gl"):
+    def from_quadrature(cls, nsamples: Union[List[int], int], weight: float = 1.0, method: str = "gl") -> 'SpawnStack':
         if not isinstance(nsamples, list):
             nsamples = [ int(nsamples) ]
 
-        forest = None
+        forest: List[Dict] = []
         for ns in nsamples:
             leaves = cp.copy(forest)
             samples, weights = quadrature(ns, 0.0, 1.0, method=method)
@@ -104,7 +107,7 @@ class SpawnStack(object):
 #  in principle deterministic algorithm for FSSH simulations.
 class EvenSamplingTrajectory(TrajectoryCum):
     ## Constructor (see TrajectoryCum constructor)
-    def __init__(self, *args, **options):
+    def __init__(self, *args: Any, **options: Any):
         TrajectoryCum.__init__(self, *args, **options)
 
         ss = options["spawn_stack"]
@@ -118,7 +121,7 @@ class EvenSamplingTrajectory(TrajectoryCum):
 
         self.zeta = self.spawn_stack.next_zeta(0.0, self.random_state)
 
-    def clone(self, spawn_stack=None):
+    def clone(self, spawn_stack: Optional[Any] = None) -> 'EvenSamplingTrajectory':
         if spawn_stack is None:
             spawn_stack = self.spawn_stack
 
@@ -146,7 +149,7 @@ class EvenSamplingTrajectory(TrajectoryCum):
     ## given a set of probabilities, determines whether and where to hop
     # @param probs [nstates] numpy array of individual hopping probabilities
     #  returns [ (target_state, hop_weight) ]
-    def hopper(self, probs):
+    def hopper(self, probs: ArrayLike) -> List[Dict[str, Union[int, float]]]:
         accumulated = self.prob_cum
         probs[self.state] = 0.0 # ensure self-hopping is nonsense
         gkdt = np.sum(probs)
@@ -187,7 +190,7 @@ class EvenSamplingTrajectory(TrajectoryCum):
     #
     # @param hop_to [nspawn] list of states and associated weights on which
     # @param electronics model class
-    def hop_to_it(self, hop_to, electronics=None):
+    def hop_to_it(self, hop_to: List[Dict[str, Any]], electronics: ElectronicT = None) -> None:
         if self.spawn_stack.do_spawn():
             for hop in hop_to:
                 stack = hop["stack"]
