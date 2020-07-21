@@ -1,9 +1,9 @@
-from typing import Any, Union, Iterator
+from typing import Any, Union, Iterator, Type
 from typing_extensions import Protocol
 
 import numpy as np
 
-ArrayLike = np.ndarray
+ArrayLike = Type[np.ndarray]
 DtypeLike = Union[np.float64, np.complex128]
 
 class ElectronicT(Protocol):

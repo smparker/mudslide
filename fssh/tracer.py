@@ -20,10 +20,10 @@ class Trace(object):
         self.weight: float = weight
 
     ## collect and optionally process data
-    def collect(self, trajectory_snapshot: Any):
+    def collect(self, trajectory_snapshot: Any) -> None:
         self.data.append(trajectory_snapshot)
 
-    def hop(self, time: float, hop_from: int, hop_to: int, zeta: float, prob: float):
+    def hop(self, time: float, hop_from: int, hop_to: int, zeta: float, prob: float) -> None:
         self.hops.append({
             "time" : time,
             "from" : hop_from,
@@ -83,9 +83,9 @@ class Trace(object):
 
 ## Class to manage the collection of observables from a set of trajectories
 class TraceManager(object):
-    def __init__(self):
+    def __init__(self) -> None:
         self.traces: List = []
-        self.outcomes: ArrayLike = None
+        self.outcomes: ArrayLike
 
     ## returns a Tracer object that will collect all of the observables for a given
     #  trajectory

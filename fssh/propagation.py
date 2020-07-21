@@ -6,7 +6,10 @@ from __future__ import print_function, division
 
 import numpy as np
 
-def rk4(y0, ydot, t0, tf, nsteps):
+from typing import Callable
+from .typing import ArrayLike, DtypeLike
+
+def rk4(y0: ArrayLike, ydot: Callable, t0: DtypeLike, tf: DtypeLike, nsteps: int) -> ArrayLike:
     """
     Propagates using 4th-order Runge-Kutta (RK4).
     """

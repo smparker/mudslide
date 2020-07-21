@@ -95,7 +95,7 @@ class SpawnStack(object):
             leaves = cp.copy(forest)
             samples, weights = quadrature(ns, 0.0, 1.0, method=method)
             forest = [ { "zeta" : s, "dw" : dw, "children" : cp.deepcopy(leaves) }
-                    for s, dw in zip(samples, weights) ]
+                    for s, dw in zip(samples, weights) ] # type: ignore
 
         return cls(forest, weight)
 

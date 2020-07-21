@@ -8,7 +8,7 @@ import argparse
 import numpy as np
 import fssh.models as tm
 
-from typing import Any
+from typing import Any, List
 from .typing import ArrayLike
 
 def main() -> None:
@@ -43,13 +43,14 @@ def main() -> None:
 
     def lineprinter(x: ArrayLike, model: Any, estates: Any) -> str:
         V = model.V(x)
-        diabats = [ V[i,i] for i in range(nstates) ]
-        energies = [ estates.hamiltonian[i,i] for i in range(nstates) ]
-        dc = [ estates.derivative_coupling[j,i] for i in range(nstates) for j in range(i) ]
-        forces = [ -estates.force[i,:] for i in range(nstates) ]
-        plist = [ x ] + diabats + energies + dc + forces
+        ndim = estates.ndim()
+        diabats = [ V[i,i] for i in range(nstates) ] # type: List[float]
+        energies = [ estates.hamiltonian[i,i] for i in range(nstates) ] # type: List[float]
+        dc = [ estates.derivative_coupling[j,i,0] for i in range(nstates) for j in range(i) ] # type: List[float]
+        forces = [ float(-estates.force[i,j]) for i in range(nstates) for j in range(ndim) ] # type: List[float]
+        plist = list(x.flatten()) + diabats + energies + dc + forces # type: List[float]
 
-        return " ".join([ "%16.10f" % x for x in plist ])
+        return " ".join([ "{:16.10f}".format(x) for x in plist ])
 
     print(headprinter())
 

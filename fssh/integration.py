@@ -6,7 +6,10 @@ from __future__ import print_function, division
 
 import numpy as np
 
-def clenshaw_curtis(n, a=-1.0, b=1.0):
+from typing import Tuple
+from .typing import ArrayLike
+
+def clenshaw_curtis(n: int, a: float = -1.0, b: float = 1.0) -> Tuple[ArrayLike,ArrayLike]:
     """
     Computes the points and weights for a Clenshaw-Curtis integration
     from a to b. In other words, for the approximation to the integral
@@ -52,7 +55,7 @@ def clenshaw_curtis(n, a=-1.0, b=1.0):
 
     return xx, out
 
-def midpoint(n, a=-1.0, b=1.0):
+def midpoint(n: int, a: float = -1.0, b: float = 1.0) -> Tuple[ArrayLike,ArrayLike]:
     """
     Returns the points and weights for a midpoint integration
     from a to b. In other words, for the approximation to the integral
@@ -68,7 +71,7 @@ def midpoint(n, a=-1.0, b=1.0):
 
     return points, weights
 
-def trapezoid(n, a=-1.0, b=1.0):
+def trapezoid(n: int, a: float = -1.0, b: float = 1.0) -> Tuple[ArrayLike,ArrayLike]:
     """
     Returns the points and weights for a trapezoid integration
     from a to b. In other words, for the approximation to the integral
@@ -88,7 +91,7 @@ def trapezoid(n, a=-1.0, b=1.0):
 
     return points, weights
 
-def quadrature(n, a=-1.0, b=1.0, method="gl"):
+def quadrature(n: int, a: float = -1.0, b: float = 1.0, method: str = "gl") -> Tuple[ArrayLike,ArrayLike]:
     """
     Returns a quadrature rule for the specified method and bounds
     """
