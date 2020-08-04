@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+"""Typing prototypes"""
+
 from typing import Any, Union, Iterator, Type
 from typing_extensions import Protocol
 

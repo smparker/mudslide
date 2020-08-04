@@ -1,7 +1,5 @@
-#!/usr/bin/env python
-
-## @package models
-#  Implementations of the one-dimensional two-state models Tully demonstrated FSSH on in Tully, J.C. <I>J. Chem. Phys.</I> 1990 <B>93</B> 1061.
+# -*- coding: utf-8 -*-
+"""Implementations of the one-dimensional two-state models Tully demonstrated FSSH on in Tully, J.C. <I>J. Chem. Phys.</I> 1990 <B>93</B> 1061."""
 
 import numpy as np
 from scipy.special import erf

@@ -1,6 +1,5 @@
-#!/usr/bin/env python
-## @package fssh
-#  Module responsible for propagating surface hopping trajectories
+# -*- coding: utf-8 -*-
+"""Code for the mudslide runtime"""
 
 from __future__ import print_function, division
 
@@ -29,8 +28,7 @@ methods = {
         }
 
 def main() -> None:
-
-    parser = ap.ArgumentParser(description="FSSH driver")
+    parser = ap.ArgumentParser(description="Mudslide test driver")
 
     parser.add_argument('-a', '--method', default="fssh", choices=methods.keys(), type=str.lower, help="Variant of SH")
     parser.add_argument('-m', '--model', default='simple', choices=models.keys(), type=str, help="Tully model to plot (%(default)s)")

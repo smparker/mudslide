@@ -1,6 +1,5 @@
-#!/usr/bin/env python
-## @package propagation
-#  Module responsible for propagating ODEs encountered in quantum dynamics
+# -*- coding: utf-8 -*-
+"""Propagators for ODEs from quantum dynamics"""
 
 from __future__ import print_function, division
 

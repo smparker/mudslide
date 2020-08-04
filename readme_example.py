@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
-import fssh
+import mudslide
 
-simple_model = fssh.models.TullySimpleAvoidedCrossing()
+simple_model = mudslide.models.TullySimpleAvoidedCrossing()
 
 # Generates trajectories always with starting position -5, starting momentum 10.0, on ground state
-traj_gen = fssh.TrajGenConst(-5.0, 10.0, "ground")
+traj_gen = mudslide.TrajGenConst(-5.0, 10.0, "ground")
 
-simulator = fssh.BatchedTraj(simple_model, traj_gen, fssh.TrajectorySH, samples = 4)
+simulator = mudslide.BatchedTraj(simple_model, traj_gen, mudslide.TrajectorySH, samples = 4)
 results = simulator.compute()
 outcomes = results.outcomes
 

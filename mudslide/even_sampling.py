@@ -1,6 +1,5 @@
-#!/usr/bin/env python
-## @package even_sampling
-#  Module responsible for propagating surface hopping trajectories
+# -*- coding: utf-8 -*-
+"""Propagate even sampling algorithm"""
 
 from __future__ import print_function, division
 

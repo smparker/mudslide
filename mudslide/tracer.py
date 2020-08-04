@@ -1,6 +1,5 @@
-#!/usr/bin/env python
-## @package tracer
-#  Module responsible for propagating surface hopping trajectories
+# -*- coding: utf-8 -*-
+"""Collect results from single trajectories"""
 
 from __future__ import print_function, division
 
@@ -117,7 +116,7 @@ class TraceManager(object):
 
     def summarize(self, verbose: bool = False, file: Any = sys.stdout) -> None:
         norm = sum((t.weight for t in self.traces))
-        print("Running the FSSH package ({})".format(__version__), file=file)
+        print("Using mudslide (v{})".format(__version__), file=file)
         print("------------------------------------", file=file)
         print("# of trajectories: {}".format(len(self.traces)), file=file)
 

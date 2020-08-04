@@ -1,6 +1,5 @@
-#!/usr/bin/env python
-## @package integration
-#  Module responsible for propagating surface hopping trajectories
+# -*- coding: utf-8 -*-
+"""Quadrature implementations"""
 
 from __future__ import print_function, division
 

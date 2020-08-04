@@ -1,6 +1,5 @@
-#!/usr/bin/env python
-## @package fssh
-#  Module responsible for propagating surface hopping trajectories
+# -*- coding: utf-8 -*-
+"""Propagating cumulative surface hopping trajectories"""
 
 from __future__ import print_function, division
 

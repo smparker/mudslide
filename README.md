@@ -5,7 +5,7 @@ The current implementation probably works for more than two electronic states, i
 one dimensional potentials.
 
 ## Contents
-* `fssh` package that contains
+* `mudslide` package that contains
   - implementation of all surface hopping methods
     - `TrajectorySH` - FSSH
     - `TrajectoryCum` - FSSH with a cumulative point of view
@@ -20,8 +20,8 @@ one dimensional potentials.
     - `ShinMetiu`
   - now some 2D models
     - `Subotnik2D`
-* `fssh` script that runs simple model trajectories
-* `surface` script that prints 1D surface and couplings
+* `mudslide` script that runs simple model trajectories
+* `mudslide-surface` script that prints 1D surface and couplings
 
 ## Requirements
 * numpy
@@ -31,7 +31,7 @@ one dimensional potentials.
 FSSH has switched to a proper python package structure, which means to work properly it now needs to be "installed". The
 most straightforward way to do this is
 
-    cd /path/to/fssh
+    cd /path/to/mudslide
     pip install --user -e .
 
 which install into your user installation dir. You can find out your user installation
@@ -45,7 +45,7 @@ and the python package, use
     export PATH=$(python -m site --user-base)/bin:$PATH
     export PYTHONPATH=$(python -m site --user-base):$PYTHONPATH
 
-## FSSH
+## Trajectory Surface Hopping
 Sets of simulations are run using the `BatchedTraj` class. A `BatchedTraj` object must be instantiated by passing a model object
 (handles electronic PESs and couplings), and a `traj_gen`
 generator that generates new initial conditions. Some simple canned examples are provided for `traj_gen`. All
@@ -54,14 +54,14 @@ other options are passed as keyword arguments to the constructor. The `compute()
 like a python dictionary. Custom `TraceManager`s can also be
 provided. For example:
 
-    import fssh
+    import mudslide
 
-    simple_model = fssh.models.TullySimpleAvoidedCrossing()
+    simple_model = mudslide.models.TullySimpleAvoidedCrossing()
 
     # Generates trajectories always with starting position -5, starting momentum 10.0, on ground state
-    traj_gen = fssh.TrajGenConst(-5.0, 10.0, "ground")
+    traj_gen = mudslide.TrajGenConst(-5.0, 10.0, "ground")
 
-    simulator = fssh.BatchedTraj(simple_model, traj_gen, fssh.TrajectorySH, samples = 4)
+    simulator = mudslide.BatchedTraj(simple_model, traj_gen, mudslide.TrajectorySH, samples = 4)
     results = simulator.compute()
     outcomes = results.outcomes
 
@@ -105,7 +105,7 @@ simplify construction of classes for new models. If you derive your class from
 `DiabaticModel_`, you only need to implement `V()` and `dV()` in the diabatic basis,
 and define class variables `ndim_` and `nstates_` that hold the number of
 nuclear degrees of freedom and the number of electronic states, respectively. See
-the file `fssh/models.py` for examples.
+the file `mudslide/models.py` for examples.
 
 The file models.py implements the three models in Tully's original paper. They are:
 

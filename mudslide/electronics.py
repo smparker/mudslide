@@ -1,7 +1,5 @@
-#!/usr/bin/env python
-## @package electronics
-#  Package responsible for handling the storage and computation of
-#  electronic degrees of freedom
+# -*- coding: utf-8 -*-
+"""Handle storage and computation of electronic degrees of freedom"""
 
 from __future__ import print_function, division
 
