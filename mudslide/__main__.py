@@ -43,7 +43,7 @@ def main() -> None:
     parser.add_argument('-j', '--nprocs', default=2, type=int, help="number of processors (%(default)d)")
     parser.add_argument('-M', '--mass', default=2000.0, type=float, help="particle mass (%(default)s)")
     parser.add_argument('-t', '--dt', default=20.0, type=float, help="time step in a.u.(%(default)s)")
-    parser.add_argument('-y', '--scale_dt', dest="scale_dt", action="store_true", help="scale (hack-like) time step using momentum (%(default)s)")
+    parser.add_argument('-y', '--scale_dt', dest="scale_dt", action="store_true", help="use dt=[dt]/k (%(default)s)")
     parser.add_argument('-T', '--nt', default=50000, type=int, help="max number of steps (%(default)s)")
     parser.add_argument('-e', '--every', default=1, type=int, help="store a snapshot every nth step (%(default)s)")
     parser.add_argument('-x', '--position', default=-10.0, type=float, help="starting position (%(default)s)")
@@ -98,8 +98,7 @@ def main() -> None:
         elif args.ksampling == "normal":
             traj_gen = TrajGenNormal(args.position, k, "ground", sigma=args.normal/k, seed = args.seed)
 
-        # hack-y scale of time step so that the input amount roughly makes sense for 10.0 a.u.
-        dt = args.dt * (10.0 / k) if args.scale_dt else args.dt
+        dt = (args.dt / k) if args.scale_dt else args.dt
 
         fssh = BatchedTraj(model, traj_gen,
                            trajectory_type = trajectory_type,
