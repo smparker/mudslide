@@ -85,12 +85,18 @@ class SpawnStack(object):
         return bool(self.sample_stack)
 
     @classmethod
-    def from_quadrature(cls, nsamples: Union[List[int], int], weight: float = 1.0, method: str = "gl") -> 'SpawnStack':
+    def from_quadrature(cls, nsamples: Union[List[int], int], weight: float = 1.0, method: str = "gl",
+            mcsamples: int = 1, random_state: Any = np.random.RandomState()) -> 'SpawnStack':
         if not isinstance(nsamples, list):
             nsamples = [ int(nsamples) ]
 
         forest: List[Dict] = []
-        for ns in nsamples:
+        if mcsamples > 1:
+            zeta = sort([ random_state.uniform() for i in mcsamples ])
+            dw = 1.0 / mcsamples
+            forest = [ { "zeta" : z, "dw" : dw, "children" : cp.deepcopy(forest) } for z in zeta ]
+
+        for ns in reversed(nsamples):
             leaves = cp.copy(forest)
             samples, weights = quadrature(ns, 0.0, 1.0, method=method)
             forest = [ { "zeta" : s, "dw" : dw, "children" : cp.deepcopy(leaves) }
@@ -114,7 +120,9 @@ class EvenSamplingTrajectory(TrajectoryCum):
             self.spawn_stack = cp.deepcopy(options["spawn_stack"])
         elif isinstance(ss, list):
             quadrature = options.get("quadrature", "gl")
-            self.spawn_stack = SpawnStack.from_quadrature(ss, method=quadrature)
+            mcsamples = options.get("mcsamples", 1)
+            self.spawn_stack = SpawnStack.from_quadrature(ss, method=quadrature,
+                    mcsamples=mcsamples, random_state=self.random_state)
         else:
             self.spawn_stack = SpawnStack(ss)
 

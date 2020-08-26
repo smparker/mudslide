@@ -90,6 +90,33 @@ def trapezoid(n: int, a: float = -1.0, b: float = 1.0) -> Tuple[ArrayLike,ArrayL
 
     return points, weights
 
+def simpson(n: int, a: float = -1.0, b: float = 1.0) -> Tuple[ArrayLike,ArrayLike]:
+    """
+    Returns the points and weights for a trapezoid integration
+    from a to b. In other words, for the approximation to the integral
+
+    \int_a^b f(x) dx \approx \frac{b-a}{n} \sum_{i=0}^n f((x_0 + x_1)/2)
+    """
+    assert b > a and n > 1
+
+    if n%2 != 1:
+        raise Exception("Simpson's rule must be defined with an odd number of points (even number of intervals)")
+
+    ninterval = n - 1
+
+    weights = np.ones(n)
+    for i in range(1, ninterval-1, 2):
+        weights[i] = 4.0
+        weights[i+1] = 2.0
+    weights[ninterval-1] = 4.0
+    weights *= (b-a) / ninterval / 3.0
+
+    points = np.zeros(n)
+    for i in range(n):
+        points[i] = a + ((b - a) / ninterval) * i
+
+    return points, weights
+
 def quadrature(n: int, a: float = -1.0, b: float = 1.0, method: str = "gl") -> Tuple[ArrayLike,ArrayLike]:
     """
     Returns a quadrature rule for the specified method and bounds
