@@ -15,3 +15,5 @@ from .ehrenfest import *
 from .batch import *
 
 from . import models
+
+from .import math
