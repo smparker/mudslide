@@ -92,7 +92,8 @@ class SpawnStack(object):
 
         forest: List[Dict] = []
         if mcsamples > 1:
-            zeta = sort([ random_state.uniform() for i in mcsamples ])
+            zeta = [ random_state.uniform() for i in range(mcsamples) ]
+            zeta.sort()
             dw = 1.0 / mcsamples
             forest = [ { "zeta" : z, "dw" : dw, "children" : cp.deepcopy(forest) } for z in zeta ]
 

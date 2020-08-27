@@ -92,7 +92,7 @@ def trapezoid(n: int, a: float = -1.0, b: float = 1.0) -> Tuple[ArrayLike,ArrayL
 
 def simpson(n: int, a: float = -1.0, b: float = 1.0) -> Tuple[ArrayLike,ArrayLike]:
     """
-    Returns the points and weights for a trapezoid integration
+    Returns the points and weights for a simpson rule integration
     from a to b. In other words, for the approximation to the integral
 
     \int_a^b f(x) dx \approx \frac{b-a}{n} \sum_{i=0}^n f((x_0 + x_1)/2)
@@ -132,5 +132,7 @@ def quadrature(n: int, a: float = -1.0, b: float = 1.0, method: str = "gl") -> T
         return midpoint(n, a, b)
     elif method.lower() == "trapezoid":
         return trapezoid(n, a, b)
+    elif method.lower() == "simpson":
+        return simpson(n, a, b)
     else:
         raise Exception("Unrecognized quadrature choice")
