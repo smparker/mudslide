@@ -84,6 +84,16 @@ class SpawnStack(object):
     def do_spawn(self) -> bool:
         return bool(self.sample_stack)
 
+    def spawn_size(self) -> int:
+        if self.sample_stack:
+            samp = self.last_stack
+            if "spawn_size" in samp:
+                return samp["spawn_size"]
+            else:
+                return 1
+        else:
+            return 1
+
     @classmethod
     def from_quadrature(cls, nsamples: Union[List[int], int], weight: float = 1.0, method: str = "gl",
             mcsamples: int = 1, random_state: Any = np.random.RandomState()) -> 'SpawnStack':
@@ -91,16 +101,16 @@ class SpawnStack(object):
             nsamples = [ int(nsamples) ]
 
         forest: List[Dict] = []
-        if mcsamples > 1:
-            zeta = [ random_state.uniform() for i in range(mcsamples) ]
-            zeta.sort()
-            dw = 1.0 / mcsamples
-            forest = [ { "zeta" : z, "dw" : dw, "children" : cp.deepcopy(forest) } for z in zeta ]
+        spawn_size = [ mcsamples ] + [ 1 ] * (len(nsamples) - 1)
 
         for ns in reversed(nsamples):
             leaves = cp.copy(forest)
             samples, weights = quadrature(ns, 0.0, 1.0, method=method)
-            forest = [ { "zeta" : s, "dw" : dw, "children" : cp.deepcopy(leaves) }
+            spawnsize = spawn_size.pop(0)
+            forest = [ { "zeta" : s,
+                "dw" : dw,
+                "children" : cp.deepcopy(leaves),
+                "spawn_size" : spawnsize }
                     for s, dw in zip(samples, weights) ] # type: ignore
 
         return cls(forest, weight)
@@ -170,11 +180,14 @@ class EvenSamplingTrajectory(TrajectoryCum):
             # where to hop
             hop_choice = probs / gkdt
             if self.spawn_stack.do_spawn():
+                nspawn = self.spawn_stack.spawn_size()
+                spawn_weight = 1.0 / nspawn
                 targets = [ { "target" : i,
                               "weight" : hop_choice[i],
                               "zeta" : zeta,
                               "prob" : accumulated,
-                              "stack" : self.spawn_stack.spawn(hop_choice[i])} for i in range(self.model.nstates()) if i != self.state ]
+                              "stack" : self.spawn_stack.spawn(spawn_weight * hop_choice[i])}
+                                    for i in range(self.model.nstates()) if i != self.state for j in range(nspawn) ]
             else:
                 target = self.random_state.choice(list(range(self.model.nstates())), p=hop_choice)
                 targets = [ {"target" : target, "weight" : 1.0, "zeta" : zeta, "prob" : accumulated, "stack" : self.spawn_stack.spawn() }]
