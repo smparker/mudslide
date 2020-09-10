@@ -48,6 +48,7 @@ def main() -> None:
     parser.add_argument('-e', '--every', default=1, type=int, help="store a snapshot every nth step (%(default)s)")
     parser.add_argument('-x', '--position', default=-10.0, type=float, help="starting position (%(default)s)")
     parser.add_argument('-b', '--bounds', default=5.0, type=float, help="bounding box to end simulation (%(default)s)")
+    parser.add_argument('-p', '--probability', choices=["tully", "poisson"], default="tully", type=str, help="how to determine hopping probabilities from gk->n * dt (%(default)s)")
     parser.add_argument('-o', '--output', default="averaged", type=str, choices=('averaged', 'single', 'pickle', 'swarm', 'hack'), help="what to produce as output (%(default)s)")
     parser.add_argument('-O', '--outfile', default="sh.pickle", type=str, help="name of pickled file to produce (%(default)s)")
     parser.add_argument('-z', '--seed', default=None, type=int, help="random seed (None)")
@@ -110,7 +111,8 @@ def main() -> None:
                            bounds = [ -abs(args.bounds), abs(args.bounds) ],
                            trace_every = args.every,
                            spawn_stack = args.sample_stack,
-                           electronic_integration=args.electronic
+                           electronic_integration=args.electronic,
+                           hopping_probability = args.probability
                    )
         results = fssh.compute()
         outcomes = results.outcomes

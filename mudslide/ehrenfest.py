@@ -34,6 +34,6 @@ class Ehrenfest(TrajectorySH):
 
     ## Ehrenfest never hops
     # @param electronics ElectronicStates from current step (not used)
-    def surface_hopping(self, last_electronics: ElectronicT, this_electronics: ElectronicT) -> DtypeLike:
-        return 0.0
+    def surface_hopping(self, last_electronics: ElectronicT, this_electronics: ElectronicT):
+        return
 

@@ -14,6 +14,8 @@ import numpy as np
 from typing import List, Dict, Type, Union, Any
 from .typing import ArrayLike, DtypeLike
 
+from .math import poisson_prob_scale
+
 class TrajectorySH(object):
     """Class to propagate a single FSSH trajectory"""
 
@@ -71,7 +73,7 @@ class TrajectorySH(object):
         self.random_state = np.random.default_rng(self.seed_sequence)
 
         self.electronics = options.get("electronics", None)
-        self.hopping = np.zeros(model.nstates(), dtype=np.float64)
+        self.hopping = 0.0
 
         self.electronic_integration = options.get("electronic_integration", "exp").lower()
         self.max_electronic_dt = options.get("max_electronic_dt", 0.1)
@@ -82,7 +84,9 @@ class TrajectorySH(object):
         self.restart = options.get("restart", False)
         self.force_quit = False
 
-        self.hopping_probability = options.get("hopping_probability", "exp")
+        self.hopping_probability = options.get("hopping_probability", "tully")
+        if self.hopping_probability not in [ "tully", "poisson" ]:
+            raise Exception("hopping_probability accepts only \"tully\" or \"poisson\" options")
 
         self.zeta = 0.0
 
@@ -397,7 +401,7 @@ class TrajectorySH(object):
         self.last_velocity = self.velocity
         self.velocity += 0.5 * (last_acceleration + this_acceleration) * self.dt
 
-    def surface_hopping(self, last_electronics: ElectronicT, this_electronics: ElectronicT) -> DtypeLike:
+    def surface_hopping(self, last_electronics: ElectronicT, this_electronics: ElectronicT):
         """Compute probability of hopping, generate random number, and perform hops
 
         :param elec_states: ElectronicStates from current step
@@ -407,36 +411,35 @@ class TrajectorySH(object):
 
         H = self.hamiltonian_propagator(last_electronics, this_electronics)
 
-        probs = 2.0 * np.imag(self.rho[self.state,:] * H[:,self.state]) * self.dt / np.real(self.rho[self.state,self.state])
+        gkndt = 2.0 * np.imag(self.rho[self.state,:] * H[:,self.state]) * self.dt / np.real(self.rho[self.state,self.state])
 
         # zero out 'self-hop' for good measure (numerical safety)
-        probs[self.state] = 0.0
+        gkndt[self.state] = 0.0
 
         # clip probabilities to make sure they are between zero and one
-        probs = np.maximum(probs, 0.0)
-        if self.hopping_probability == "tully":
-            self.hopping = probs
-        elif self.hopping_probability == "exp":
-            sum_prob = np.sum(probs)
-            if sum_prob != 0.0:
-                total_prob = -np.expm1(sum_prob)
-                self.hopping = (probs / sum_prob) * total_prob
-            else:
-                self.hopping = probs
+        gkndt = np.maximum(gkndt, 0.0)
 
-        hop_targets = self.hopper(probs)
+        hop_targets = self.hopper(gkndt)
         if hop_targets:
             self.hop_to_it(hop_targets, this_electronics)
 
-        return sum(probs)
-
-    def hopper(self, probs: np.ndarray) -> List[Dict[str, float]]:
+    def hopper(self, gkndt: np.ndarray) -> List[Dict[str, float]]:
         """
         Determine whether and where to hop
 
         :param probs: [nstates] numpy array of individual hopping probabilities
         :return: [(target_state, weight)] list of (target_state, weight) pairs
         """
+
+        probs = np.zeros_like(gkndt)
+        if self.hopping_probability == "tully":
+            probs = gkndt
+        elif self.hopping_probability == "poisson":
+            probs = gkndt * poisson_prob_scale(np.sum(gkndt))
+        else:
+            raise Exception("Unrecognized option for hopping_probability")
+        self.hopping = np.sum(probs) # store total hopping probability
+
         self.zeta = self.random()
         acc_prob = np.cumsum(probs)
         hops = np.less(self.zeta, acc_prob)
@@ -486,8 +489,6 @@ class TrajectorySH(object):
 
         potential_energy = self.potential_energy(self.electronics)
 
-        self.hopping = 0.0
-
         self.trace()
 
         # propagation
@@ -503,7 +504,7 @@ class TrajectorySH(object):
 
             # now propagate the electronic wavefunction to the new time
             self.propagate_electronics(last_electronics, self.electronics, self.dt)
-            self.hopping = self.surface_hopping(last_electronics, self.electronics)
+            self.surface_hopping(last_electronics, self.electronics)
 
             self.time += self.dt
             self.nsteps += 1

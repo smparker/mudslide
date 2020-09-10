@@ -48,15 +48,15 @@ class TrajectoryCum(TrajectorySH):
     ## given a set of probabilities, determines whether and where to hop
     # @param probs [nstates] numpy array of individual hopping probabilities
     #  returns (do_hop, target_state)
-    def hopper(self, probs: ArrayLike) -> List[Dict]:
-        accumulated = np.longdouble(self.prob_cum)
-        probs[self.state] = 0.0 # ensure self-hopping is nonsense
-        gkdt = np.sum(probs)
+    def hopper(self, gkndt: ArrayLike) -> List[Dict]:
+        self.hopping = np.sum(gkndt)
 
+        accumulated = np.longdouble(self.prob_cum)
+        gkdt = np.sum(gkndt)
         accumulated += (accumulated - 1.0) * np.expm1(-gkdt)
         if accumulated > self.zeta: # then hop
             # where to hop
-            hop_choice = probs / gkdt
+            hop_choice = gkndt / gkdt
 
             zeta = self.zeta
             target = self.random_state.choice(list(range(self.model.nstates())), p=hop_choice)
