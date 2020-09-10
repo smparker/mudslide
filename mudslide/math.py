@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Quadrature implementations"""
+"""Math helper functions"""
 
 from __future__ import print_function, division
 
