@@ -20,24 +20,26 @@ def clenshaw_curtis(n: int, a: float = -1.0, b: float = 1.0) -> Tuple[ArrayLike,
     """
     assert b > a and n > 1
 
-    theta = np.pi * np.flip(np.arange(n+1)) / n
+    npoints = n
+    nsegments = n - 1
+    theta = np.pi * np.flip(np.arange(npoints)) / nsegments
     xx = np.cos(theta) * 0.5 * (b - a) + 0.5 * (a + b)
 
-    wcc0 = 1.0/(n*n - 1 + (n%2))
+    wcc0 = 1.0/(nsegments*nsegments - 1 + (nsegments%2))
 
     # build v vector
-    v = np.zeros(n)
-    v[:n//2] = 2.0/(1.0 - 4.0 * np.arange(n//2)**2)
-    v[n//2] = (n - 3) / (2 * (n//2) - 1) - 1
-    for k in range(1, (n+1)//2):
-        v[n-k] = np.conj(v[k])
+    v = np.zeros(nsegments)
+    v[:nsegments//2] = 2.0/(1.0 - 4.0 * np.arange(nsegments//2)**2)
+    v[nsegments//2] = (nsegments - 3) / (2 * (nsegments//2) - 1) - 1
+    for k in range(1, npoints//2):
+        v[nsegments-k] = np.conj(v[k])
 
     # build g vector
-    g = np.zeros(n)
-    g[:n//2] = -wcc0
-    g[n//2] = wcc0 * ( (2 - (n%2)) * n - 1 )
-    for k in range(1, (n+1)//2):
-        g[n-k] = np.conj(g[k])
+    g = np.zeros(nsegments)
+    g[:nsegments//2] = -wcc0
+    g[nsegments//2] = wcc0 * ( (2 - (nsegments%2)) * nsegments - 1 )
+    for k in range(1, npoints//2):
+        g[nsegments-k] = np.conj(g[k])
 
     h = v + g
     wcc = np.fft.ifft(h)
@@ -46,9 +48,9 @@ def clenshaw_curtis(n: int, a: float = -1.0, b: float = 1.0) -> Tuple[ArrayLike,
     imag_norm = np.linalg.norm(np.imag(wcc))
     assert imag_norm < 1e-14
 
-    out = np.zeros(n+1)
-    out[:n] = np.real(wcc)
-    out[n] = out[0]
+    out = np.zeros(npoints)
+    out[:nsegments] = np.real(wcc)
+    out[nsegments] = out[0]
     out = np.flip(out) # might be redundant, but for good measure
     out *= 0.5 * (b - a)
 
