@@ -46,6 +46,19 @@ class TestQuadratures(unittest.TestCase):
         self.assertEqual(len(w), self.n)
         self.assertTrue(np.all(np.isclose(w, refw)))
 
+    def test_simpson_quadrature(self):
+        """Test Simpson quadrature"""
+        refx = self.evenx
+        refw = [0.03333333, 0.13333333, 0.06666667, 0.13333333, 0.06666667, 0.13333333,
+                 0.06666667, 0.13333333, 0.06666667, 0.13333333, 0.03333333]
+
+        x, w = mudslide.integration.quadrature(self.n, self.a, self.b, "simpson")
+        self.assertEqual(len(x), self.n)
+        self.assertTrue(np.all(np.isclose(x, refx)))
+
+        self.assertEqual(len(w), self.n)
+        self.assertTrue(np.all(np.isclose(w, refw)))
+
     def test_clenshawcurtis_quadrature(self):
         """Test Clenshaw-Curtis quadrature"""
         refx = [0.        , 0.02447174, 0.0954915 , 0.20610737, 0.3454915 , 0.5       ,
@@ -60,7 +73,7 @@ class TestQuadratures(unittest.TestCase):
         self.assertEqual(len(w), self.n)
         self.assertTrue(np.all(np.isclose(w, refw)))
 
-    def test_clenshawcurtis_quadrature(self):
+    def test_gasslegendre_quadrature(self):
         """Test Gauss-Legendre quadrature"""
         refx = [0.01088567, 0.0564687 , 0.134924  , 0.24045194, 0.36522842, 0.5       ,
                  0.63477158, 0.75954806, 0.865076  , 0.9435313 , 0.98911433]
