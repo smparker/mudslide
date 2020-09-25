@@ -62,10 +62,12 @@ class DiabaticModel_(ElectronicModel_):
         out.compute(X, couplings=couplings, gradients=gradients, reference=self.reference)
         return out
 
-    ## Computes coefficient matrix for basis states
-    # if a diabatic representation is chosen, no transformation takes place
-    # @param reference optional ElectronicStates from previous step used only to fix phase
     def _compute_basis_states(self, V: ArrayLike, reference: Any = None) -> Tuple[ArrayLike,ArrayLike]:
+        """Computes coefficient matrix for basis states
+        if a diabatic representation is chosen, no transformation takes place
+        :param V: potential matrix
+        :param reference: ElectronicStates from previous step used only to fix phase
+        """
         if self.representation == "adiabatic":
             energies, coeff = np.linalg.eigh(V)
             if reference is not None:
@@ -81,8 +83,8 @@ class DiabaticModel_(ElectronicModel_):
         else:
             raise Exception("Unrecognized run mode")
 
-    ## returns \f$-\langle \phi_{\mbox{state}} | \nabla H | \phi_{\mbox{state}} \rangle\f$ of Hamiltonian
     def _compute_force(self, dV: ArrayLike, coeff: ArrayLike) -> ArrayLike:
+        r""":math:`-\langle \phi_{\mbox{state}} | \nabla H | \phi_{\mbox{state}} \rangle`"""
         nst = self.nstates()
         ndim = self.ndim()
 
@@ -93,13 +95,13 @@ class DiabaticModel_(ElectronicModel_):
             out[ist,:] += -np.einsum("i,ix->x", coeff[:,ist], half[:,ist,:])
         return out
 
-    ## returns \f$F^\xi{ij} = \langle \phi_i | -\nabla_\xi H | \phi_j\rangle\f$
     def _compute_force_matrix(self, coeff: ArrayLike, dV: ArrayLike) -> ArrayLike:
+        r"""returns :math:`F^\xi{ij} = \langle \phi_i | -\nabla_\xi H | \phi_j\rangle`"""
         out = -np.einsum("ip,xij,jq->pqx", coeff, dV, coeff)
         return out
 
-    ## returns \f$\phi_{i} | \nabla_\alpha \phi_{j} = d^\alpha_{ij}\f$
     def _compute_derivative_coupling(self, coeff: ArrayLike, dV: ArrayLike, energies: ArrayLike) -> ArrayLike:
+        r"""returns :math:`\phi_{i} | \nabla_\alpha \phi_{j} = d^\alpha_{ij}`"""
         if self.representation == "diabatic":
             return np.zeros([self.nstates(), self.nstates(), self.ndim()], dtype=np.float64)
 
@@ -160,10 +162,12 @@ class AdiabaticModel_(ElectronicModel_):
         out.compute(X, couplings=couplings, gradients=gradients, reference=self.reference)
         return out
 
-    ## Computes coefficient matrix for basis states
-    # if a diabatic representation is chosen, no transformation takes place
-    # @param reference optional ElectronicStates from previous step used only to fix phase
     def _compute_basis_states(self, V: ArrayLike, reference: Any = None) -> Tuple[ArrayLike,ArrayLike]:
+        """Computes coefficient matrix for basis states
+        if a diabatic representation is chosen, no transformation takes place
+        :param V: potential matrix
+        :param reference: ElectronicStates from previous step used only to fix phase
+        """
         if self.representation == "adiabatic":
             en, co = np.linalg.eigh(V)
             nst = self.nstates()
@@ -184,8 +188,8 @@ class AdiabaticModel_(ElectronicModel_):
         else:
             raise Exception("Unrecognized representation")
 
-    ## returns \f$-\langle \phi_{\mbox{state}} | \nabla H | \phi_{\mbox{state}} \rangle\f$ of Hamiltonian
     def _compute_force(self, dV: ArrayLike, coeff: ArrayLike) -> ArrayLike:
+        r""":math:`-\langle \phi_{\mbox{state}} | \nabla H | \phi_{\mbox{state}} \rangle`"""
         nst = self.nstates()
         ndim = self.ndim()
 
@@ -196,13 +200,13 @@ class AdiabaticModel_(ElectronicModel_):
             out[ist,:] += -np.einsum("i,ix->x", coeff[:,ist], half[:,ist,:])
         return out
 
-    ## returns \f$F^\xi{ij} = \langle \phi_i | -\nabla_\xi H | \phi_j\rangle\f$
     def _compute_force_matrix(self, coeff: ArrayLike, dV: ArrayLike) -> ArrayLike:
+        r"""returns :math:`F^\xi{ij} = \langle \phi_i | -\nabla_\xi H | \phi_j\rangle`"""
         out = -np.einsum("ip,xij,jq->pqx", coeff, dV, coeff)
         return out
 
-    ## returns \f$\phi_{i} | \nabla_\alpha \phi_{j} = d^\alpha_{ij}\f$
     def _compute_derivative_coupling(self, coeff: ArrayLike, dV: ArrayLike, energies: ArrayLike) -> ArrayLike:
+        r"""returns :math:`\phi_{i} | \nabla_\alpha \phi_{j} = d^\alpha_{ij}`"""
         if self.representation == "diabatic":
             return np.zeros([self.nstates(), self.nstates(), self.ndim()], dtype=np.float64)
 

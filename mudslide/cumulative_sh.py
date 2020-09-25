@@ -13,22 +13,24 @@ from .trajectory_sh import TrajectorySH
 from typing import Any, List, Dict
 from .typing import ArrayLike
 
-## Trajectory surface hopping using a cumulative approach rather than instantaneous
-#
-#  Instead of using a random number generator at every time step to test for a hop,
-#  hops occur when the cumulative probability of a hop crosses a randomly determined
-#  threshold. Swarmed results should be identical to the traditional variety, but
-#  should be a bit easier to reproduce since far fewer random numbers are ever needed.
 class TrajectoryCum(TrajectorySH):
-    ## Constructor (see TrajectorySH constructor)
+    """
+    Trajectory surface hopping using a cumulative approach rather than instantaneous
+
+    Instead of using a random number generator at every time step to test for a hop,
+    hops occur when the cumulative probability of a hop crosses a randomly determined
+    threshold. Swarmed results should be identical to the traditional variety, but
+    should be a bit easier to reproduce since far fewer random numbers are ever needed.
+    """
     def __init__(self, *args: Any, **kwargs: Any):
+        """Constructor (see TrajectorySH constructor)"""
         TrajectorySH.__init__(self, *args, **kwargs)
 
         self.prob_cum = np.longdouble(0.0)
         self.zeta = self.random()
 
-    ## returns loggable data
     def snapshot(self) -> Dict:
+        """returns loggable data"""
         out = {
             "time" : self.time,
             "position"  : np.copy(self.position),
@@ -45,10 +47,12 @@ class TrajectoryCum(TrajectorySH):
             }
         return out
 
-    ## given a set of probabilities, determines whether and where to hop
-    # @param probs [nstates] numpy array of individual hopping probabilities
-    #  returns (do_hop, target_state)
     def hopper(self, gkndt: ArrayLike) -> List[Dict]:
+        """given a set of probabilities, determines whether and where to hop
+
+        :param probs: [nstates] numpy array of individual hopping probabilities
+        :returns: dictioanry with { "target": int, "weight": float, "zeta": float, "prob": float }
+        """
         self.hopping = np.sum(gkndt)
 
         accumulated = np.longdouble(self.prob_cum)

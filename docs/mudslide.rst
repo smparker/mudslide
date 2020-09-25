@@ -5,7 +5,7 @@ fssh package
 Module contents
 ---------------
 
-.. automodule:: fssh
+.. automodule:: mudslide
    :members:
    :undoc-members:
    :show-inheritance:
@@ -36,7 +36,7 @@ Module contents
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: fssh.models
+.. automodule:: mudslide.models
    :members:
    :undoc-members:
    :show-inheritance:

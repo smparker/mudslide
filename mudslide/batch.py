@@ -13,10 +13,6 @@ from .tracer import TraceManager
 from typing import Any, Iterator, Tuple
 from .typing import ModelT, TrajGenT, ArrayLike, DtypeLike
 
-#####################################################################################
-# Canned classes act as generator functions for initial conditions                  #
-#####################################################################################
-
 class TrajGenConst(object):
     """Canned class whose call function acts as a generator for static initial conditions
 

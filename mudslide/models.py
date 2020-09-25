@@ -52,23 +52,24 @@ def pad_model(nstates, diags):
     return class_decorator
 '''
 
-## Tunneling through a single barrier model used in Tully's 1990 JCP
-#
-# \f[
-#     V_{11} = \left\{ \begin{array}{cr}
-#                   A (1 - e^{Bx}) & x < 0 \\
-#                  -A (1 - e^{-Bx}) & x > 0
-#                   \end{array} \right.
-# \f]
-# \f[ V_{22} = -V_{11} \f]
-# \f[ V_{12} = V_{21} = C e^{-D x^2} \f]
 class TullySimpleAvoidedCrossing(DiabaticModel_):
+    r"""Tunneling through a single barrier model used in Tully's 1990 JCP
+
+    .. math::
+       V_{11} &= \left\{ \begin{array}{cr}
+                     A (1 - e^{Bx}) & x < 0 \\
+                    -A (1 - e^{-Bx}) & x > 0
+                     \end{array} \right. \\
+       V_{22} &= -V_{11} \\
+       V_{12} &= V_{21} = C e^{-D x^2}
+
+    """
     ndim_: int = 1
     nstates_: int = 2
 
-    ## Constructor that defaults to the values reported in Tully's 1990 JCP
     def __init__(self, representation: str = "adiabatic", reference: Any = None,
             a: float = 0.01, b: float = 1.6, c: float = 0.005, d: float = 1.0, mass: float = 2000.0):
+        """Constructor that defaults to the values reported in Tully's 1990 JCP"""
         DiabaticModel_.__init__(self, representation=representation, reference=reference)
 
         self.A = a
@@ -77,16 +78,16 @@ class TullySimpleAvoidedCrossing(DiabaticModel_):
         self.D = d
         self.mass = np.array(mass, dtype=np.float64).reshape(self.ndim())
 
-    ## \f$V(x)\f$
     def V(self, x: ArrayLike) -> ArrayLike:
+        """:math:`V(x)`"""
         v11 = float(np.copysign(self.A, x) * ( 1.0 - np.exp(-self.B * np.abs(x)) ))
         v22 = -v11
         v12 = float(self.C * np.exp(-self.D * x * x))
         out = np.array([ [v11, v12], [v12, v22] ], dtype=np.float64)
         return out
 
-    ## \f$\nabla V(x)\f$
     def dV(self, x: ArrayLike) -> ArrayLike:
+        """:math:`\\nabla V(x)`"""
         xx = np.array(x, dtype=np.float64)
         v11 = self.A * self.B * np.exp(-self.B * abs(xx))
         v22 = -v11
@@ -95,18 +96,20 @@ class TullySimpleAvoidedCrossing(DiabaticModel_):
                          [v12, v22] ], dtype=np.float64)
         return out.reshape([1, 2, 2])
 
-## Tunneling through a double avoided crossing used in Tully's 1990 JCP
-#
-# \f[ V_{11} = 0 \f]
-# \f[ V_{22} = -A e^{-Bx^2} + E_0 \f]
-# \f[ V_{12} = V_{21} = C e^{-D x^2} \f]
 class TullyDualAvoidedCrossing(DiabaticModel_):
+    r"""Tunneling through a double avoided crossing used in Tully's 1990 JCP
+
+    .. math::
+        V_{11} &= 0 \\
+        V_{22} &= -A e^{-Bx^2} + E_0 \\
+        V_{12} &= V_{21} = C e^{-D x^2}
+    """
     ndim_: int = 1
     nstates_: int = 2
 
-    ## Constructor that defaults to the values reported in Tully's 1990 JCP
     def __init__(self, representation: str = "adiabatic", reference: Any = None,
             a: float = 0.1, b: float = 0.28, c: float = 0.015, d: float = 0.06, e: float = 0.05, mass: float = 2000.0):
+        """Constructor that defaults to the values reported in Tully's 1990 JCP"""
         DiabaticModel_.__init__(self, representation=representation, reference=reference)
         self.A = a
         self.B = b
@@ -115,8 +118,8 @@ class TullyDualAvoidedCrossing(DiabaticModel_):
         self.E0 = e
         self.mass = np.array(mass, dtype=np.float64).reshape(self.ndim())
 
-    ## \f$V(x)\f$
     def V(self, x: ArrayLike) -> ArrayLike:
+        """:math:`V(x)`"""
         v11 = 0.0
         v22 = float(-self.A * np.exp(-self.B * x * x) + self.E0)
         v12 = float(self.C * np.exp(-self.D * x * x))
@@ -124,8 +127,8 @@ class TullyDualAvoidedCrossing(DiabaticModel_):
                          [v12, v22] ], dtype=np.float64)
         return out
 
-    ## \f$\nabla V(x)\f$
     def dV(self, x: ArrayLike) -> ArrayLike:
+        """:math:`\\nabla V(x)`"""
         xx = np.array(x, dtype=np.float64)
         v11 = np.zeros_like(xx)
         v22 = 2.0 * self.A * self.B * xx * np.exp(-self.B * xx * xx)
@@ -134,31 +137,33 @@ class TullyDualAvoidedCrossing(DiabaticModel_):
                          [v12, v22] ], dtype=np.float64)
         return out.reshape([1, 2, 2])
 
-## Model with extended coupling and the possibility of reflection. The most challenging of the
-#  models used in Tully's 1990 JCP
-# \f[ V_{11} = A \f]
-# \f[ V_{22} = -A \f]
-# \f[
-#     V_{12} = \left\{ \begin{array}{cr}
-#                   B e^{Cx} & x < 0 \\
-#                   B \left( 2 - e^{-Cx} \right) & x > 0
-#                   \end{array} \right.
-# \f]
 class TullyExtendedCouplingReflection(DiabaticModel_):
+    r"""Model with extended coupling and the possibility of reflection. The most challenging of the
+    models used in Tully's 1990 JCP
+
+    .. math::
+        V_{11} &= A \\
+        V_{22} &= -A \\
+        V_{12} &= \left\{ \begin{array}{cr}
+                      B e^{Cx} & x < 0 \\
+                      B \left( 2 - e^{-Cx} \right) & x > 0
+                      \end{array} \right.
+    """
+
     ndim_: int = 1
     nstates_: int = 2
 
-    ## Constructor that defaults to the values reported in Tully's 1990 JCP
     def __init__(self, representation: str = "adiabatic", reference: Any = None,
             a: float = 0.0006, b: float = 0.10, c: float = 0.90, mass: float = 2000.0):
+        """Constructor that defaults to the values reported in Tully's 1990 JCP"""
         DiabaticModel_.__init__(self, representation=representation, reference=reference)
         self.A = a
         self.B = b
         self.C = c
         self.mass = np.array(mass, dtype=np.float64).reshape(self.ndim())
 
-    ## \f$V(x)\f$
     def V(self, x: ArrayLike) -> ArrayLike:
+        """:math:`V(x)`"""
         v11 = self.A
         v22 = -self.A
         v12 = float(np.exp(-np.abs(x)*self.C))
@@ -170,8 +175,8 @@ class TullyExtendedCouplingReflection(DiabaticModel_):
                          [v12, v22] ], dtype=np.float64)
         return out
 
-    ## \f$\nabla V(x)\f$
     def dV(self, x: ArrayLike) -> ArrayLike:
+        """:math:`\\nabla V(x)`"""
         xx = np.array(x, dtype=np.float64)
         v11 = np.zeros_like(xx)
         v22 = np.zeros_like(xx)
@@ -184,9 +189,9 @@ class SuperExchange(DiabaticModel_):
     nstates_: int = 3
     ndim_: int = 1
 
-    ## Constructor defaults to Prezhdo paper on GFSH
     def __init__(self, representation: str = "adiabatic", reference: Any = None,
             v11: float = 0.0, v22: float = 0.01, v33: float = 0.005, v12: float = 0.001, v23: float = 0.01, mass:float = 2000.0):
+        """Constructor defaults to Prezhdo paper on GFSH"""
         DiabaticModel_.__init__(self, representation=representation, reference=reference)
         self.v11 = v11
         self.v22 = v22
@@ -195,8 +200,8 @@ class SuperExchange(DiabaticModel_):
         self.v23 = v23
         self.mass = np.array(mass, dtype=np.float64).reshape(self.ndim())
 
-    ## \f$V(x)\f$
     def V(self, x: ArrayLike) -> ArrayLike:
+        """:math:`V(x)`"""
         v12 = self.v12 * np.exp(-0.5*x*x)
         v23 = self.v23 * np.exp(-0.5*x*x)
 
@@ -204,8 +209,8 @@ class SuperExchange(DiabaticModel_):
                           [v12, self.v22, v23],
                           [0.0, v23, self.v33] ], dtype=np.float64)
 
-    ## \f$ \nabla V(x)\f$
     def dV(self, x: ArrayLike) -> ArrayLike:
+        """:math:`\\nabla V(x)`"""
         v12 = -x * self.v12 * np.exp(-0.5*x*x)
         v23 = -x * self.v23 * np.exp(-0.5*x*x)
         out = np.array([ [0.0, v12, 0.0],
@@ -218,9 +223,9 @@ class SubotnikModelX(DiabaticModel_):
     nstates_: int = 3
     ndim_: int = 1
 
-    ## Constructor defaults to Subotnik JPCA 2011 paper on decoherence
     def __init__(self, representation: str = "adiabatic", reference: Any = None,
             a: float = 0.03, b: float = 1.6, c: float = 0.005, xp:float = 7.0, mass:float = 2000.0):
+        """Constructor defaults to Subotnik JPCA 2011 paper on decoherence"""
         DiabaticModel_.__init__(self, representation=representation, reference=reference)
         self.a = float(a)
         self.b = float(b)
@@ -228,8 +233,8 @@ class SubotnikModelX(DiabaticModel_):
         self.xp = float(xp)
         self.mass = np.array(mass, dtype=np.float64).reshape(self.ndim())
 
-    ## \f$V(x)\f$
     def V(self, x: ArrayLike) -> ArrayLike:
+        """:math:`V(x)`"""
         xx = np.array( [ x - self.xp, x, x + self.xp ] )
         tan = self.a * np.tanh(self.b * xx)
         ex = self.c * np.exp(-xx**2)
@@ -245,8 +250,8 @@ class SubotnikModelX(DiabaticModel_):
                           [v12, v22, v23],
                           [v13, v23, v33] ], dtype=np.float64)
 
-    ## \f$ \nabla V(x)\f$
     def dV(self, x: ArrayLike) -> ArrayLike:
+        """:math:`\\nabla V(x)`"""
         xx = np.array( [ x - self.xp, x, x + self.xp ] )
         tan = self.a * self.b * np.cosh(self.b * xx)**(-2)
         ex = -2.0 * xx * self.c * np.exp(-xx**2)
@@ -268,9 +273,9 @@ class SubotnikModelS(DiabaticModel_):
     nstates_: int = 3
     ndim_: int = 1
 
-    ## Constructor defaults to Subotnik JPCA 2011 paper on decoherence
     def __init__(self, representation: str = "adiabatic", reference: Any = None,
             a: float = 0.015, b: float = 1.0, c:float = 0.005, d:float = 0.5, xp:float = 7.0, mass:float = 2000.0):
+        """Constructor defaults to Subotnik JPCA 2011 paper on decoherence"""
         DiabaticModel_.__init__(self, representation=representation, reference=reference)
         self.a = float(a)
         self.b = float(b)
@@ -279,8 +284,8 @@ class SubotnikModelS(DiabaticModel_):
         self.xp = float(xp)
         self.mass = np.array(mass, dtype=np.float64).reshape(self.ndim())
 
-    ## \f$V(x)\f$
     def V(self, x: ArrayLike) -> ArrayLike:
+        """:math:`V(x)`"""
         xx = np.array( [ x - self.xp, x, x + self.xp ] )
         tan = self.a * np.tanh(self.b * xx)
         ex = self.c * np.exp(-xx**2)
@@ -296,8 +301,8 @@ class SubotnikModelS(DiabaticModel_):
                           [v12, v22, v23],
                           [v13, v23, v33] ], dtype=np.float64)
 
-    ## \f$ \nabla V(x)\f$
     def dV(self, x: ArrayLike) -> ArrayLike:
+        """:math:`\\nabla V(x)`"""
         xx = np.array( [ x - self.xp, x, x + self.xp ] )
         tan = self.a * self.b * np.cosh(self.b * xx)**(-2)
         ex = -2.0 * xx * self.c * np.exp(-xx**2)
@@ -319,9 +324,9 @@ class Subotnik2D(DiabaticModel_):
     nstates_: int = 2
     ndim_: int = 2
 
-    ## Constructor defaults to Subotnik JPCA 2011 paper on decoherence
     def __init__(self, representation: str = "adiabatic", reference: Any = None,
             a: float = 0.2, b: float = 0.6, c: float = 0.015, d: float = 0.3, f: float = 0.05, g: float = 0.3, w: float = 2.0, mass: float = 2000.0):
+        """Constructor defaults to Subotnik JPCA 2011 paper on decoherence"""
         DiabaticModel_.__init__(self, representation=representation, reference=reference)
         self.a = float(a)
         self.b = float(b)
@@ -332,8 +337,8 @@ class Subotnik2D(DiabaticModel_):
         self.w = float(w)
         self.mass = np.array(mass, dtype=np.float64).reshape(self.ndim())
 
-    ## \f$V(x)\f$
     def V(self, r: ArrayLike) -> ArrayLike:
+        """:math:`V(x)`"""
         x, y = r[0], r[1]
         v11 = -self.f * np.tanh(self.b * x)
         z = self.b * (x - 1.0) + self.w * np.cos(self.g * y + np.pi * 0.5)
@@ -343,8 +348,8 @@ class Subotnik2D(DiabaticModel_):
         return np.array([ [v11, v12],
                           [v12, v22] ], dtype=np.float64)
 
-    ## \f$ \nabla V(x)\f$
     def dV(self, r: ArrayLike) -> ArrayLike:
+        """:math:`\\nabla V(x)`"""
         x, y = r[0], r[1]
 
         z = self.b * (x - 1.0) + self.w * np.cos(self.g * y + np.pi * 0.5)
@@ -367,14 +372,14 @@ class Subotnik2D(DiabaticModel_):
         return out.reshape([2, 3, 3])
 
 class ShinMetiu(AdiabaticModel_):
-    ## Constructor defaults to classic Shin-Metiu as described in
-    ## Gossel, Liacombe, Maitra JCP 2019
     ndim_: int = 1
 
     def __init__(self, representation: str = "adiabatic", reference: Any = None,
             nstates: int = 3,
             L: float = 19.0, Rf:float = 5.0, Rl:float = 3.1, Rr:float = 4.0,
             mass:float = 1836.0, m_el: float = 1.0, nel: int = 128, box: Any = None):
+        """Constructor defaults to classic Shin-Metiu as described in
+        Gossel, Liacombe, Maitra JCP 2019"""
         AdiabaticModel_.__init__(self, representation=representation, reference=reference)
 
         self.L = L
@@ -439,12 +444,12 @@ class ShinMetiu(AdiabaticModel_):
         dvv = self.d_soft_coulomb(rR, self.Rf)
         return np.diag(dvv)
 
-    ## \f$V(x)\f$
     def V(self, R: ArrayLike) -> ArrayLike:
+        """:math:`V(x)`"""
         return self.V_el(R) + self.V_nuc(R)
 
-    ## \f$\frac{V(x)}{dR}\f$
     def dV(self, R: ArrayLike) -> ArrayLike:
+        """:math:`\\nabla V(x)`"""
         return (self.dV_el(R) + self.dV_nuc(R)).reshape([1, len(self.rr), len(self.rr)])
 
 

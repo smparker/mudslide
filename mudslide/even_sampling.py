@@ -13,8 +13,8 @@ from .integration import quadrature
 from typing import Optional, List, Any, Dict, Union
 from .typing import ArrayLike, ElectronicT
 
-## Data structure to inform how new traces are spawned and weighted
 class SpawnStack(object):
+    """Data structure to inform how new traces are spawned and weighted"""
     def __init__(self, sample_stack: List, weight: float = 1.0):
         self.sample_stack = sample_stack
         self.base_weight: float = weight
@@ -78,10 +78,11 @@ class SpawnStack(object):
             next_stack = None
         return self.__class__(next_stack, weight)
 
-    ## Test whether the stack indicates we should keep spawning trajectories
-    #  versus just following one. An empty stack means we should behave like
-    #  a normal cumulative surface hopping run.
     def do_spawn(self) -> bool:
+        """Test whether the stack indicates we should keep spawning trajectories
+        versus just following one. An empty stack means we should behave like
+        a normal cumulative surface hopping run.
+        """
         return bool(self.sample_stack)
 
     def spawn_size(self) -> int:
@@ -115,15 +116,16 @@ class SpawnStack(object):
 
         return cls(forest, weight)
 
-## Trajectory surface hopping using an even sampling approach
-#
-#  Related to the cumulative trajectory picture, but instead of hopping
-#  stochastically, new trajectories are spawned at even intervals of the
-#  of the cumulative probability distribution. This is an *experimental*
-#  in principle deterministic algorithm for FSSH simulations.
 class EvenSamplingTrajectory(TrajectoryCum):
-    ## Constructor (see TrajectoryCum constructor)
+    """Trajectory surface hopping using an even sampling approach
+
+    Related to the cumulative trajectory picture, but instead of hopping
+    stochastically, new trajectories are spawned at even intervals of the
+    of the cumulative probability distribution. This is an *experimental*
+    in principle deterministic algorithm for FSSH simulations.
+    """
     def __init__(self, *args: Any, **options: Any):
+        """Constructor (see TrajectoryCum constructor)"""
         TrajectoryCum.__init__(self, *args, **options)
 
         ss = options["spawn_stack"]
@@ -164,10 +166,11 @@ class EvenSamplingTrajectory(TrajectoryCum):
                 spawn_stack = spawn_stack)
         return out
 
-    ## given a set of probabilities, determines whether and where to hop
-    # @param probs [nstates] numpy array of individual hopping probabilities
-    #  returns [ (target_state, hop_weight) ]
     def hopper(self, probs: ArrayLike) -> List[Dict[str, Union[int, float]]]:
+        """Given a set of probabilities, determines whether and where to hop
+        :param probs: [nstates] numpy array of individual hopping probabilities
+        :returns: [ (target_state, hop_weight) ]
+        """
         accumulated = self.prob_cum
         probs[self.state] = 0.0 # ensure self-hopping is nonsense
         gkdt = np.sum(probs)
@@ -201,17 +204,18 @@ class EvenSamplingTrajectory(TrajectoryCum):
         self.prob_cum = accumulated
         return []
 
-    ## hop_to_it for even sampling spawns new trajectories instead of enacting hop
-    #
-    #  hop_to_it must accomplish:
-    #    - copy current trajectory
-    #    - initiate hops on the copied trajectories
-    #    - make no changes to current trajectory
-    #    - set next threshold for spawning
-    #
-    # @param hop_to [nspawn] list of states and associated weights on which
-    # @param electronics model class
     def hop_to_it(self, hop_to: List[Dict[str, Any]], electronics: ElectronicT = None) -> None:
+        """hop_to_it for even sampling spawns new trajectories instead of enacting hop
+
+         hop_to_it must accomplish:
+           - copy current trajectory
+           - initiate hops on the copied trajectories
+           - make no changes to current trajectory
+           - set next threshold for spawning
+
+        :param hop_to: [nspawn] list of states and associated weights on which to hop
+        :param electronics: model class
+        """
         if self.spawn_stack.do_spawn():
             for hop in hop_to:
                 stack = hop["stack"]

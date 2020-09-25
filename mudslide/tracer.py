@@ -11,15 +11,15 @@ import sys
 from typing import List, Any, Dict, Iterator
 from .typing import ArrayLike, DtypeLike
 
-## Collect results from a single trajectory
 class Trace(object):
+    """Collect results from a single trajectory"""
     def __init__(self, weight: float = 1.0):
         self.data: List = []
         self.hops: List = []
         self.weight: float = weight
 
-    ## collect and optionally process data
     def collect(self, trajectory_snapshot: Any) -> None:
+        """collect and optionally process data"""
         self.data.append(trajectory_snapshot)
 
     def hop(self, time: float, hop_from: int, hop_to: int, zeta: float, prob: float) -> None:
@@ -55,10 +55,8 @@ class Trace(object):
             line += " {active:12d} {hopping:12e}".format(**i)
             print(line, file=file)
 
-    ## Classifies end of simulation:
-    #
-    #  2*state + [0 for left, 1 for right]
     def outcome(self) -> ArrayLike:
+        """Classifies end of simulation: 2*state + [0 for left, 1 for right]"""
         last_snapshot = self.data[-1]
         nst = last_snapshot["density_matrix"].shape[0]
         position = last_snapshot["position"]
@@ -80,23 +78,22 @@ class Trace(object):
                 }
 
 
-## Class to manage the collection of observables from a set of trajectories
 class TraceManager(object):
+    """Manage the collection of observables from a set of trajectories"""
     def __init__(self) -> None:
         self.traces: List = []
         self.outcomes: ArrayLike
 
-    ## returns a Tracer object that will collect all of the observables for a given
-    #  trajectory
     def spawn_tracer(self) -> Trace:
+        """returns a Tracer object that will collect all of the observables for a given trajectory"""
         return Trace()
 
-    ## accepts a Tracer object and adds it to list of traces
     def merge_tracer(self, tracer: Trace) -> None:
+        """accepts a Tracer object and adds it to list of traces"""
         self.traces.append(tracer)
 
-    ## merge other manager into self
     def add_batch(self, traces: List[Trace]) -> None:
+        """merge other manager into self"""
         self.traces.extend(traces)
 
     def __iter__(self) -> Iterator:

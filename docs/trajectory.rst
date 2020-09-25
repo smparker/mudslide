@@ -1,7 +1,7 @@
 Trajectory Classes
 ====================================
 
-.. automodule:: fssh
+.. automodule:: mudslide
    :members:
    :undoc-members:
    :show-inheritance:
