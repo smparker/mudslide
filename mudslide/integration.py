@@ -31,15 +31,15 @@ def clenshaw_curtis(n: int, a: float = -1.0, b: float = 1.0) -> Tuple[ArrayLike,
     v = np.zeros(nsegments)
     v[:nsegments//2] = 2.0/(1.0 - 4.0 * np.arange(nsegments//2)**2)
     v[nsegments//2] = (nsegments - 3) / (2 * (nsegments//2) - 1) - 1
-    for k in range(1, npoints//2):
-        v[nsegments-k] = np.conj(v[k])
+
+    kk = np.arange(1, npoints//2)
+    v[nsegments-kk] = np.conj(v[kk])
 
     # build g vector
     g = np.zeros(nsegments)
     g[:nsegments//2] = -wcc0
     g[nsegments//2] = wcc0 * ( (2 - (nsegments%2)) * nsegments - 1 )
-    for k in range(1, npoints//2):
-        g[nsegments-k] = np.conj(g[k])
+    g[nsegments-kk] = np.conj(g[kk])
 
     h = v + g
     wcc = np.fft.ifft(h)
@@ -66,9 +66,7 @@ def midpoint(n: int, a: float = -1.0, b: float = 1.0) -> Tuple[ArrayLike,ArrayLi
     assert b > a and n > 1
 
     weights = np.ones(n) * (b - a) / n
-    points = np.zeros(n)
-    for i in range(n):
-        points[i] = a + ((b - a) / n) * (i + 0.5)
+    points = a + ((b - a) / n * (np.arange(n) + 0.5))
 
     return points, weights
 
@@ -86,9 +84,7 @@ def trapezoid(n: int, a: float = -1.0, b: float = 1.0) -> Tuple[ArrayLike,ArrayL
     weights = np.ones(n) * (b - a) / ninterval
     weights[0] *= 0.5
     weights[-1] *= 0.5
-    points = np.zeros(n)
-    for i in range(n):
-        points[i] = a + ((b - a) / ninterval) * i
+    points = a + ((b - a) / ninterval) * np.arange(n)
 
     return points, weights
 
@@ -113,9 +109,7 @@ def simpson(n: int, a: float = -1.0, b: float = 1.0) -> Tuple[ArrayLike,ArrayLik
     weights[ninterval-1] = 4.0
     weights *= (b-a) / ninterval / 3.0
 
-    points = np.zeros(n)
-    for i in range(n):
-        points[i] = a + ((b - a) / ninterval) * i
+    points = a + ((b - a) / ninterval) * np.arange(n)
 
     return points, weights
 
