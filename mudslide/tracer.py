@@ -103,8 +103,8 @@ class TraceManager(object):
         return self.traces[i]
 
     def outcome(self) -> ArrayLike:
-        weight_norm = np.sum( (t.weight for t in self.traces) )
-        outcome = np.sum((t.weight * t.outcome() for t in self.traces))/weight_norm
+        weight_norm = sum( (t.weight for t in self.traces) )
+        outcome = sum((t.weight * t.outcome() for t in self.traces))/weight_norm
         return outcome
 
     def counts(self) -> ArrayLike:
