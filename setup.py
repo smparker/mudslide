@@ -10,10 +10,17 @@ def readme():
     with open("README.md") as f:
         return f.read()
 
-setup(name='mudslide',
-    version=main_ns['__version__'],
-    description='Quantum-Classical Mudslides',
+setup(
+    name='mudslide',
     packages=['mudslide'],
+    version=main_ns['__version__'],
+    license='MIT',
+    description='Package to simulate nonadiabatic molecular dynamics using trajectory methods',
+    author='Shane M. Parker',
+    author_email='shane.parker@case.edu',
+    url='https://github.com/smparker/mudslide',
+    download_url='https://github.com/smparker/mudslide/archive/v0.9.tar.gz',
+    keywords= ['science', 'chemistry', 'nonadiabatic dynamics'],
     install_requires=[
         'numpy>=1.19',
         'scipy',
@@ -27,6 +34,16 @@ setup(name='mudslide',
             'mudslide-surface = mudslide.surface:main'
         ]
     },
-    zip_safe=False
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'Intended Audience :: Developers',
+        'Intended Audience :: Science/Research',
+        'Topic :: Scientific/Engineering :: Chemistry'
+        'Topic :: Scientific/Engineering :: Physics'
+        'License :: OSI Approved :: MIT License',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8'
+        ]
 )
 
