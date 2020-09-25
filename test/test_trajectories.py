@@ -4,23 +4,11 @@
 import unittest
 import sys
 import os
-from contextlib import contextmanager
-from io import StringIO
 
 import mudslide
 import mudslide.__main__
 
 testdir = os.path.dirname(__file__)
-
-@contextmanager
-def captured_output():
-    new_out, new_err = StringIO(), StringIO()
-    old_out, old_err = sys.stdout, sys.stderr
-    try:
-        sys.stdout, sys.stderr = new_out, new_err
-        yield sys.stdout, sys.stderr
-    finally:
-        sys.stdout, sys.stderr = old_out, old_err
 
 def print_problem(problem, file=sys.stdout):
     what = problem["what"]
@@ -90,19 +78,31 @@ def compare_line_by_line(f1, f2, typespec, tol=1e-3):
     return problems
 
 class TrajectoryTest(object):
-    def capture_traj_problems(self, k, tol):
-        options = "-s {0:d} -m {1:s} -k {2:f} {2:f} -x {3:f} --dt {4:f} -n {5:d} -z {6:d} -o {7:s} -j {8:d}".format(self.samples, self.model, k, self.x, self.dt, self.n, self.z, self.o, self.j).split()
+    samples = 1
+    method = "fssh"
+    x = -10
+    dt = 5
+    n = 1
+    seed = 200
+    o = "single"
+    j = 1
+    electronic = "exp"
 
-        outfile = os.path.join(testdir, "checks", "{:s}".format(self.model), "k{:d}.out".format(k))
+    def capture_traj_problems(self, k, tol):
+        options = "-s {0:d} -m {1:s} -k {2:f} {2:f} -x {3:f} --dt {4:f} -n {5:d} -z {6:d} -o {7:s} -j {8:d} -a {9:s} --electronic {10:s}".format(self.samples, self.model, k, self.x, self.dt, self.n, self.seed, self.o, self.j, self.method, self.electronic).split()
+
+        checkdir = os.path.join(testdir, "checks", self.method)
+        os.makedirs(checkdir, exist_ok=True)
+        outfile = os.path.join(checkdir, "{:s}_k{:d}.out".format(self.model, k))
         with open(outfile, "w") as f:
             mudslide.__main__.main(options, f)
 
         form = "f" * (6 + 2*self.nstate) + "df"
-        reffile = os.path.join(testdir, "ref", "{:s}".format(self.model), "k{:d}.ref".format(k))
+        reffile = os.path.join(testdir, "ref", self.method, "{:s}_k{:d}.ref".format(self.model, k))
         with open(reffile) as ref, open(outfile) as out:
             problems = compare_line_by_line(ref, out, form, tol)
-            #for p in problems:
-            #    print_problem(p)
+            for p in problems:
+                print_problem(p)
 
         return problems
 
@@ -110,13 +110,6 @@ class TestTSAC(unittest.TestCase, TrajectoryTest):
     """Test Suite for tully simple avoided crossing"""
     model = "simple"
     nstate = 2
-    samples = 1
-    x = -10
-    dt = 5
-    n = 1
-    z = 200
-    o = "single"
-    j = 1
 
     def test_tsac_k8(self):
         probs = self.capture_traj_problems(8, 1e-3)
@@ -127,6 +120,56 @@ class TestTSAC(unittest.TestCase, TrajectoryTest):
         self.assertEqual(len(probs), 0)
 
     def test_tsac_k20(self):
+        probs = self.capture_traj_problems(20, 1e-3)
+        self.assertEqual(len(probs), 0)
+
+class TestDual(unittest.TestCase, TrajectoryTest):
+    """Test Suite for tully dual avoided crossing"""
+    model = "dual"
+    nstate = 2
+
+    def test_dual_k20(self):
+        probs = self.capture_traj_problems(20, 1e-3)
+        self.assertEqual(len(probs), 0)
+
+    def test_dual_k50(self):
+        probs = self.capture_traj_problems(50, 1e-3)
+        self.assertEqual(len(probs), 0)
+
+    def test_dual_k100(self):
+        probs = self.capture_traj_problems(100, 1e-3)
+        self.assertEqual(len(probs), 0)
+
+class TestExtended(unittest.TestCase, TrajectoryTest):
+    """Test Suite for tully dual avoided crossing"""
+    model = "extended"
+    nstate = 2
+
+    def test_extended_k10(self):
+        probs = self.capture_traj_problems(10, 1e-3)
+        self.assertEqual(len(probs), 0)
+
+    def test_extended_k15(self):
+        probs = self.capture_traj_problems(15, 1e-3)
+        self.assertEqual(len(probs), 0)
+
+    def test_extended_k20(self):
+        probs = self.capture_traj_problems(20, 1e-3)
+        self.assertEqual(len(probs), 0)
+
+class TestTSACc(unittest.TestCase, TrajectoryTest):
+    """Test Suite for tully simple avoided crossing with cumulative hopping"""
+    model = "simple"
+    nstate = 2
+    seed = 756396545
+    method = "cumulative-sh"
+    electronic = "linear-rk4"
+
+    def test_tsac_c_k10(self):
+        probs = self.capture_traj_problems(10, 1e-3)
+        self.assertEqual(len(probs), 0)
+
+    def test_tsac_c_k20(self):
         probs = self.capture_traj_problems(20, 1e-3)
         self.assertEqual(len(probs), 0)
 
