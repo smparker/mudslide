@@ -4,6 +4,7 @@
 from __future__ import print_function, division
 import queue
 import sys
+import logging
 
 import numpy as np
 
@@ -11,7 +12,9 @@ from .exceptions import StillInteracting
 from .tracer import TraceManager
 
 from typing import Any, Iterator, Tuple
-from .typing import ModelT, TrajGenT, ArrayLike, DtypeLike
+from .typing import ModelT, TrajGenT, ArrayLike
+
+logger = logging.getLogger("mudslide")
 
 class TrajGenConst(object):
     """Canned class whose call function acts as a generator for static initial conditions
@@ -96,7 +99,7 @@ class BatchedTraj(object):
          | initial_time       | 0.0                        |
          | samples            | 2000                       |
          | dt                 | 20.0  ~ 0.5 fs             |
-         | nprocs             | MultiProcessing.cpu_count  |
+         | nprocs             | 1                          |
          | outcome_type       | "state"                    |
          | seed               | None (date)                |
         """
@@ -153,9 +156,12 @@ class BatchedTraj(object):
         :returns: TraceManager containing the results
         """
         # for now, define four possible outcomes of the simulation
-        outcomes = np.zeros([self.model.nstates(),2], dtype=np.float64)
         nsamples = int(self.options["samples"])
         nprocs = self.options["nprocs"]
+
+        if nprocs > 1:
+            logger.warning('nprocs {} specified, but parallelism is not currently handled'.format(nprocs))
+
 
         traj_queue: Any = queue.Queue()
         results_queue: Any = queue.Queue()

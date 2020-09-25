@@ -1,20 +1,18 @@
 # -*- coding: utf-8 -*-
 """Propagate FSSH trajectory"""
 
-from __future__ import print_function, division
-
-from .version import __version__
-from .propagation import rk4
-from .tracer import Trace
-from .typing import ElectronicT, ModelT
+from __future__ import division
 
 import copy as cp
 import numpy as np
 
-from typing import List, Dict, Type, Union, Any
-from .typing import ArrayLike, DtypeLike
-
+from .propagation import rk4
+from .tracer import Trace
 from .math import poisson_prob_scale
+
+from typing import List, Dict, Union, Any
+from .typing import ElectronicT, ArrayLike, DtypeLike
+
 
 class TrajectorySH(object):
     """Class to propagate a single FSSH trajectory"""
@@ -289,7 +287,6 @@ class TrajectorySH(object):
         # normalize
         direction /= np.sqrt(np.dot(direction, direction))
         M_inv = 1.0 / self.mass
-        Md = self.mass * direction
         a = np.einsum('m,m,m', M_inv, direction, direction)
         b = 2.0 * np.dot(self.velocity, direction)
         c = -2.0 * reduction
@@ -407,8 +404,6 @@ class TrajectorySH(object):
         :param elec_states: ElectronicStates from current step
         :return: total probability of any hop occuring
         """
-        nstates = self.model.nstates()
-
         H = self.hamiltonian_propagator(last_electronics, this_electronics)
 
         gkndt = 2.0 * np.imag(self.rho[self.state,:] * H[:,self.state]) * self.dt / np.real(self.rho[self.state,self.state])
@@ -464,7 +459,6 @@ class TrajectorySH(object):
         """
         hop_dict = hop_targets[0]
         hop_to = int(hop_dict["target"])
-        weight = float(hop_dict["weight"])
         elec_states = electronics if electronics is not None else self.electronics
         new_potential, old_potential = elec_states.hamiltonian[hop_to, hop_to], elec_states.hamiltonian[self.state, self.state]
         delV = new_potential - old_potential
@@ -486,8 +480,6 @@ class TrajectorySH(object):
 
         if not self.restart:
             self.electronics = self.model.update(self.position)
-
-        potential_energy = self.potential_energy(self.electronics)
 
         self.trace()
 

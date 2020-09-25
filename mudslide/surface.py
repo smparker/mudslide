@@ -6,7 +6,7 @@ from __future__ import print_function
 import argparse
 import numpy as np
 
-from .models import *
+from .models import models
 
 from typing import Any, List
 from .typing import ArrayLike

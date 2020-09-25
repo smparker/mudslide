@@ -10,7 +10,7 @@ import sys
 
 from .trajectory_sh import TrajectorySH
 from .cumulative_sh import TrajectoryCum
-from .even_sampling import EvenSamplingTrajectory, SpawnStack
+from .even_sampling import EvenSamplingTrajectory
 from .ehrenfest import Ehrenfest
 from .batch import TrajGenConst, TrajGenNormal, BatchedTraj
 from .models import models
@@ -40,7 +40,7 @@ def main() -> None:
     parser.add_argument('-f', '--normal', default=20, type=float, help="standard deviation as a proportion of inverse momentum for normal samping (%(default)s)")
     parser.add_argument('-s', '--samples', default=200, type=int, help="number of samples (%(default)d)")
     parser.add_argument('--sample-stack', default=[10], nargs='*', type=int, help="number of samples at each sampling depth for even sampling algorithm (%(default)s)")
-    parser.add_argument('-j', '--nprocs', default=2, type=int, help="number of processors (%(default)d)")
+    parser.add_argument('-j', '--nprocs', default=1, type=int, help="number of processors (%(default)d)")
     parser.add_argument('-M', '--mass', default=2000.0, type=float, help="particle mass (%(default)s)")
     parser.add_argument('-t', '--dt', default=20.0, type=float, help="time step in a.u.(%(default)s)")
     parser.add_argument('-y', '--scale_dt', dest="scale_dt", action="store_true", help="use dt=[dt]/k (%(default)s)")

@@ -9,7 +9,7 @@ import numpy as np
 import sys
 
 from typing import List, Any, Dict, Iterator
-from .typing import ArrayLike, DtypeLike
+from .typing import ArrayLike
 
 class Trace(object):
     """Collect results from a single trajectory"""

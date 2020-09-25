@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Propagators for ODEs from quantum dynamics"""
 
-from __future__ import print_function, division
+from __future__ import division
 
 import numpy as np
 

@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
 """Propagating cumulative surface hopping trajectories"""
 
-from __future__ import print_function, division
+from __future__ import division
 
-from .version import __version__
-
-import copy as cp
 import numpy as np
 
 from .trajectory_sh import TrajectorySH
