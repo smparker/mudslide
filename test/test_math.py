@@ -5,7 +5,6 @@
 
 import unittest
 import sys
-import re
 
 from mudslide import poisson_prob_scale
 import numpy as np

@@ -27,7 +27,7 @@ methods = {
         "even-sampling" : EvenSamplingTrajectory
         }
 
-def main() -> None:
+def main(argv = None, file=sys.stdout) -> None:
     parser = ap.ArgumentParser(description="Mudslide test driver")
 
     parser.add_argument('-a', '--method', default="fssh", choices=methods.keys(), type=str.lower, help="Variant of SH")
@@ -54,7 +54,7 @@ def main() -> None:
     parser.add_argument('-z', '--seed', default=None, type=int, help="random seed (None)")
     parser.add_argument('--published', dest="published", action="store_true", help="override ranges to use those found in relevant papers (%(default)s)")
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     model = models[args.model](mass=args.mass)
 
@@ -86,11 +86,11 @@ def main() -> None:
     all_results = []
 
     if (args.output == "averaged" or args.output == "pickle"):
-        print("# momentum ", end='')
+        print("# momentum ", end='', file=file)
         for ist in range(model.nstates()):
             for d in [ "reflected", "transmitted"]:
-                print("%d_%s" % (ist, d), end=' ')
-        print()
+                print("%d_%s" % (ist, d), end=' ', file=file)
+        print(file=file)
 
     for k in kpoints:
         traj_gen: Any = None
@@ -118,7 +118,7 @@ def main() -> None:
         outcomes = results.outcomes
 
         if (args.output == "single"):
-            results.traces[0].print()
+            results.traces[0].print(file=file)
         elif (args.output == "swarm"):
             maxsteps = max([ len(t) for t in results.traces ])
             outfiles = [ "state_%d.trace" % i for i in range(model.nstates()) ]
@@ -139,13 +139,13 @@ def main() -> None:
             for f in fils:
                 f.close()
         elif (args.output == "averaged" or args.output == "pickle"):
-            print("%12.6f %s" % (k, " ".join(["%12.6f" % x for x in np.nditer(outcomes)])))
+            print("%12.6f %s" % (k, " ".join(["%12.6f" % x for x in np.nditer(outcomes)])), file=file)
             if (args.output == "pickle"): # save results for later processing
                 all_results.append((k, results))
         elif (args.output == "hack"):
-            print("Hack something here, if you like.")
+            print("Hack something here, if you like.", file=file)
         else:
-            print("Not printing results. This is probably not what you wanted!")
+            print("Not printing results. This is probably not what you wanted!", file=file)
 
     if (len(all_results) > 0):
         pickle.dump(all_results, open(args.outfile, "wb"))
