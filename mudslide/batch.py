@@ -127,29 +127,6 @@ class BatchedTraj(object):
             if x not in self.options:
                 self.options[x] = inp[x]
 
-    def run_trajectories(self, n: int) -> Tuple:
-        """Runs a set of trajectories and collects the results
-
-        :param n: number of trajectories to run
-        """
-        outcomes = np.zeros([self.model.nstates(),2], dtype=np.float64)
-        traces = []
-        try:
-            for x0, p0, initial, params in self.traj_gen(n):
-                traj_input = self.options
-                traj_input.update(params)
-                traj = self.trajectory(self.model, x0, p0, initial, self.tracemanager.spawn_tracer(), **traj_input)
-                try:
-                    trace = traj.simulate()
-                    traces.append(trace)
-                    outcomes += traj.outcome()
-                except StillInteracting:
-                    print("BEWARE: a simulation ended while still in interaction region", file=sys.stderr)
-                    pass
-            return (outcomes, traces)
-        except KeyboardInterrupt:
-            raise
-
     def compute(self) -> TraceManager:
         """Run batch of trajectories and return aggregate results
 
@@ -208,14 +185,3 @@ def traj_runner(traj_queue: Any, results_queue: Any) -> None:
             results_queue.put(results)
         traj_queue.task_done()
 
-def unwrapped_run_trajectories(fssh: Any, n: int) -> Tuple:
-    """global version of BatchedTraj.run_trajectories that
-    is necessary because of the stupid way threading pools work in python
-
-    :param fssh: BatchedTraj object
-    :param n: number of trajectories to run
-    """
-    try:
-        return BatchedTraj.run_trajectories(fssh, n)
-    except KeyboardInterrupt:
-        raise
