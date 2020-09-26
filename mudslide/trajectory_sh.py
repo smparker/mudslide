@@ -511,20 +511,3 @@ class TrajectorySH(object):
 
         return self.tracer
 
-    def outcome(self) -> np.ndarray:
-        """
-        Classifies end of simulation:
-
-        :return: 2*state + [0 for left, 1 for right]
-        """
-        out = np.zeros([self.model.nstates(), 2], dtype=np.float64)
-        lr = 0 if self.position < 0.0 else 1
-        if self.outcome_type == "populations":
-            out[:,lr] = np.real(self.rho).diag()[:]
-        elif self.outcome_type == "state":
-            out[self.state,lr] = 1.0
-        else:
-            raise Exception("Unrecognized outcome recognition type")
-        return out
-        # first bit is left (0) or right (1), second bit is electronic state
-
