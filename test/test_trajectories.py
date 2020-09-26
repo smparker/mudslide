@@ -88,8 +88,9 @@ class TrajectoryTest(object):
     j = 1
     electronic = "exp"
 
-    def capture_traj_problems(self, k, tol):
+    def capture_traj_problems(self, k, tol, extra_options = []):
         options = "-s {0:d} -m {1:s} -k {2:f} {2:f} -x {3:f} --dt {4:f} -n {5:d} -z {6:d} -o {7:s} -j {8:d} -a {9:s} --electronic {10:s}".format(self.samples, self.model, k, self.x, self.dt, self.n, self.seed, self.o, self.j, self.method, self.electronic).split()
+        options += extra_options
 
         checkdir = os.path.join(testdir, "checks", self.method)
         os.makedirs(checkdir, exist_ok=True)
@@ -97,7 +98,10 @@ class TrajectoryTest(object):
         with open(outfile, "w") as f:
             mudslide.__main__.main(options, f)
 
-        form = "f" * (6 + 2*self.nstate) + "df"
+        if self.o == "single":
+            form = "f" * (6 + 2*self.nstate) + "df"
+        elif self.o == "averaged":
+            form = "ffff"
         reffile = os.path.join(testdir, "ref", self.method, "{:s}_k{:d}.ref".format(self.model, k))
         with open(reffile) as ref, open(outfile) as out:
             problems = compare_line_by_line(ref, out, form, tol)
@@ -111,51 +115,33 @@ class TestTSAC(unittest.TestCase, TrajectoryTest):
     model = "simple"
     nstate = 2
 
-    def test_tsac_k8(self):
-        probs = self.capture_traj_problems(8, 1e-3)
-        self.assertEqual(len(probs), 0)
-
-    def test_tsac_k14(self):
-        probs = self.capture_traj_problems(14, 1e-3)
-        self.assertEqual(len(probs), 0)
-
-    def test_tsac_k20(self):
-        probs = self.capture_traj_problems(20, 1e-3)
-        self.assertEqual(len(probs), 0)
+    def test_tsac(self):
+        for k in [8, 14, 20]:
+            with self.subTest(k=k):
+                probs = self.capture_traj_problems(k, 1e-3)
+                self.assertEqual(len(probs), 0)
 
 class TestDual(unittest.TestCase, TrajectoryTest):
     """Test Suite for tully dual avoided crossing"""
     model = "dual"
     nstate = 2
 
-    def test_dual_k20(self):
-        probs = self.capture_traj_problems(20, 1e-3)
-        self.assertEqual(len(probs), 0)
-
-    def test_dual_k50(self):
-        probs = self.capture_traj_problems(50, 1e-3)
-        self.assertEqual(len(probs), 0)
-
-    def test_dual_k100(self):
-        probs = self.capture_traj_problems(100, 1e-3)
-        self.assertEqual(len(probs), 0)
+    def test_dual(self):
+        for k in [20, 50, 100]:
+            with self.subTest(k=k):
+                probs = self.capture_traj_problems(k, 1e-3)
+                self.assertEqual(len(probs), 0)
 
 class TestExtended(unittest.TestCase, TrajectoryTest):
     """Test Suite for tully dual avoided crossing"""
     model = "extended"
     nstate = 2
 
-    def test_extended_k10(self):
-        probs = self.capture_traj_problems(10, 1e-3)
-        self.assertEqual(len(probs), 0)
-
-    def test_extended_k15(self):
-        probs = self.capture_traj_problems(15, 1e-3)
-        self.assertEqual(len(probs), 0)
-
-    def test_extended_k20(self):
-        probs = self.capture_traj_problems(20, 1e-3)
-        self.assertEqual(len(probs), 0)
+    def test_extended(self):
+        for k in [10, 15, 20]:
+            with self.subTest(k=k):
+                probs = self.capture_traj_problems(k, 1e-3)
+                self.assertEqual(len(probs), 0)
 
 class TestTSACc(unittest.TestCase, TrajectoryTest):
     """Test Suite for tully simple avoided crossing with cumulative hopping"""
@@ -165,13 +151,26 @@ class TestTSACc(unittest.TestCase, TrajectoryTest):
     method = "cumulative-sh"
     electronic = "linear-rk4"
 
-    def test_tsac_c_k10(self):
-        probs = self.capture_traj_problems(10, 1e-3)
-        self.assertEqual(len(probs), 0)
+    def test_tsac_c(self):
+        for k in [10, 20]:
+            with self.subTest(k=k):
+                probs = self.capture_traj_problems(k, 1e-3)
+                self.assertEqual(len(probs), 0)
 
-    def test_tsac_c_k20(self):
-        probs = self.capture_traj_problems(20, 1e-3)
-        self.assertEqual(len(probs), 0)
+class TestES(unittest.TestCase, TrajectoryTest):
+    """Test Suite for tully simple avoided crossing with cumulative hopping"""
+    model = "simple"
+    nstate = 2
+    dt = 20
+    seed = 84329
+    method = "even-sampling"
+    o = "averaged"
+
+    def test_es_tsac(self):
+        for k in [10, 20]:
+            with self.subTest(k=k):
+                probs = self.capture_traj_problems(k, 1e-3, extra_options=["--sample-stack", "5"])
+                self.assertEqual(len(probs), 0)
 
 if __name__ == '__main__':
     unittest.main()
