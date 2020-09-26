@@ -7,6 +7,7 @@ import os
 
 import mudslide
 import mudslide.__main__
+import mudslide.surface
 
 testdir = os.path.dirname(__file__)
 
@@ -171,6 +172,28 @@ class TestES(unittest.TestCase, TrajectoryTest):
             with self.subTest(k=k):
                 probs = self.capture_traj_problems(k, 1e-3, extra_options=["--sample-stack", "5"])
                 self.assertEqual(len(probs), 0)
+
+class TestSurface(unittest.TestCase):
+    """Test Suite for surface writer"""
+
+    def test_surface(self):
+        tol = 1e-3
+        for m in [ "simple", "extended", "dual", "super", "shin-metiu", "modelx", "models" ]:
+            with self.subTest(m=m):
+                options = "-m {:s} -r -11 11 -n 200".format(m).split()
+                checkdir = os.path.join(testdir, "checks", "surface")
+                os.makedirs(checkdir, exist_ok=True)
+                outfile = os.path.join(checkdir, "{:s}.out".format(m))
+                with open(outfile, "w") as f:
+                    mudslide.surface.main(options, f)
+
+                form = "f" * (8 if m in ["simple", "extended", "dual"] else 13)
+                reffile = os.path.join(testdir, "ref", "surface", "{:s}.ref".format(m))
+                with open(reffile) as ref, open(outfile) as out:
+                    problems = compare_line_by_line(ref, out, form, tol)
+                    for p in problems:
+                        print_problem(p)
+                self.assertEqual(len(problems), 0)
 
 if __name__ == '__main__':
     unittest.main()

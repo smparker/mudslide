@@ -3,6 +3,8 @@
 
 from __future__ import print_function
 
+import sys
+
 import argparse
 import numpy as np
 
@@ -11,12 +13,12 @@ from .models import models
 from typing import Any, List
 from .typing import ArrayLike
 
-def main() -> None:
+def main(argv=None, file=sys.stdout) -> None:
     parser = argparse.ArgumentParser(description="Generate potential energy surface scans of two-state models")
     parser.add_argument('-m', '--model', default='simple', choices=[m for m in models], help="Tully model to plot")
     parser.add_argument('-r', '--range', default=(-10.0,10.0), nargs=2, type=float, help="range over which to plot PES (default: %(default)s)")
     parser.add_argument('-n', default=100, type=int, help="number of points to plot")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     if args.model in models:
         model = models[args.model]()
@@ -52,11 +54,11 @@ def main() -> None:
 
         return " ".join([ "{:16.10f}".format(x) for x in plist ])
 
-    print(headprinter())
+    print(headprinter(), file=file)
 
     for x in xr:
         elec = elec.update(x, last_elec)
-        print(lineprinter(x, model, elec))
+        print(lineprinter(x, model, elec), file=file)
 
         last_elec = elec
 
