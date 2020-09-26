@@ -8,4 +8,4 @@ install:
   - pip install numpy scipy
   - pip install --upgrade numpy scipy
   - pip install -e .
-script: check/run_test
+script: python -m unittest
