@@ -158,6 +158,17 @@ class TestTSACc(unittest.TestCase, TrajectoryTest):
                 probs = self.capture_traj_problems(k, 1e-3)
                 self.assertEqual(len(probs), 0)
 
+class TestEhrenfest(unittest.TestCase, TrajectoryTest):
+    """Test suite for ehrenfest trajectory"""
+    model = "simple"
+    nstate = 2
+    method = "ehrenfest"
+
+    def test_ehrenfest(self):
+        k = 15
+        probs = self.capture_traj_problems(k, 1e-3)
+        self.assertEqual(len(probs), 0)
+
 class TestES(unittest.TestCase, TrajectoryTest):
     """Test Suite for tully simple avoided crossing with cumulative hopping"""
     model = "simple"
