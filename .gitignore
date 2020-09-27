@@ -2,6 +2,7 @@
 *.check
 *.pyc
 *.egg-info
+.coverage
 _build
 _static
 _templates
