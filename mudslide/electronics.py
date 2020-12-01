@@ -132,7 +132,7 @@ class DiabaticModel_(ElectronicModel_):
         r0 = 100 #distance to hydrogen atom - set arbitrarily currently
         mh = 1.01 #mass of hydrogen
         w5 = 1 #freq of neutral ground-state normal vibration - set arbitrarily currently
-        An = np.array([1.4823, -0.2191, 0.0525, -0.0118])
+        A_subn = np.array([1.4823, -0.2191, 0.0525, -0.0118])
         theta = X[5]
         k11 = np.zeros(4)
         k22 = np.zeros(4)
@@ -145,8 +145,8 @@ class DiabaticModel_(ElectronicModel_):
             k22[i] = k2[i]*X[i]
             w12 = w12 + lamb*X[i] + lamb*r0*(math.sqrt(w5*mh))*math.sin(theta)
 
-        for i in An:
-            q5[i] = An[i]*((math.sin((i+1)*theta))**2)
+        for i in A_subn:
+            q5[i] = A_subn[i]*((math.sin((i+1)*theta))**2)
 
         w11 = e1 + w0 + np.sum(k11) + np.sum(q5)
         w22 = e2 + w0 + np.sum(k22) + np.sum(q5)
@@ -167,14 +167,14 @@ class DiabaticModel_(ElectronicModel_):
         mh = 1.01 #mass of hydrogen
         w5 = 1 #freq of neutral ground-state normal vibration - set arbitrarily currently
         theta = X[5]
-        An = np.array([1.4823, -0.2191, 0.0525, -0.0118])
+        A_subn = np.array([1.4823, -0.2191, 0.0525, -0.0118])
         q5 = np.zeros(4)
 
         for i in range(4):
             w0 = w0 + om[i]*X[i]
 
-        for i in An:
-            q5[i] = An[i]*(i+1)*(math.sin((i+1)*theta)*(math.cos((i+1)*theta)))
+        for i in A_subn:
+            q5[i] = A_subn[i]*(i+1)*(math.sin((i+1)*theta)*(math.cos((i+1)*theta)))
             
         w11 = w0 + np.sum(k1) + np.sum(q5)
         w22 = w0 + np.sum(k2) + np.sum(q5)
