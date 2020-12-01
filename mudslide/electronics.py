@@ -122,7 +122,6 @@ class DiabaticModel_(ElectronicModel_):
         return out
 
     def V(self, X: ArrayLike) -> ArrayLike:
-        def V(self, X: ArrayLike) -> ArrayLike:
         e1 = 8.5037
         e2 = 9.4523
         om = np.array([0.1117, 0.2021, 0.2723, 0.4102])
