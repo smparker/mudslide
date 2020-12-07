@@ -451,6 +451,77 @@ class ShinMetiu(AdiabaticModel_):
     def dV(self, R: ArrayLike) -> ArrayLike:
         """:math:`\\nabla V(x)`"""
         return (self.dV_el(R) + self.dV_nuc(R)).reshape([1, len(self.rr), len(self.rr)])
+   
+class LinearVibronic(DiabaticModel_):
+    ndim_: int = 5 #not entirely sure if this is necessary or what it should be
+    def __init__(self, representation: str = "adiabatic", reference: Any = None,
+            mass: float = 2000.0):
+        DiabaticModel_.__init__(self, representation=representation, reference=reference)
+        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndim())
+        
+    def V(self, X: ArrayLike) -> ArrayLike:
+        e1 = 8.5037
+        e2 = 9.4523
+        om = np.array([0.1117, 0.2021, 0.2723, 0.4102])
+        k1 = np.array([-0.0456, 0.0399, -0.2139, -0.0864])
+        k2 = np.array([-0.0393, 0.0463, 0.2877, -0.1352])
+        lamb = 0.3289
+        w0 = 0
+        r0 = 100 #distance to hydrogen atom - set arbitrarily currently
+        mh = 1.01 #mass of hydrogen
+        w5 = 1 #freq of neutral ground-state normal vibration - set arbitrarily currently
+        An = np.array([1.4823, -0.2191, 0.0525, -0.0118])
+        theta = X[5]
+        k11 = np.zeros(4)
+        k22 = np.zeros(4)
+        q5 = np.zeros(4)
+
+
+        for i in range(4):
+            w0 = w0 + ((om[i]/2)*(X[i]**2))
+            k11[i] = k1[i]*X[i]
+            k22[i] = k2[i]*X[i]
+            w12 = w12 + lamb*X[i] + lamb*r0*(math.sqrt(w5*mh))*math.sin(theta)
+
+        for i in An:
+            q5[i] = An[i]*((math.sin((i+1)*theta))**2)
+
+        w11 = e1 + w0 + np.sum(k11) + np.sum(q5)
+        w22 = e2 + w0 + np.sum(k22) + np.sum(q5)
+        w21 = w12
+
+        out = np.array([ [w11, w12],
+                        [w21, w22]], dtype = np.float64)
+        return out
+    
+    def dV(self, X: ArrayLike) -> ArrayLike:
+        om = np.array([0.1117, 0.2021, 0.2723, 0.4102])
+        k1 = np.array([-0.0456, 0.0399, -0.2139, -0.0864])
+        k2 = np.array([-0.0393, 0.0463, 0.2877, -0.1352])
+        lamb = 0.3289*4
+        w0 = 0
+        r0 = 100 #distance to hydrogen atom - set arbitrarily currently
+        mh = 1.01 #mass of hydrogen
+        w5 = 1 #freq of neutral ground-state normal vibration - set arbitrarily currently
+        theta = X[5]
+        An = np.array([1.4823, -0.2191, 0.0525, -0.0118])
+        q5 = np.zeros(4)
+
+        for i in range(4):
+            w0 = w0 + om[i]*X[i]
+
+        for i in An:
+            q5[i] = An[i]*(i+1)*(math.sin((i+1)*theta)*(math.cos((i+1)*theta)))
+            
+        w11 = w0 + np.sum(k1) + np.sum(q5)
+        w22 = w0 + np.sum(k2) + np.sum(q5)
+        w12 = lamb + 0.3289*r0*(math.sqrt(w5*mh))*math.cos(theta)
+        w21 = w12
+
+        out = np.array([ [w11, w12],
+                        [w21, w22]], dtype = np.float64)
+        #need 5 outputs for the 5 input variables
+        return out.reshape([5, 2, 2])
 
 
 models =    { "simple" : TullySimpleAvoidedCrossing,
