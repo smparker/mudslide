@@ -270,6 +270,7 @@ class TrajectorySH(object):
 
         :param source: active state before hop
         :param target: active state after hop
+        :param electronics: electronic model information (used to pull derivative coupling)
 
         :return: unit vector pointing in direction of rescale
         """
@@ -279,9 +280,9 @@ class TrajectorySH(object):
 
     def rescale_component(self, direction: ArrayLike, reduction: DtypeLike) -> None:
         """
-        Rescales velocity in the specified direction and amount
+        Updates velocity by rescaling the *momentum* in the specified direction and amount
 
-        :param direction: the direction of the velocity to rescale
+        :param direction: the direction of the *momentum* to rescale
         :param reduction: how much kinetic energy should be damped
         """
         # normalize
@@ -302,6 +303,8 @@ class TrajectorySH(object):
         """
         if velo is None:
             velo = 0.5 * (self.velocity + self.last_velocity)
+        if last_electronics is None:
+            last_electronics = this_electronics
 
         H = 0.5 * (this_electronics.hamiltonian + last_electronics.hamiltonian) # type: ignore
         TV = 0.5 * np.einsum("ijx,x->ij", this_electronics.derivative_coupling + last_electronics.derivative_coupling, #type: ignore
@@ -402,7 +405,6 @@ class TrajectorySH(object):
         """Compute probability of hopping, generate random number, and perform hops
 
         :param elec_states: ElectronicStates from current step
-        :return: total probability of any hop occuring
         """
         H = self.hamiltonian_propagator(last_electronics, this_electronics)
 

@@ -169,6 +169,18 @@ class TestEhrenfest(unittest.TestCase, TrajectoryTest):
         probs = self.capture_traj_problems(k, 1e-3)
         self.assertEqual(len(probs), 0)
 
+class TestAFSSH(unittest.TestCase, TrajectoryTest):
+    """Test suite for AFSSH trajectory"""
+    model = "simple"
+    nstate = 2
+    method = "afssh"
+
+    def test_afssh(self):
+        k = 15
+        probs = self.capture_traj_problems(k, 1e-3)
+        self.assertEqual(len(probs), 0)
+        print(probs)
+
 class TestES(unittest.TestCase, TrajectoryTest):
     """Test Suite for tully simple avoided crossing with cumulative hopping"""
     model = "simple"

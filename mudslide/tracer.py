@@ -16,6 +16,7 @@ class Trace(object):
     def __init__(self, weight: float = 1.0):
         self.data: List = []
         self.hops: List = []
+        self.events: Dict = {}
         self.weight: float = weight
 
     def collect(self, trajectory_snapshot: Any) -> None:
@@ -30,6 +31,11 @@ class Trace(object):
             "zeta" : zeta,
             "prob" : prob
             })
+
+    def record_event(self, event_type: str, event: Dict):
+        if event_type not in self.events:
+            self.events[event_type] = []
+        self.events[event_type].append(event)
 
     def __iter__(self) -> Iterator:
         return self.data.__iter__()

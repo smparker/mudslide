@@ -56,6 +56,8 @@ class DiabaticModel_(ElectronicModel_):
 
         self.force = self._compute_force(dV, self.reference)
 
+        self.force_matrix = self._compute_force_matrix(dV, self.reference)
+
     def update(self, X: ArrayLike, couplings: Any = None, gradients: Any = None) -> 'DiabaticModel_':
         self.position = X
         out = cp.copy(self)
@@ -95,7 +97,7 @@ class DiabaticModel_(ElectronicModel_):
             out[ist,:] += -np.einsum("i,ix->x", coeff[:,ist], half[:,ist,:])
         return out
 
-    def _compute_force_matrix(self, coeff: ArrayLike, dV: ArrayLike) -> ArrayLike:
+    def _compute_force_matrix(self, dV: ArrayLike, coeff: ArrayLike) -> ArrayLike:
         r"""returns :math:`F^\xi{ij} = \langle \phi_i | -\nabla_\xi H | \phi_j\rangle`"""
         out = -np.einsum("ip,xij,jq->pqx", coeff, dV, coeff)
         return out
@@ -156,6 +158,8 @@ class AdiabaticModel_(ElectronicModel_):
 
         self.force = self._compute_force(dV, self.reference)
 
+        self.force_matrix = self._compute_force_matrix(dV, self.reference)
+
     def update(self, X: ArrayLike, couplings: Any = None, gradients: Any = None) -> 'AdiabaticModel_':
         self.position = X
         out = cp.copy(self)
@@ -200,7 +204,7 @@ class AdiabaticModel_(ElectronicModel_):
             out[ist,:] += -np.einsum("i,ix->x", coeff[:,ist], half[:,ist,:])
         return out
 
-    def _compute_force_matrix(self, coeff: ArrayLike, dV: ArrayLike) -> ArrayLike:
+    def _compute_force_matrix(self, dV: ArrayLike, coeff: ArrayLike) -> ArrayLike:
         r"""returns :math:`F^\xi{ij} = \langle \phi_i | -\nabla_\xi H | \phi_j\rangle`"""
         out = -np.einsum("ip,xij,jq->pqx", coeff, dV, coeff)
         return out

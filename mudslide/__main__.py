@@ -12,6 +12,7 @@ from .trajectory_sh import TrajectorySH
 from .cumulative_sh import TrajectoryCum
 from .even_sampling import EvenSamplingTrajectory
 from .ehrenfest import Ehrenfest
+from .afssh import AugmentedFSSH
 from .batch import TrajGenConst, TrajGenNormal, BatchedTraj
 from .models import models
 
@@ -24,6 +25,7 @@ methods = {
         "fssh": TrajectorySH,
         "cumulative-sh": TrajectoryCum,
         "ehrenfest": Ehrenfest,
+        "afssh": AugmentedFSSH,
         "even-sampling" : EvenSamplingTrajectory
         }
 
