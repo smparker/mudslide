@@ -451,6 +451,10 @@ class TrajectorySH(object):
         else:
             return []
 
+    def hop_update(self, hop_from, hop_to):
+        """Handle any extra operations that need to occur after a hop"""
+        return
+
     def hop_to_it(self, hop_targets: List[Dict[str, Union[float,int]]], electronics: ElectronicT = None) -> None:
         """
         Hop from the current active state to the given state, including
@@ -470,6 +474,7 @@ class TrajectorySH(object):
             hop_from = self.state
             self.state = hop_to
             self.rescale_component(rescale_vector, -delV)
+            self.hop_update(hop_from, hop_to)
             self.tracer.hop(self.time, hop_from, hop_to, hop_dict["zeta"], hop_dict["prob"])
 
     def simulate(self) -> 'Trace':

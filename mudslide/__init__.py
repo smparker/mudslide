@@ -9,6 +9,7 @@ from .trajectory_sh import *
 from .cumulative_sh import *
 from .even_sampling import *
 from .ehrenfest import *
+from .afssh import *
 from .batch import *
 
 from . import models

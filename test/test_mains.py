@@ -171,12 +171,13 @@ class TestEhrenfest(unittest.TestCase, TrajectoryTest):
 
 class TestAFSSH(unittest.TestCase, TrajectoryTest):
     """Test suite for AFSSH trajectory"""
-    model = "simple"
+    model = "dual"
     nstate = 2
     method = "afssh"
+    seed = 78341
 
     def test_afssh(self):
-        k = 15
+        k = 14
         probs = self.capture_traj_problems(k, 1e-3)
         self.assertEqual(len(probs), 0)
         print(probs)

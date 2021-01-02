@@ -57,12 +57,12 @@ class AugmentedFSSH(TrajectorySH):
 
         def ydot(RR: ArrayLike, t: DtypeLike) -> ArrayLike:
             assert t >= 0.0 and t <= dt
-            HR = np.einsum("pr,xrq->xpr", H, RR)
+            HR = np.einsum("pr,xrq->xpq", H, RR)
             RH = np.einsum("xpr,rq->xpq", RR, H)
 
-            return -1j * (HR - RH) - delV
+            return -1j * (HR - RH) + delV
 
-        nsteps = 16
+        nsteps = 128
         Rt = rk4(self.delR, ydot, 0.0, dt, nsteps)
         self.delR = Rt
 
@@ -77,13 +77,14 @@ class AugmentedFSSH(TrajectorySH):
 
         def ydot(PP: ArrayLike, t: DtypeLike) -> ArrayLike:
             assert t >= 0.0 and t <= dt
-            HP = np.einsum("pr,xrq->xpr", H, PP)
+            HP = np.einsum("pr,xrq->xpq", H, PP)
             PH = np.einsum("xpr,rq->xpq", PP, H)
 
             return -1j * (HP - PH) + dFrho_comm
 
-        nsteps = 16
+        nsteps = 128
         Pt = rk4(self.delP, ydot, 0.0, dt, nsteps)
+        self.delP = Pt
         return
 
     def direction_of_rescale(self, source: int, target: int, electronics: ElectronicT=None) -> np.ndarray:
@@ -97,8 +98,9 @@ class AugmentedFSSH(TrajectorySH):
 
         :return: unit vector pointing in direction of rescale
         """
-        out = self.delP[source, source, :] - self.delP[target, target, :]
-        return out
+        out = self.delP[:, source, source] - self.delP[:, target, target]
+        assert np.linalg.norm(np.imag(out)) < 1e-8
+        return np.real(out)
 
     def gamma_collapse(self, electronics: ElectronicT=None) -> np.ndarray:
         """
@@ -112,9 +114,6 @@ class AugmentedFSSH(TrajectorySH):
         nst = self.model.nstates()
         ndim = self.model.ndim()
         out = np.zeros(nst, dtype=np.float64)
-
-        ddR = np.zeros([nst, ndim])
-        ddP = np.zeros([nst, ndim])
 
         def shifted_diagonal(X, k: int) -> np.ndarray:
             out = np.zeros([nst, ndim])
@@ -170,3 +169,11 @@ class AugmentedFSSH(TrajectorySH):
                     "eta" : eta
                     })
 
+    def hop_update(self, hop_from, hop_to):
+        """Shift delR and delP after hops"""
+        dRb = self.delR[:, hop_to, hop_to]
+        dPb = self.delP[:, hop_to, hop_to]
+
+        for i in range(self.model.nstates()):
+            self.delR[:,i,i] -= dRb
+            self.delP[:,i,i] -= dPb
