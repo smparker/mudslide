@@ -62,7 +62,7 @@ class AugmentedFSSH(TrajectorySH):
 
             return -1j * (HR - RH) + delV
 
-        nsteps = 128
+        nsteps = 4
         Rt = rk4(self.delR, ydot, 0.0, dt, nsteps)
         self.delR = Rt
 
@@ -82,7 +82,7 @@ class AugmentedFSSH(TrajectorySH):
 
             return -1j * (HP - PH) + dFrho_comm
 
-        nsteps = 128
+        nsteps = 4
         Pt = rk4(self.delP, ydot, 0.0, dt, nsteps)
         self.delP = Pt
         return
