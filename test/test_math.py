@@ -12,7 +12,7 @@ import numpy as np
 class TestMath(unittest.TestCase):
     """Test Suite for math functions"""
     def test_poisson_scale(self):
-        """Test poisson scaling function"""
+        """Poisson scaling function"""
         args = np.array([0.0, 0.5, 1.0])
         fx = poisson_prob_scale(args)
         refs = np.array([1.0, 0.7869386805747332, 0.6321205588285577])
