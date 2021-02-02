@@ -2,6 +2,7 @@
 """Implementations of the one-dimensional two-state models Tully demonstrated FSSH on in Tully, J.C. <I>J. Chem. Phys.</I> 1990 <B>93</B> 1061."""
 
 import numpy as np
+import math
 from scipy.special import erf
 
 from .electronics import DiabaticModel_, AdiabaticModel_
