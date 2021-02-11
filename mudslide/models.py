@@ -455,6 +455,7 @@ class ShinMetiu(AdiabaticModel_):
    
 class LinearVibronic(DiabaticModel_):
     ndim_: int = 1 #not entirely sure if this is necessary or what it should be
+    nstates_ : int = 2
     def __init__(self, representation: str = "adiabatic", reference: Any = None,
             mass: float = 2000.0):
         DiabaticModel_.__init__(self, representation=representation, reference=reference)
