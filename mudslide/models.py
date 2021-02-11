@@ -454,7 +454,7 @@ class ShinMetiu(AdiabaticModel_):
         return (self.dV_el(R) + self.dV_nuc(R)).reshape([1, len(self.rr), len(self.rr)])
    
 class LinearVibronic(DiabaticModel_):
-    ndim_: int = 5 #not entirely sure if this is necessary or what it should be
+    ndim_: int = 1 #not entirely sure if this is necessary or what it should be
     def __init__(self, representation: str = "adiabatic", reference: Any = None,
             mass: float = 2000.0):
         DiabaticModel_.__init__(self, representation=representation, reference=reference)
