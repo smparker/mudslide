@@ -542,5 +542,6 @@ models =    { "simple" : TullySimpleAvoidedCrossing,
               "super"  : SuperExchange,
               "shin-metiu" : ShinMetiu,
               "modelx" : SubotnikModelX,
-              "models" : SubotnikModelS
+              "models" : SubotnikModelS,
+              "vibronic" : LinearVibronic
               }
