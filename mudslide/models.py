@@ -472,10 +472,11 @@ class LinearVibronic(DiabaticModel_):
         mh = 1.01 #mass of hydrogen
         w5 = 1 #freq of neutral ground-state normal vibration - set arbitrarily currently
         An = np.array([1.4823, -0.2191, 0.0525, -0.0118])
-        theta = X[5]
+        theta = X[4]
         k11 = np.zeros(4)
         k22 = np.zeros(4)
         q5 = np.zeros(4)
+        w12 = 0
 
 
         for i in range(4):
@@ -484,7 +485,7 @@ class LinearVibronic(DiabaticModel_):
             k22[i] = k2[i]*X[i]
             w12 = w12 + lamb*X[i] + lamb*r0*(math.sqrt(w5*mh))*math.sin(theta)
 
-        for i in An:
+        for i in range(4):
             q5[i] = An[i]*((math.sin((i+1)*theta))**2)
 
         w11 = e1 + w0 + np.sum(k11) + np.sum(q5)
@@ -504,7 +505,7 @@ class LinearVibronic(DiabaticModel_):
         r0 = 100 #distance to hydrogen atom - set arbitrarily currently
         mh = 1.01 #mass of hydrogen
         w5 = 1 #freq of neutral ground-state normal vibration - set arbitrarily currently
-        theta = X[5]
+        theta = X[4]
         An = np.array([1.4823, -0.2191, 0.0525, -0.0118])
         q5 = np.zeros(4)
 
@@ -514,7 +515,7 @@ class LinearVibronic(DiabaticModel_):
             w22 = w0 + k2[i]
             w12 = lamb + 0.3289*r0*(math.sqrt(w5*mh))*math.cos(theta)
             w21 = w12
-            if i == 1:
+            if i == 0:
                 out = np.array([ [w11, w12],
                                 [w21, w22]], dtype = np.float64)
             else:
@@ -522,7 +523,7 @@ class LinearVibronic(DiabaticModel_):
                             [w21, w22]], dtype = np.float64)
                 out = np.append(out,new)
 
-        for i in An:
+        for i in range(4):
             q5[i] = An[i]*(i+1)*(math.sin((i+1)*theta)*(math.cos((i+1)*theta)))
             
         w11 = np.sum(q5)
@@ -532,7 +533,7 @@ class LinearVibronic(DiabaticModel_):
         new = np.array([ [w11, w12],
                     [w21, w22]], dtype = np.float64)
         out = np.append(out,new)
-    
+
         return out.reshape([5, 2, 2])
 
 
