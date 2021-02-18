@@ -486,7 +486,7 @@ class LinearVibronic(DiabaticModel_):
             k22[i] = k2[i]*X[i]
             w12 = w12 + lamb*X[i]
 
-        w12 = w12 + lamb*r0*(math.sqrt(w5*mh))*math.sin(theta)
+        w12 = w12 + lamb*4.35*math.sin(theta)
 
         for i in range(4):
             q5[i] = An[i]*((math.sin((i+1)*theta))**2)
@@ -531,7 +531,7 @@ class LinearVibronic(DiabaticModel_):
             
         w11 = np.sum(q5)
         w22 = w11
-        w12 = lamb + 0.3289*r0*(math.sqrt(w5*mh))*math.cos(theta)
+        w12 = lamb + 0.3289*4.35*math.cos(theta)
         w21 = w12
         new = np.array([ [w11, w12],
                     [w21, w22]], dtype = np.float64)
