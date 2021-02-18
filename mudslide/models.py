@@ -505,7 +505,7 @@ class LinearVibronic(DiabaticModel_):
         k2 = np.array([-0.0393, 0.0463, 0.2877, -0.1352])
         lamb = 0.3289*4
         w0 = 0
-        r0 = 100 #distance to hydrogen atom - set arbitrarily currently
+        r0 = 1.073 #distance to hydrogen atom from the carbon-carbon axis - set arbitrarily currently
         mh = 1.01 #mass of hydrogen
         w5 = 1 #freq of neutral ground-state normal vibration - set arbitrarily currently
         theta = X[4]
