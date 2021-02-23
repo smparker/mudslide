@@ -504,6 +504,8 @@ class LinearVibronic(DiabaticModel_):
         theta = X[4]
         An = np.array([1.4823, -0.2191, 0.0525, -0.0118])
         q5 = np.zeros(4)
+        w12 = 0
+        w21 = w12
 
         for i in range(4):
             w0 = w0 + om[i]*X[i]
