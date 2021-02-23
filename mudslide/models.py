@@ -499,7 +499,7 @@ class LinearVibronic(DiabaticModel_):
         om = np.array([0.1117, 0.2021, 0.2723, 0.4102])
         k1 = np.array([-0.0456, 0.0399, -0.2139, -0.0864])
         k2 = np.array([-0.0393, 0.0463, 0.2877, -0.1352])
-        lamb = 0.3289*4
+        lamb = 0.3289
         w0 = 0
         theta = X[4]
         An = np.array([1.4823, -0.2191, 0.0525, -0.0118])
