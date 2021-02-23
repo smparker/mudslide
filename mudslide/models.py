@@ -524,7 +524,7 @@ class LinearVibronic(DiabaticModel_):
             
         w11 = np.sum(q5)
         w22 = w11
-        w12 = lamb + 0.3289*4.35*math.cos(theta)
+        w12 = 0.3289*4.35*math.cos(theta)
         w21 = w12
         new = np.array([ [w11, w12],
                     [w21, w22]], dtype = np.float64)
