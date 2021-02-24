@@ -203,6 +203,8 @@ class SuperExchange(DiabaticModel_):
 
     def V(self, x: ArrayLike) -> ArrayLike:
         """:math:`V(x)`"""
+        if np.ndim(x) != 0:
+            x = x[0]
         v12 = self.v12 * np.exp(-0.5*x*x)
         v23 = self.v23 * np.exp(-0.5*x*x)
 
@@ -212,6 +214,8 @@ class SuperExchange(DiabaticModel_):
 
     def dV(self, x: ArrayLike) -> ArrayLike:
         """:math:`\\nabla V(x)`"""
+        if np.ndim(x) != 0:
+            x = x[0]
         v12 = -x * self.v12 * np.exp(-0.5*x*x)
         v23 = -x * self.v23 * np.exp(-0.5*x*x)
         out = np.array([ [0.0, v12, 0.0],
@@ -236,6 +240,8 @@ class SubotnikModelX(DiabaticModel_):
 
     def V(self, x: ArrayLike) -> ArrayLike:
         """:math:`V(x)`"""
+        if np.ndim(x) != 0:
+            x = x[0]
         xx = np.array( [ x - self.xp, x, x + self.xp ] )
         tan = self.a * np.tanh(self.b * xx)
         ex = self.c * np.exp(-xx**2)
@@ -253,6 +259,8 @@ class SubotnikModelX(DiabaticModel_):
 
     def dV(self, x: ArrayLike) -> ArrayLike:
         """:math:`\\nabla V(x)`"""
+        if np.ndim(x) != 0:
+            x = x[0]
         xx = np.array( [ x - self.xp, x, x + self.xp ] )
         tan = self.a * self.b * np.cosh(self.b * xx)**(-2)
         ex = -2.0 * xx * self.c * np.exp(-xx**2)
@@ -287,6 +295,8 @@ class SubotnikModelS(DiabaticModel_):
 
     def V(self, x: ArrayLike) -> ArrayLike:
         """:math:`V(x)`"""
+        if np.ndim(x) != 0:
+            x = x[0]
         xx = np.array( [ x - self.xp, x, x + self.xp ] )
         tan = self.a * np.tanh(self.b * xx)
         ex = self.c * np.exp(-xx**2)
@@ -304,6 +314,8 @@ class SubotnikModelS(DiabaticModel_):
 
     def dV(self, x: ArrayLike) -> ArrayLike:
         """:math:`\\nabla V(x)`"""
+        if np.ndim(x) != 0:
+            x = x[0]
         xx = np.array( [ x - self.xp, x, x + self.xp ] )
         tan = self.a * self.b * np.cosh(self.b * xx)**(-2)
         ex = -2.0 * xx * self.c * np.exp(-xx**2)
