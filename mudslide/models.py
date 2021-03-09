@@ -474,8 +474,8 @@ class LinearVibronic(DiabaticModel_):
         self.mass = np.array(mass, dtype=np.float64).reshape(self.ndim())
         
     def V(self, X: ArrayLike) -> ArrayLike:
-        e1 = 8.5037
-        e2 = 9.4523
+        e1 = 8.5037/27.211386245988
+        e2 = 9.4523/27.211386245988
         om = np.array([0.1117, 0.2021, 0.2723, 0.4102])
         k1 = np.array([-0.0456, 0.0399, -0.2139, -0.0864])
         k2 = np.array([-0.0393, 0.0463, 0.2877, -0.1352])
