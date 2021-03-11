@@ -469,7 +469,7 @@ class LinearVibronic(DiabaticModel_):
     ndim_: int = 5 #not entirely sure if this is necessary or what it should be
     nstates_ : int = 2
     def __init__(self, representation: str = "adiabatic", reference: Any = None,
-            mass: float = [2000.0, 2000.0, 2000.0, 2000.0, 135]):
+            mass: float = [8.952551477, 4.948045522, 3.672420125, 2.437835202, 0.4675534809]):
         DiabaticModel_.__init__(self, representation=representation, reference=reference)
         self.mass = np.array(mass, dtype=np.float64).reshape(self.ndim())
         
