@@ -498,7 +498,6 @@ class LinearVibronic(DiabaticModel_):
         k22 = np.zeros(4)
         q5 = np.zeros(4)
 
-
         for i in range(4):
             w0 = w0 + ((self.om[i]/2)*(X[i]**2))
             k11[i] = self.k1[i]*X[i]
