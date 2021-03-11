@@ -189,7 +189,7 @@ class TestSurface(unittest.TestCase):
 
     def test_surface(self):
         tol = 1e-3
-        for m in [ "simple", "extended", "dual", "super", "shin-metiu", "modelx", "models" ]:
+        for m in [ "simple", "extended", "dual", "super", "shin-metiu", "modelx", "models", "vibronic" ]:
             with self.subTest(m=m):
                 options = "-m {:s} -r -11 11 -n 200".format(m).split()
                 checkdir = os.path.join(testdir, "checks", "surface")
@@ -199,6 +199,8 @@ class TestSurface(unittest.TestCase):
                     mudslide.surface.main(options, f)
 
                 form = "f" * (8 if m in ["simple", "extended", "dual"] else 13)
+                if m in ["vibronic"]:
+                    form = "f" * 20
                 reffile = os.path.join(testdir, "ref", "surface", "{:s}.ref".format(m))
                 with open(reffile) as ref, open(outfile) as out:
                     problems = compare_line_by_line(ref, out, form, tol)
