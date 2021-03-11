@@ -492,11 +492,11 @@ class LinearVibronic(DiabaticModel_):
         
         
     def V(self, X: ArrayLike) -> ArrayLike:
-        theta = X[4]
         w0 = 0
+        theta = X[4]
+        q5 = np.zeros(4)
         k11 = np.zeros(4)
         k22 = np.zeros(4)
-        q5 = np.zeros(4)
 
         for i in range(4):
             w0 = w0 + ((self.om[i]/2)*(X[i]**2))
@@ -518,10 +518,10 @@ class LinearVibronic(DiabaticModel_):
     
     def dV(self, X: ArrayLike) -> ArrayLike:
         w0 = 0
-        theta = X[4]
-        q5 = np.zeros(4)
         w12 = 0
         w21 = w12
+        theta = X[4]
+        q5 = np.zeros(4)
 
         for i in range(4):
             w0 = self.om[i]*X[i]
