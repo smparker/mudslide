@@ -466,41 +466,51 @@ class ShinMetiu(AdiabaticModel_):
         return (self.dV_el(R) + self.dV_nuc(R)).reshape([1, len(self.rr), len(self.rr)])
    
 class LinearVibronic(DiabaticModel_):
-    ndim_: int = 5 #not entirely sure if this is necessary or what it should be
+    ndim_: int = 5
     nstates_ : int = 2
     def __init__(self, representation: str = "adiabatic", reference: Any = None,
-            mass: float = [8.952551477, 4.948045522, 3.672420125, 2.437835202, 0.4675534809]):
+            mass: float = [8.952551477, 4.948045522, 3.672420125, 2.437835202, 0.4675534809],
+            E1: float = 8.5037/27.211386245988, 
+            E2: float = 9.4523/27.211386245988,
+            lamb: float = 0.3289,
+            r0sqrtw5mh: float = 4.35,
+            om: float = np.array([0.1117, 0.2021, 0.2723, 0.4102]),
+            k1: float = np.array([-0.0456, 0.0399, -0.2139, -0.0864]),
+            k2: float = np.array([-0.0393, 0.0463, 0.2877, -0.1352]),
+            An: float = np.array([1.4823, -0.2191, 0.0525, -0.0118]),
+            ):
         DiabaticModel_.__init__(self, representation=representation, reference=reference)
         self.mass = np.array(mass, dtype=np.float64).reshape(self.ndim())
+        self.E1 = float(E1)
+        self.E2 = float(E2)
+        self.lamb = float(lamb)
+        self.r0sqrtw5mh = float(r0sqrtw5mh)
+        self.om = om
+        self.k1 = k1
+        self.k2 = k2
+        self.An = An
+        
         
     def V(self, X: ArrayLike) -> ArrayLike:
-        e1 = 8.5037/27.211386245988
-        e2 = 9.4523/27.211386245988
-        om = np.array([0.1117, 0.2021, 0.2723, 0.4102])
-        k1 = np.array([-0.0456, 0.0399, -0.2139, -0.0864])
-        k2 = np.array([-0.0393, 0.0463, 0.2877, -0.1352])
-        lamb = 0.3289
-        w0 = 0
-        An = np.array([1.4823, -0.2191, 0.0525, -0.0118])
         theta = X[4]
+        w0 = 0
         k11 = np.zeros(4)
         k22 = np.zeros(4)
         q5 = np.zeros(4)
-        w12 = 0
 
 
         for i in range(4):
-            w0 = w0 + ((om[i]/2)*(X[i]**2))
-            k11[i] = k1[i]*X[i]
-            k22[i] = k2[i]*X[i]
+            w0 = w0 + ((self.om[i]/2)*(X[i]**2))
+            k11[i] = self.k1[i]*X[i]
+            k22[i] = self.k2[i]*X[i]
 
-        w12 = lamb*4.35*math.sin(theta)
+        w12 = self.lamb*self.r0sqrtw5mh*math.sin(theta)
 
         for i in range(4):
-            q5[i] = An[i]*((math.sin((i+1)*theta))**2)
+            q5[i] = self.An[i]*((math.sin((i+1)*theta))**2)
 
-        w11 = e1 + w0 + np.sum(k11) + np.sum(q5)
-        w22 = e2 + w0 + np.sum(k22) + np.sum(q5)
+        w11 = self.E1 + w0 + np.sum(k11) + np.sum(q5)
+        w22 = self.E2 + w0 + np.sum(k22) + np.sum(q5)
         w21 = w12
 
         out = np.array([ [w11, w12],
@@ -508,21 +518,16 @@ class LinearVibronic(DiabaticModel_):
         return out
     
     def dV(self, X: ArrayLike) -> ArrayLike:
-        om = np.array([0.1117, 0.2021, 0.2723, 0.4102])
-        k1 = np.array([-0.0456, 0.0399, -0.2139, -0.0864])
-        k2 = np.array([-0.0393, 0.0463, 0.2877, -0.1352])
-        lamb = 0.3289
         w0 = 0
         theta = X[4]
-        An = np.array([1.4823, -0.2191, 0.0525, -0.0118])
         q5 = np.zeros(4)
         w12 = 0
         w21 = w12
 
         for i in range(4):
-            w0 = om[i]*X[i]
-            w11 = w0 + k1[i]
-            w22 = w0 + k2[i]
+            w0 = self.om[i]*X[i]
+            w11 = w0 + self.k1[i]
+            w22 = w0 + self.k2[i]
             if i == 0:
                 out = np.array([ [w11, w12],
                                 [w21, w22]], dtype = np.float64)
@@ -535,11 +540,11 @@ class LinearVibronic(DiabaticModel_):
             w22 = 0
 
         for i in range(4):
-            q5[i] = An[i]*2*(i+1)*(math.sin((i+1)*theta)*(math.cos((i+1)*theta)))
+            q5[i] = self.An[i]*2*(i+1)*(math.sin((i+1)*theta)*(math.cos((i+1)*theta)))
             
         w11 = np.sum(q5)
         w22 = w11
-        w12 = 0.3289*4.35*math.cos(theta)
+        w12 = self.lamb*self.r0sqrtw5mh*math.cos(theta)
         w21 = w12
         new = np.array([ [w11, w12],
                     [w21, w22]], dtype = np.float64)
