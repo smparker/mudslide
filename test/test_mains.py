@@ -191,7 +191,10 @@ class TestSurface(unittest.TestCase):
         tol = 1e-3
         for m in [ "simple", "extended", "dual", "super", "shin-metiu", "modelx", "models", "vibronic" ]:
             with self.subTest(m=m):
-                options = "-m {:s} -r -11 11 -n 200".format(m).split()
+                if m in ["vibronic"]:
+                    options = "-m {:s} --x0 0 0 0 0 0 -s 2 -r -5 5".format(m).split()
+                else:
+                    options = "-m {:s} -r -11 11 -n 200".format(m).split()
                 checkdir = os.path.join(testdir, "checks", "surface")
                 os.makedirs(checkdir, exist_ok=True)
                 outfile = os.path.join(checkdir, "{:s}.out".format(m))

@@ -50,7 +50,10 @@ def main(argv=None, file=sys.stdout) -> None:
         diabats = [ "V_%1d" % i for i in range(nstates) ]
         energies = [ "E_%1d" % i for i in range(nstates) ]
         dc = [ "d_%1d%1d" % (j, i) for i in range(nstates) for j in range(i) ]
-        forces = [ "dE_%1d" % i for i in range(nstates) ]
+        if model == "vibronic":
+            forces = [ "dE_%1d" % i for i in range(ndim*2) ]
+        else:
+            forces = [ "dE_%1d" % i for i in range(nstates) ]
 
         plist = xn + diabats + energies + dc + forces
         return "#" + " ".join([ "%16s" % x for x in plist ])
