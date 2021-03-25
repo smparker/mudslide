@@ -112,8 +112,8 @@ class DiabaticModel_(ElectronicModel_):
         for j in range(self.nstates()):
             for i in range(j):
                 dE = energies[j] - energies[i]
-                if abs(dE) < 1.0e-14:
-                    dE = np.copysign(1.0e-14, dE)
+                if abs(dE) < 1.0e-10:
+                    dE = np.copysign(1.0e-10, dE)
 
                 out[i,j,:] /= dE
                 out[j,i,:] /= -dE
