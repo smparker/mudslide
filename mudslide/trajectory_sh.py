@@ -176,6 +176,7 @@ class TrajectorySH(object):
         """
         if force or (self.nsteps % self.trace_every) == 0:
             self.tracer.collect(self.snapshot())
+            self.trouble_shooter()
 
     def snapshot(self) -> Dict[str,Any]:
         """Collect data from run for logging
@@ -196,6 +197,11 @@ class TrajectorySH(object):
             "zeta"   : self.zeta
             }
         return out
+    
+    def trouble_shooter(self):
+        log = self.snapshot()
+        with open("snapout.dat", "w") as file:
+            file.write("{}\t{}\t{}\t{}\t{}\n".format(log["time"], log["potential"], log["kinetic"], log["energy"], log["active"]))
 
     def kinetic_energy(self) -> np.float64:
         """Kinetic energy
