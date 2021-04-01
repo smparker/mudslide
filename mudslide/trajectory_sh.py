@@ -201,7 +201,7 @@ class TrajectorySH(object):
 
     def no_file_log(self):
         log = self.snapshot()
-        print(f"t:{log["time"]}\tPE:{log["potential"]}\tKE:{log["kinetic"]}\tTE:{log["energy"]}\tAS:{log["active"]}\n")
+        #print(f"t:{log["time"]}\tPE:{log["potential"]}\tKE:{log["kinetic"]}\tTE:{log["energy"]}\tAS:{log["active"]}\n")
     
     def trouble_shooter(self):
         log = self.snapshot()
