@@ -201,11 +201,10 @@ class TrajectorySH(object):
 
     def no_file_log(self):
         log = self.snapshot()
-        #print(f"t:{log["time"]}\tPE:{log["potential"]}\tKE:{log["kinetic"]}\tTE:{log["energy"]}\tAS:{log["active"]}\n")
     
     def trouble_shooter(self):
         log = self.snapshot()
-        with open("snapout.dat", "a") as file:
+        with open("snapout.dat", "w") as file:
             file.write("t:{}\tPE:{}\tKE:{}\tTE:{}\tAS:{}\n".format(log["time"], log["potential"], log["kinetic"], log["energy"], log["active"]))
 
     def kinetic_energy(self) -> np.float64:
