@@ -177,7 +177,7 @@ class TrajectorySH(object):
         if force or (self.nsteps % self.trace_every) == 0:
             self.tracer.collect(self.snapshot())
             self.trouble_shooter()
-            self.no_file_log()
+            #self.no_file_log()
 
     def snapshot(self) -> Dict[str,Any]:
         """Collect data from run for logging
