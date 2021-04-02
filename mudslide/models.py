@@ -469,7 +469,7 @@ class LinearVibronic(DiabaticModel_):
     ndim_: int = 5
     nstates_ : int = 2
     def __init__(self, representation: str = "adiabatic", reference: Any = None,
-            mass: float = [16436.88451, 9084.611578, 6742.563349, 4475.865431, 3475.98736],
+            mass: float = [243.6078782, 134.6412667, 99.93022402, 66.33593369, 3475.98736],
             E1: float = 8.5037/27.211386245988, 
             E2: float = 9.4523/27.211386245988,
             lamb: float = 0.3289,
