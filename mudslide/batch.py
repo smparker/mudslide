@@ -10,6 +10,7 @@ import numpy as np
 
 from .exceptions import StillInteracting
 from .tracer import TraceManager
+from .constants import boltzmann
 
 from typing import Any, Iterator, Tuple
 from .typing import ModelT, TrajGenT, ArrayLike
@@ -55,7 +56,7 @@ class TrajGenNormal(object):
         self.momentum_deviation = 1.0 / sigma
         self.initial_state = initial_state
         self.seed_sequence = np.random.SeedSequence(seed)
-        self.random_state = np.random.np.random.default_rng(seed_traj)
+        self.random_state = np.random.default_rng(seed_traj)
 
     def kskip(self, ktest: float) -> bool:
         """Whether to skip given momentum
@@ -63,7 +64,7 @@ class TrajGenNormal(object):
 
         :returns: True/False
         """
-        return ktest < 0.0
+        return np.any(ktest < 0.0)
 
     def __call__(self, nsamples: int) -> Iterator:
         """Generate nsamples initial conditions
@@ -76,6 +77,46 @@ class TrajGenNormal(object):
 
             if (self.kskip(k)): continue
             yield (x, k, self.initial_state, { "seed_sequence" : seedseqs[i] })
+
+class TrajGenBoltzmann(object):
+    """Generate momenta randomly according to the Boltzmann distribution"""
+    def __init__(self, position: ArrayLike, mass: ArrayLike, temperature: float,
+            initial_state: Any, scale: bool = True,
+            seed: Any = None, momentum_seed: Any = None):
+        """
+        :param position: initial positions
+        :param mass: array of particle masses
+        :param temperature: initial temperature to determine momenta
+        :param seed: initial seed to give trajectory
+        :param momentum_seed: initial seed for momentum random generator
+        """
+        assert position.shape == mass.shape
+
+        self.position = position
+        self.mass = mass
+        self.temperature = temperature
+        self.initial_state = initial_state
+        self.scale = scale
+        self.seed_sequence = np.random.SeedSequence(seed)
+        self.random_state = np.random.default_rng(momentum_seed)
+        self.kt = boltzmann * self.temperature
+        self.sigma = np.sqrt(self.kt * self.mass)
+
+    def __call__(self, nsamples: int) -> Iterator:
+        """Generate nsamples initial conditions
+        :param nsamples: number of initial conditions requested
+        """
+        seedseqs = self.seed_sequence.spawn(nsamples)
+        for i in range(nsamples):
+            x = self.position
+            p = self.random_state.normal(0.0, self.sigma)
+            if self.scale:
+                avg_KE = 0.5 * np.dot(p**2, np.reciprocal(self.mass))/x.size
+                kbT2 = 0.5 * self.kt
+                scal = np.sqrt(kbT2/avg_KE)
+                p *= scal
+
+            yield (x, p, self.initial_state, { "seed_sequence" : seedseqs[i] })
 
 
 class BatchedTraj(object):
