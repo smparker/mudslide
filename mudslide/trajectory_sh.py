@@ -270,6 +270,24 @@ class TrajectorySH(object):
         component = np.dot(u, momentum) * u
         return 0.5 * np.einsum('m,m,m', 1.0/self.mass, component, component)
 
+    def hop_allowed(self, direction: ArrayLike, dE: float):
+        """
+        Returns whether a hop with the given rescale direction and requested energy change
+        is allowed
+
+        :param direction: momentum unit vector
+        :param dE: change in energy such that Enew = Eold + dE
+
+        :return: whether to hop
+        """
+        if dE > 0.0:
+            return True
+        u = direction / np.linalg.norm(direction)
+        a = np.einsum('m,m,m', np.reciprocal(self.mass), u, u)
+        b = 2.0 * np.dot(self.velocity, u)
+        c = -2.0 * dE
+        return (b*b > 4.0 * a * c)
+
     def direction_of_rescale(self, source: int, target: int, electronics: ElectronicT=None) -> np.ndarray:
         """
         Return direction in which to rescale momentum
@@ -281,7 +299,7 @@ class TrajectorySH(object):
         """
         elec_states = self.electronics if electronics is None else electronics
         out = elec_states.derivative_coupling[source, target, :]
-        return out
+        return np.copy(out)
 
     def rescale_component(self, direction: ArrayLike, reduction: DtypeLike) -> None:
         """
@@ -291,14 +309,14 @@ class TrajectorySH(object):
         :param reduction: how much kinetic energy should be damped
         """
         # normalize
-        direction /= np.sqrt(np.dot(direction, direction))
+        u = direction / np.linalg.norm(direction)
         M_inv = 1.0 / self.mass
-        a = np.einsum('m,m,m', M_inv, direction, direction)
-        b = 2.0 * np.dot(self.velocity, direction)
+        a = np.einsum('m,m,m', M_inv, u, u)
+        b = 2.0 * np.dot(self.velocity, u)
         c = -2.0 * reduction
         roots = np.roots([a, b, c])
         scal = min(roots, key=lambda x: abs(x))
-        self.velocity += scal * M_inv * direction
+        self.velocity += scal * M_inv * u
 
     def hamiltonian_propagator(self, last_electronics: ElectronicT, this_electronics: ElectronicT, velo: ArrayLike = None) -> np.ndarray:
         """Compute the Hamiltonian used to propagate the electronic wavefunction
@@ -470,7 +488,7 @@ class TrajectorySH(object):
         delV = new_potential - old_potential
         rescale_vector = self.direction_of_rescale(self.state, hop_to)
         component_kinetic = self.mode_kinetic_energy(rescale_vector)
-        if delV <= component_kinetic:
+        if self.hop_allowed(rescale_vector, -delV):
             hop_from = self.state
             self.state = hop_to
             self.rescale_component(rescale_vector, -delV)
