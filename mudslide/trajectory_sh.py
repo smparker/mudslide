@@ -176,8 +176,7 @@ class TrajectorySH(object):
         """
         if force or (self.nsteps % self.trace_every) == 0:
             self.tracer.collect(self.snapshot())
-            self.trouble_shooter()
-            #self.no_file_log()
+            #self.trouble_shooter()
 
     def snapshot(self) -> Dict[str,Any]:
         """Collect data from run for logging
@@ -198,9 +197,6 @@ class TrajectorySH(object):
             "zeta"   : self.zeta
             }
         return out
-
-    def no_file_log(self):
-        log = self.snapshot()
     
     def trouble_shooter(self):
         log = self.snapshot()
