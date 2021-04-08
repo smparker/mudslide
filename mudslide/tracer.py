@@ -59,10 +59,14 @@ class Trace(object):
         """Classifies end of simulation: 2*state + [0 for left, 1 for right]"""
         last_snapshot = self.data[-1]
         nst = last_snapshot["density_matrix"].shape[0]
+        ndim = len(last_snapshot["position"])
         position = last_snapshot["position"]
         active = last_snapshot["active"]
 
         out = np.zeros([nst, 2], dtype=np.float64)
+
+        if ndim != 1:
+            return out
 
         lr = 0 if position < 0.0 else 1
         # first bit is left (0) or right (1), second bit is electronic state
