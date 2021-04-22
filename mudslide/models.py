@@ -9,6 +9,7 @@ from .electronics import DiabaticModel_, AdiabaticModel_
 
 from typing import Any
 from .typing import ArrayLike, DtypeLike
+from .constants import eVtoHartree
 
 # Here are some helper functions that pad the model problems with fake electronic states.
 # Useful for debugging, so keeping it around
@@ -470,8 +471,8 @@ class LinearVibronic(DiabaticModel_):
     nstates_ : int = 2
     def __init__(self, representation: str = "adiabatic", reference: Any = None,
             mass: float = [243.6078782, 134.6412667, 99.93022402, 66.33593369, 3475.98736],
-            E1: float = 8.5037/27.211386245988, 
-            E2: float = 9.4523/27.211386245988,
+            E1: float = 8.5037, 
+            E2: float = 9.4523,
             lamb: float = 0.3289,
             r0sqrtw5mh: float = 4.35,
             om: float = np.array([0.1117, 0.2021, 0.2723, 0.4102]),
@@ -481,14 +482,14 @@ class LinearVibronic(DiabaticModel_):
             ):
         DiabaticModel_.__init__(self, representation=representation, reference=reference)
         self.mass = np.array(mass, dtype=np.float64).reshape(self.ndim())
-        self.E1 = float(E1)
-        self.E2 = float(E2)
-        self.lamb = float(lamb/27.211386245988)
+        self.E1 = float(E1/eVtoHartree)
+        self.E2 = float(E2/eVtoHartree)
+        self.lamb = float(lamb/eVtoHartree)
         self.r0sqrtw5mh = float(r0sqrtw5mh)
-        self.om = om/27.211386245988
-        self.k1 = k1/27.211386245988
-        self.k2 = k2/27.211386245988
-        self.An = An/27.211386245988
+        self.om = om/eVtoHartree
+        self.k1 = k1/eVtoHartree
+        self.k2 = k2/eVtoHartree
+        self.An = An/eVtoHartree
         
         
     def V(self, X: ArrayLike) -> ArrayLike:
