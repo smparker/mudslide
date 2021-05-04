@@ -41,6 +41,10 @@ class TrajectorySH(object):
                 self.rho = np.zeros([model.nstates(),model.nstates()], dtype=np.complex128)
                 self.rho[0,0] = 1.0
                 self.state = 0
+            elif rho0 == "first_excited":
+                self.rho = np.zeros([model.nstates(),model.nstates()], dtype=np.complex128)
+                self.rho[1,1] = 1.0
+                self.state = 1
             else:
                 Exception("Unrecognized initial state option")
         else:
