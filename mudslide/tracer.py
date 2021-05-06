@@ -132,4 +132,17 @@ class TraceManager(object):
             print("{:>6s} {:>16s} {:>6s} {:>12s}".format("trace", "runtime", "nhops", "weight"), file=file)
             for i, t in enumerate(self.traces):
                 print("{:6d} {:16.4f} {:6d} {:12.6f}".format(i, t.data[-1]["time"], len(t.hops), t.weight/norm), file=file)
+    
+    def as_dict(self) -> Dict:
+        out = {
+                "hops" : [],
+                "data" : [],
+                "weight" : []
+            }
+        for x in self.traces:
+            out["hops"].append(x.as_dict()["hops"])
+            out["data"].append(x.as_dict()["data"])
+            out["weight"].append(x.as_dict()["weight"])
+
+        return out
 
