@@ -465,13 +465,13 @@ class ShinMetiu(AdiabaticModel_):
     def dV(self, R: ArrayLike) -> ArrayLike:
         """:math:`\\nabla V(x)`"""
         return (self.dV_el(R) + self.dV_nuc(R)).reshape([1, len(self.rr), len(self.rr)])
-   
+
 class LinearVibronic(DiabaticModel_):
     ndim_: int = 5
     nstates_ : int = 2
     def __init__(self, representation: str = "adiabatic", reference: Any = None,
             mass: float = [243.6078782, 134.6412667, 99.93022402, 66.33593369, 3475.98736],
-            E1: float = 8.5037, 
+            E1: float = 8.5037,
             E2: float = 9.4523,
             lamb: float = 0.3289,
             r0sqrtw5mh: float = 4.35,
@@ -490,8 +490,8 @@ class LinearVibronic(DiabaticModel_):
         self.k1 = k1/eVtoHartree
         self.k2 = k2/eVtoHartree
         self.An = An/eVtoHartree
-        
-        
+
+
     def V(self, X: ArrayLike) -> ArrayLike:
         w0 = 0
         theta = X[4]
@@ -516,7 +516,7 @@ class LinearVibronic(DiabaticModel_):
         out = np.array([ [w11, w12],
                         [w21, w22]], dtype = np.float64)
         return out
-    
+
     def dV(self, X: ArrayLike) -> ArrayLike:
         w0 = 0
         w12 = 0
@@ -541,7 +541,7 @@ class LinearVibronic(DiabaticModel_):
 
         for i in range(4):
             q5[i] = self.An[i]*2*(i+1)*(math.sin((i+1)*theta)*(math.cos((i+1)*theta)))
-            
+
         w11 = np.sum(q5)
         w22 = w11
         w12 = self.lamb*self.r0sqrtw5mh*math.cos(theta)
