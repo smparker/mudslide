@@ -21,12 +21,35 @@ class ElectronicModel_(object):
         self.position: ArrayLike
         self.reference = reference
 
+
+        self.hamiltonian: ArrayLike
+        self.force: ArrayLike
+        self.derivative_coupling: ArrayLike
+
     def compute(self, X: ArrayLike, couplings: Any = None, gradients: Any = None, reference: Any = None) -> None:
+        """
+        Central function for model objects. After the compute function exists, the following
+        data must be provided:
+          - self.hamiltonian -> n x n array containing electronic hamiltonian
+          - self.force -> n x ndim array containing the force on each diagonal
+          - self.derivative_coupling -> n x n x ndim array containing derivative couplings
+
+        The couplings and gradients options are currently unimplemented, but are
+        intended to allow specification of which couplings and gradients are needed
+        so that computational cost can be reduced.
+
+        Nothing is returned, but the model object should contain all the
+        necessary date.
+        """
         raise NotImplementedError("ElectronicModels need a compute function")
 
     def update(self, X: ArrayLike, couplings: Any = None, gradients: Any = None) -> 'ElectronicModel_':
-        self.position = X
+        """
+        Convenience function that copies the present object, updates the position,
+        calls compute, and then returns the new object
+        """
         out = cp.copy(self)
+        out.position = X
         out.compute(X, couplings=couplings, gradients=gradients, reference=self.reference)
         return out
 
@@ -59,8 +82,8 @@ class DiabaticModel_(ElectronicModel_):
         self.force = self._compute_force(dV, self.reference)
 
     def update(self, X: ArrayLike, couplings: Any = None, gradients: Any = None) -> 'DiabaticModel_':
-        self.position = X
         out = cp.copy(self)
+        out.position = X
         out.compute(X, couplings=couplings, gradients=gradients, reference=self.reference)
         return out
 
@@ -159,8 +182,8 @@ class AdiabaticModel_(ElectronicModel_):
         self.force = self._compute_force(dV, self.reference)
 
     def update(self, X: ArrayLike, couplings: Any = None, gradients: Any = None) -> 'AdiabaticModel_':
-        self.position = X
         out = cp.copy(self)
+        out.position = X
         out.compute(X, couplings=couplings, gradients=gradients, reference=self.reference)
         return out
 
