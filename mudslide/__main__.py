@@ -13,6 +13,7 @@ from .cumulative_sh import TrajectoryCum
 from .even_sampling import EvenSamplingTrajectory
 from .ehrenfest import Ehrenfest
 from .batch import TrajGenConst, TrajGenNormal, BatchedTraj
+from .tracer import InMemoryTrace, YAMLTrace, TraceManager
 from .models import models
 
 import argparse as ap
@@ -52,6 +53,7 @@ def main(argv = None, file=sys.stdout) -> None:
     parser.add_argument('-o', '--output', default="averaged", type=str, choices=('averaged', 'single', 'pickle', 'swarm', 'hack'), help="what to produce as output (%(default)s)")
     parser.add_argument('-O', '--outfile', default="sh.pickle", type=str, help="name of pickled file to produce (%(default)s)")
     parser.add_argument('-z', '--seed', default=None, type=int, help="random seed (None)")
+    parser.add_argument("--log", choices=["memory", "yaml"], default="memory", help="how to store trajectory data")
     parser.add_argument('--published', dest="published", action="store_true", help="override ranges to use those found in relevant papers (%(default)s)")
 
     args = parser.parse_args(argv)
@@ -83,6 +85,8 @@ def main(argv = None, file=sys.stdout) -> None:
 
     trajectory_type = methods[args.method]
 
+    trace_type = { "memory" : InMemoryTrace, "yaml" : YAMLTrace }[args.log]
+
     all_results = []
 
     if (args.output == "averaged" or args.output == "pickle"):
@@ -109,6 +113,7 @@ def main(argv = None, file=sys.stdout) -> None:
                            nprocs = args.nprocs,
                            dt = dt,
                            bounds = [ -abs(args.bounds), abs(args.bounds) ],
+                           tracemanager = TraceManager(TraceType=trace_type),
                            trace_every = args.every,
                            spawn_stack = args.sample_stack,
                            electronic_integration=args.electronic,
