@@ -7,7 +7,7 @@ import copy as cp
 import numpy as np
 
 from .propagation import rk4
-from .tracer import Trace
+from .tracer import DefaultTrace
 from .math import poisson_prob_scale
 
 from typing import List, Dict, Union, Any
@@ -27,7 +27,7 @@ class TrajectorySH(object):
         :param options: option dictionary
         """
         self.model = model
-        self.tracer = tracer if tracer is not None else Trace()
+        self.tracer = tracer if tracer is not None else DefaultTrace()
         self.queue: Any = queue
         self.mass = model.mass
         self.position = np.array(x0, dtype=np.float64).reshape(model.ndim())

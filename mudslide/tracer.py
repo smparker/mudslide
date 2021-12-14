@@ -256,30 +256,32 @@ class YAMLTrace(Trace_):
                     "weight" : self.weight
                     }
 
-Trace = InMemoryTrace
+DefaultTrace = InMemoryTrace
 
 class TraceManager(object):
     """Manage the collection of observables from a set of trajectories"""
-    def __init__(self) -> None:
+    def __init__(self, TraceType=InMemoryTrace) -> None:
+        self.TraceType = TraceType
+
         self.traces: List = []
         self.outcomes: ArrayLike
 
-    def spawn_tracer(self) -> Trace:
+    def spawn_tracer(self) -> Trace_:
         """returns a Tracer object that will collect all of the observables for a given trajectory"""
-        return Trace()
+        return self.TraceType()
 
-    def merge_tracer(self, tracer: Trace) -> None:
+    def merge_tracer(self, tracer: Trace_) -> None:
         """accepts a Tracer object and adds it to list of traces"""
         self.traces.append(tracer)
 
-    def add_batch(self, traces: List[Trace]) -> None:
+    def add_batch(self, traces: List[Trace_]) -> None:
         """merge other manager into self"""
         self.traces.extend(traces)
 
     def __iter__(self) -> Iterator:
         return self.traces.__iter__()
 
-    def __getitem__(self, i: int) -> Trace:
+    def __getitem__(self, i: int) -> Trace_:
         return self.traces[i]
 
     def outcome(self) -> ArrayLike:
