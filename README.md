@@ -61,7 +61,7 @@ provided. For example:
     # Generates trajectories always with starting position -5, starting momentum 10.0, on ground state
     traj_gen = mudslide.TrajGenConst(-5.0, 10.0, "ground")
 
-    simulator = mudslide.BatchedTraj(simple_model, traj_gen, mudslide.TrajectorySH, samples = 4)
+    simulator = mudslide.BatchedTraj(simple_model, traj_gen, mudslide.TrajectorySH, samples = 4, bounds=[[-4],[4]])
     results = simulator.compute()
     outcomes = results.outcomes
 
