@@ -4,8 +4,9 @@
 from __future__ import division
 
 import numpy as np
+from .typing import ArrayLike
 
-def poisson_prob_scale(x):
+def poisson_prob_scale(x: ArrayLike):
     """Computes (1 - exp(-x))/x which is needed when scaling Poisson probabilities"""
     if abs(x) < 1e-3:
         return 1 - x/2 + x**2/6 - x**3/24

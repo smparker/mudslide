@@ -25,35 +25,36 @@ class Trace_(object):
         """add a single snapshot to the trace"""
         return
 
-    def record_event(self, event_dict) -> None:
+    def record_event(self, event_dict: Dict) -> None:
         """add a single event (e.g., hop or collapse) to the log"""
         return
 
     def __iter__(self) -> Iterator:
         """option to iterate through every snapshot"""
-        return
+        pass
 
     def __getitem__(self, i: int) -> Any:
         """option to get a particular snapshot"""
-        return
+        pass
 
     def __len__(self) -> int:
         return 0
 
-    def form_data(self, snap_dict):
+    def form_data(self, snap_dict: Dict) -> Dict:
         out = {}
         for k, v in snap_dict.items():
             if isinstance(v, list):
-                out[k] = np.array(v)
+                o = np.array(v)
                 if k in [ "density_matrix" ]:
-                    out[k] = out[k].view(dtype=np.complex128)
+                    o = o.view(dtype=np.complex128)
+                out[k] = o
             elif isinstance(v, dict):
                 out[k] = self.form_data(v)
             else:
                 out[k] = v
         return out
 
-    def clone(self):
+    def clone(self) -> 'Trace_':
         return cp.deepcopy(self)
 
     def print(self, file: Any = sys.stdout) -> None:

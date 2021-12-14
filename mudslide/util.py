@@ -4,7 +4,7 @@
 import os
 import sys
 
-def find_unique_name(name, always_enumerate = False, ending = ""):
+def find_unique_name(name: str, always_enumerate: bool = False, ending: str = "") -> str:
     """
     Given an input basename, checks whether a file with the given name already exists.
     If a file already exists, a suffix is added to make the file unique.
