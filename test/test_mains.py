@@ -88,9 +88,10 @@ class TrajectoryTest(object):
     o = "single"
     j = 1
     electronic = "exp"
+    log = "memory"
 
     def capture_traj_problems(self, k, tol, extra_options = []):
-        options = "-s {0:d} -m {1:s} -k {2:f} {2:f} -x {3:f} --dt {4:f} -n {5:d} -z {6:d} -o {7:s} -j {8:d} -a {9:s} --electronic {10:s}".format(self.samples, self.model, k, self.x, self.dt, self.n, self.seed, self.o, self.j, self.method, self.electronic).split()
+        options = "-s {0:d} -m {1:s} -k {2:f} {2:f} -x {3:f} --dt {4:f} -n {5:d} -z {6:d} -o {7:s} -j {8:d} -a {9:s} --electronic {10:s} --log {11:s}".format(self.samples, self.model, k, self.x, self.dt, self.n, self.seed, self.o, self.j, self.method, self.electronic, self.log).split()
         options += extra_options
 
         checkdir = os.path.join(testdir, "checks", self.method)
@@ -151,6 +152,7 @@ class TestTSACc(unittest.TestCase, TrajectoryTest):
     seed = 756396545
     method = "cumulative-sh"
     electronic = "linear-rk4"
+    log = "yaml"
 
     def test_tsac_c(self):
         for k in [10, 20]:
