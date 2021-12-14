@@ -7,11 +7,90 @@ from .version import __version__
 
 import numpy as np
 import sys
+import copy as cp
+import shutil
 
 from typing import List, Any, Dict, Iterator
 from .typing import ArrayLike
 
-class Trace(object):
+from .util import find_unique_name
+
+import yaml
+
+class Trace_(object):
+    def __init__(self, weight: float = 1.0):
+        self.weight: float = weight
+
+    def collect(self, snapshot: Any) -> None:
+        """add a single snapshot to the trace"""
+        return
+
+    def record_event(self, event_dict) -> None:
+        """add a single event (e.g., hop or collapse) to the log"""
+        return
+
+    def __iter__(self) -> Iterator:
+        """option to iterate through every snapshot"""
+        return
+
+    def __getitem__(self, i: int) -> Any:
+        """option to get a particular snapshot"""
+        return
+
+    def __len__(self) -> int:
+        return 0
+
+    def form_data(self, snap_dict):
+        out = {}
+        for k, v in snap_dict.items():
+            if isinstance(v, list):
+                out[k] = np.array(v)
+                if k in [ "density_matrix" ]:
+                    out[k] = out[k].view(dtype=np.complex128)
+            elif isinstance(v, dict):
+                out[k] = self.form_data(v)
+            else:
+                out[k] = v
+        return out
+
+    def clone(self):
+        return cp.deepcopy(self)
+
+    def print(self, file: Any = sys.stdout) -> None:
+        nst = len(self[0]["density_matrix"])
+        headerlist =  [ "%12s" % x for x in [ "time", "x", "p", "V", "T", "E" ] ]
+        headerlist += [ "%12s" % x for x in [ "rho_{%d,%d}" % (i,i) for i in range(nst) ] ]
+        headerlist += [ "%12s" % x for x in [ "H_{%d,%d}" % (i,i) for i in range(nst) ] ]
+        headerlist += [ "%12s" % "active" ]
+        headerlist += [ "%12s" % "hopping" ]
+        print("#" + " ".join(headerlist), file=file)
+        for i in self:
+            line = " {time:12.6f} {position[0]:12.6f} {momentum[0]:12.6f} {potential:12.6f} {kinetic:12.6f} {energy:12.6f} ".format(**i)
+            line += " ".join(["%12.6f" % x for x in np.real(np.diag(i["density_matrix"]))])
+            line += " " + " ".join(["%12.6f" % x for x in np.real(np.diag(i["electronics"]["hamiltonian"]))])
+            line += " {active:12d} {hopping:12e}".format(**i)
+            print(line, file=file)
+
+    def outcome(self) -> ArrayLike:
+        """Classifies end of simulation: 2*state + [0 for left, 1 for right]"""
+        last_snapshot = self[-1]
+        ndim = len(last_snapshot["position"])
+        nst = len(last_snapshot["density_matrix"])
+        position = last_snapshot["position"][0]
+        active = last_snapshot["active"]
+
+        out = np.zeros([nst, 2], dtype=np.float64)
+
+        if ndim != 1:
+            return out
+
+        lr = 0 if position < 0.0 else 1
+        # first bit is left (0) or right (1), second bit is electronic state
+        out[active, lr] = 1.0
+
+        return out
+
+class InMemoryTrace(Trace_):
     """Collect results from a single trajectory"""
     def __init__(self, weight: float = 1.0):
         self.data: List = []
@@ -31,48 +110,18 @@ class Trace(object):
             "prob" : prob
             })
 
+    def record_event(self, event_dict):
+        self.hops.append(event_dict)
+
     def __iter__(self) -> Iterator:
-        return self.data.__iter__()
+        for snap in self.data:
+            yield self.form_data(snap)
 
     def __getitem__(self, i: int) -> Any:
-        return self.data[i]
+        return self.form_data(self.data[i])
 
     def __len__(self) -> int:
         return len(self.data)
-
-    def print(self, file: Any = sys.stdout) -> None:
-        nst = self.data[0]["density_matrix"].shape[0]
-        headerlist =  [ "%12s" % x for x in [ "time", "x", "p", "V", "T", "E" ] ]
-        headerlist += [ "%12s" % x for x in [ "rho_{%d,%d}" % (i,i) for i in range(nst) ] ]
-        headerlist += [ "%12s" % x for x in [ "H_{%d,%d}" % (i,i) for i in range(nst) ] ]
-        headerlist += [ "%12s" % "active" ]
-        headerlist += [ "%12s" % "hopping" ]
-        print("#" + " ".join(headerlist), file=file)
-        for i in self.data:
-            line = " {time:12.6f} {position[0]:12.6f} {momentum[0]:12.6f} {potential:12.6f} {kinetic:12.6f} {energy:12.6f} ".format(**i)
-            line += " ".join(["%12.6f" % x for x in np.real(np.diag(i["density_matrix"]))])
-            line += " " + " ".join(["%12.6f" % x for x in np.real(np.diag(i["electronics"].hamiltonian))])
-            line += " {active:12d} {hopping:12e}".format(**i)
-            print(line, file=file)
-
-    def outcome(self) -> ArrayLike:
-        """Classifies end of simulation: 2*state + [0 for left, 1 for right]"""
-        last_snapshot = self.data[-1]
-        nst = last_snapshot["density_matrix"].shape[0]
-        ndim = len(last_snapshot["position"])
-        position = last_snapshot["position"]
-        active = last_snapshot["active"]
-
-        out = np.zeros([nst, 2], dtype=np.float64)
-
-        if ndim != 1:
-            return out
-
-        lr = 0 if position < 0.0 else 1
-        # first bit is left (0) or right (1), second bit is electronic state
-        out[active, lr] = 1.0
-
-        return out
 
     def as_dict(self) -> Dict:
         return {
@@ -81,6 +130,133 @@ class Trace(object):
                 "weight" : self.weight
                 }
 
+class YAMLTrace(Trace_):
+    """Collect results from a single trajectory and write to yaml files"""
+    def __init__(self, name: str = "traj", weight: float = 1.0,
+            log_pitch = 512):
+        self.weight: float = weight
+
+        self.log_pitch = log_pitch
+        self.logsize = 0
+        self.nlogs = 1
+        self.active_logsize = 0
+        self.active_logfile = ""
+        self.logfiles = [ ]
+
+        self.base_name = name
+        self.unique_name = find_unique_name(name, always_enumerate = True, ending=".yaml")
+
+        # set log names
+        self.main_log = self.unique_name + ".yaml"
+        self.active_logfile = self.unique_name + "-log_0.yaml"
+        self.event_log = self.unique_name + "-events.yaml"
+
+        self.logfiles = [ self.active_logfile ]
+
+        # create empty files
+        open(self.main_log, "x").close()
+        open(self.active_logfile, "x").close()
+        open(self.event_log, "x").close()
+
+        self.write_main_log()
+
+    def write_main_log(self):
+        """Writes main log file, which points to other files for logging information"""
+        out = {
+            "name" : self.unique_name,
+            "logfiles" : self.logfiles,
+            "nlogs" : self.nlogs,
+            "log_pitch" : self.log_pitch,
+            "event_log" : self.event_log,
+            "weight" : self.weight
+            }
+
+        with open(self.main_log, "w") as f:
+            yaml.safe_dump(out, f)
+
+    def collect(self, trajectory_snapshot: Any) -> None:
+        """collect and optionally process data"""
+        isnap = self.logsize + 1
+        target_log = isnap // self.log_pitch
+        if target_log != (self.nlogs - 1): # for zero based index, target_log == nlogs means we're out of logs
+            self.nlogs += 1
+            self.active_logfile = "{}-log_{:d}.yaml".format(self.unique_name, self.nlogs)
+            self.logfiles.append(self.active_logfile)
+            self.write_main_log()
+
+        with open(self.active_logfile, "a") as f:
+            yaml.safe_dump([trajectory_snapshot], f, explicit_start=False)
+
+        self.logsize += 1
+
+    def hop(self, time: float, hop_from: int, hop_to: int, zeta: float, prob: float) -> None:
+        hop_data = {
+            "event": "hop",
+            "time" : time,
+            "from" : hop_from,
+            "to"   : hop_to,
+            "zeta" : zeta,
+            "prob" : prob
+            }
+        self.record_event(hop_data)
+
+    def record_event(self, event_dict):
+        with open(self.event_log, "a") as f:
+            yaml.safe_dump([event_dict], f, explicit_start=False)
+
+    def clone(self):
+        out = YAMLTrace(name=self.base_name, weight=float(self.weight), log_pitch=self.log_pitch)
+
+        out.logsize = self.logsize
+        out.nlogs = self.nlogs
+        out.active_logsize = self.active_logsize
+
+        out.logfiles = [ "{}-log_{}.yaml".format(out.unique_name, i) for i in range(out.nlogs) ]
+        for selflog, outlog in zip(self.logfiles, out.logfiles):
+            shutil.copy(selflog, outlog)
+        out.active_logfile = out.logfiles[-1]
+
+        shutil.copy(self.event_log, out.event_log)
+
+        out.write_main_log()
+
+        return out
+
+    def __iter__(self) -> Iterator:
+        for log in self.logfiles:
+            with open(log, "r") as f:
+                chunk = yaml.safe_load(f)
+                for i in chunk:
+                    yield self.form_data(i)
+
+    def __getitem__(self, i: int) -> Any:
+        """This is an inefficient way to loop through data"""
+        if i == -1:
+            i = self.logsize - 1
+
+        if i < 0 or i >= self.logsize:
+            raise IndexError("Invalid index specified: {}".format(i))
+
+        target_log = i // self.log_pitch
+        target_snap = i - target_log * self.log_pitch
+        with open(self.logfiles[target_log], "r") as f:
+            chunk = yaml.safe_load(f)
+            return self.form_data(chunk[target_snap])
+
+    def __len__(self) -> int:
+        return self.logsize
+
+    def as_dict(self) -> Dict:
+        with open(self.main_log) as f:
+            info = yaml.safe_load(f)
+
+            return {
+                    "hops" : info["hops"],
+                    "data" : [ x for x in self ],
+                    "weight" : self.weight
+                    }
+
+Trace = InMemoryTrace
 
 class TraceManager(object):
     """Manage the collection of observables from a set of trajectories"""
@@ -132,7 +308,7 @@ class TraceManager(object):
             print("{:>6s} {:>16s} {:>6s} {:>12s}".format("trace", "runtime", "nhops", "weight"), file=file)
             for i, t in enumerate(self.traces):
                 print("{:6d} {:16.4f} {:6d} {:12.6f}".format(i, t.data[-1]["time"], len(t.hops), t.weight/norm), file=file)
-    
+
     def as_dict(self) -> Dict:
         out = {
                 "hops" : [],

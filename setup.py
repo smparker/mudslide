@@ -24,7 +24,8 @@ setup(
     install_requires=[
         'numpy>=1.19',
         'scipy',
-        'typing_extensions'
+        'typing_extensions',
+        'pyyaml'
         ],
     test_suite='nose.collector',
     tests_require=['nose'],

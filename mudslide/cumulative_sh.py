@@ -29,18 +29,18 @@ class TrajectoryCum(TrajectorySH):
     def snapshot(self) -> Dict:
         """returns loggable data"""
         out = {
-            "time" : self.time,
-            "position"  : np.copy(self.position),
-            "momentum"  : self.mass * np.copy(self.velocity),
-            "potential" : self.potential_energy(),
-            "kinetic"   : self.kinetic_energy(),
-            "energy"    : self.total_energy(),
-            "density_matrix" : np.copy(self.rho),
-            "active"    : self.state,
-            "electronics" : self.electronics,
-            "hopping"   : self.hopping,
-            "zeta"      : self.zeta,
-            "prob_cum"  : self.prob_cum
+            "time"      : self.time,
+            "position"  : self.position.tolist(),
+            "momentum"  : (self.mass * self.velocity).tolist(),
+            "potential" : self.potential_energy().item(),
+            "kinetic"   : self.kinetic_energy().item(),
+            "energy"    : self.total_energy().item(),
+            "density_matrix" : self.rho.view(np.float64).tolist(),
+            "active"    : int(self.state),
+            "electronics" : self.electronics.as_dict(),
+            "hopping"   : float(self.hopping),
+            "zeta"      : float(self.zeta),
+            "prob_cum"  : float(self.prob_cum)
             }
         return out
 

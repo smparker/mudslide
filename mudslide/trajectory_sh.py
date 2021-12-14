@@ -13,7 +13,6 @@ from .math import poisson_prob_scale
 from typing import List, Dict, Union, Any
 from .typing import ElectronicT, ArrayLike, DtypeLike
 
-
 class TrajectorySH(object):
     """Class to propagate a single FSSH trajectory"""
 
@@ -189,19 +188,19 @@ class TrajectorySH(object):
         """
         out = {
             "time" : self.time,
-            "position"  : np.copy(self.position),
-            "momentum"  : self.mass * np.copy(self.velocity),
-            "potential" : self.potential_energy(),
-            "kinetic"   : self.kinetic_energy(),
-            "energy"    : self.total_energy(),
-            "density_matrix" : np.copy(self.rho),
+            "position"  : self.position.tolist(),
+            "momentum"  : (self.mass * self.velocity).tolist(),
+            "potential" : self.potential_energy().item(),
+            "kinetic"   : self.kinetic_energy().item(),
+            "energy"    : self.total_energy().item(),
+            "density_matrix" : self.rho.view(dtype=np.float64).tolist(),
             "active"    : self.state,
-            "electronics" : self.electronics,
+            "electronics" : self.electronics.as_dict(),
             "hopping"   : self.hopping,
             "zeta"   : self.zeta
             }
         return out
-    
+
     def trouble_shooter(self):
         log = self.snapshot()
         with open("snapout.dat", "a") as file:
@@ -461,7 +460,7 @@ class TrajectorySH(object):
             probs = gkndt * poisson_prob_scale(np.sum(gkndt))
         else:
             raise Exception("Unrecognized option for hopping_probability")
-        self.hopping = np.sum(probs) # store total hopping probability
+        self.hopping = np.sum(probs).item() # store total hopping probability
 
         self.zeta = self.random()
         acc_prob = np.cumsum(probs)
@@ -473,7 +472,7 @@ class TrajectorySH(object):
                     hop_to = i
                     break
 
-            return [{ "target" : hop_to, "weight" : 1.0, "zeta" : self.zeta, "prob" : hops[i] }]
+            return [{ "target" : hop_to, "weight" : 1.0, "zeta" : self.zeta, "prob" : acc_prob[hop_to] }]
         else:
             return []
 
@@ -496,7 +495,7 @@ class TrajectorySH(object):
             hop_from = self.state
             self.state = hop_to
             self.rescale_component(rescale_vector, -delV)
-            self.tracer.hop(self.time, hop_from, hop_to, hop_dict["zeta"], hop_dict["prob"])
+            self.tracer.hop(self.time, hop_from, hop_to, float(hop_dict["zeta"]), float(hop_dict["prob"]))
 
     def simulate(self) -> 'Trace':
         """

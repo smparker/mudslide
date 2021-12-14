@@ -150,7 +150,7 @@ class EvenSamplingTrajectory(TrajectoryCum):
                 self.position,
                 self.velocity * self.mass,
                 self.rho,
-                tracer=cp.deepcopy(self.tracer),
+                tracer=self.tracer.clone(),
                 queue = self.queue,
                 last_velocity = self.last_velocity,
                 state0 = self.state,

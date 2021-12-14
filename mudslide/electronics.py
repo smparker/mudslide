@@ -53,6 +53,17 @@ class ElectronicModel_(object):
         out.compute(X, couplings=couplings, gradients=gradients, reference=self.reference)
         return out
 
+    def as_dict(self):
+        out = {
+            "nstates" : self.nstates(),
+            "ndim" : self.ndim(),
+            "position" : self.position.tolist(),
+            "hamiltonian" : self.hamiltonian.tolist(),
+            "derivative_coupling" : self.derivative_coupling.tolist(),
+            "force" : self.force.tolist()
+            }
+        return out
+
 class DiabaticModel_(ElectronicModel_):
     '''
     Base class to handle model problems given in
