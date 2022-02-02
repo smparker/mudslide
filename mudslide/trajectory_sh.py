@@ -89,6 +89,7 @@ class TrajectorySH(object):
         if self.hopping_probability not in [ "tully", "poisson" ]:
             raise Exception("hopping_probability accepts only \"tully\" or \"poisson\" options")
 
+        self.zeta_list = list(options.get("zeta_list", []))
         self.zeta = 0.0
 
     def update_weight(self, weight: float) -> None:
@@ -272,6 +273,20 @@ class TrajectorySH(object):
         momentum = self.velocity * self.mass
         component = np.dot(u, momentum) * u
         return 0.5 * np.einsum('m,m,m', 1.0/self.mass, component, component)
+
+    def draw_new_zeta(self) -> float:
+        """
+        Returns a new zeta value for hopping. First it checks the input list of
+        zeta values in self.zeta_list. If no value is found in zeta_list, then
+        a random number is pulled.
+
+        :returns: zeta
+        """
+        if self.zeta_list:
+            return self.zeta_list.pop(0)
+        else:
+            return self.random()
+
 
     def hop_allowed(self, direction: ArrayLike, dE: float):
         """
@@ -462,7 +477,7 @@ class TrajectorySH(object):
             raise Exception("Unrecognized option for hopping_probability")
         self.hopping = np.sum(probs).item() # store total hopping probability
 
-        self.zeta = self.random()
+        self.zeta = self.draw_new_zeta()
         acc_prob = np.cumsum(probs)
         hops = np.less(self.zeta, acc_prob)
         if any(hops):

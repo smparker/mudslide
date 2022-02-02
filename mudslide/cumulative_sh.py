@@ -24,15 +24,7 @@ class TrajectoryCum(TrajectorySH):
         TrajectorySH.__init__(self, *args, **kwargs)
 
         self.prob_cum = np.longdouble(0.0)
-        self.zeta_list = list(kwargs.get("zeta_list", []))
-
         self.zeta = self.draw_new_zeta()
-
-    def draw_new_zeta(self) -> float:
-        if self.zeta_list:
-            return self.zeta_list.pop(0)
-        else:
-            return self.random()
 
     def snapshot(self) -> Dict:
         """returns loggable data"""
