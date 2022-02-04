@@ -14,7 +14,7 @@ from .even_sampling import EvenSamplingTrajectory
 from .ehrenfest import Ehrenfest
 from .afssh import AugmentedFSSH
 from .batch import TrajGenConst, TrajGenNormal, BatchedTraj
-from .tracer import InMemoryTrace, YAMLTrace, TraceManager
+from .tracer import TraceManager
 from .models import scattering_models as models
 
 import argparse as ap
@@ -139,10 +139,10 @@ def main(argv=None, file=sys.stdout) -> None:
 
     trajectory_type = methods[args.method]
 
-    trace_type = {"memory": InMemoryTrace, "yaml": YAMLTrace}[args.log]
+    trace_type = args.log
     trace_options = {}
-    if args.log == "yaml":
-        trace_options["location"] = args.logdir
+    if trace_type == "yaml":
+        trace_options.update({"location": args.logdir})
 
     all_results = []
 
@@ -170,8 +170,8 @@ def main(argv=None, file=sys.stdout) -> None:
                            samples=args.samples,
                            nprocs=args.nprocs,
                            dt=dt,
-                           bounds=[-abs(args.bounds), abs(args.bounds)],
-                           tracemanager=TraceManager(TraceType=trace_type, trace_kwargs=trace_options),
+                           bounds=[ -abs(args.bounds), abs(args.bounds) ],
+                           tracemanager=TraceManager(trace_type, trace_kwargs=trace_options),
                            trace_every=args.every,
                            spawn_stack=args.sample_stack,
                            electronic_integration=args.electronic,

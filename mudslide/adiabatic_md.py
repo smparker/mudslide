@@ -6,7 +6,7 @@ from __future__ import division
 import copy as cp
 import numpy as np
 
-from .tracer import DefaultTrace
+from .tracer import Trace
 
 from typing import List, Dict, Union, Any
 from .typing import ElectronicT, ArrayLike, DtypeLike
@@ -30,7 +30,7 @@ class AdiabaticMD(object):
         :param options: option dictionary
         """
         self.model = model
-        self.tracer = tracer if tracer is not None else DefaultTrace()
+        self.tracer = Trace(tracer)
         self.queue: Any = queue
         self.mass = model.mass
         self.position = np.array(x0, dtype=np.float64).reshape(model.ndim())

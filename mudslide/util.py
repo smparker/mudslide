@@ -24,3 +24,11 @@ def find_unique_name(name: str, location="", always_enumerate: bool = False, end
             return out
     raise Exception("No unique name could be made from base {}.".format(name))
     return ""
+
+def is_string(x) -> bool:
+    """
+    Tell whether the input is a string or some other variable
+
+    :returns: True if x is a string
+    """
+    return isinstance(x, str)

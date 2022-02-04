@@ -13,11 +13,10 @@ import yaml
 import queue
 from mudslide.even_sampling import SpawnStack
 from mudslide.even_sampling import EvenSamplingTrajectory
-from mudslide.tracer import InMemoryTrace, YAMLTrace, TraceManager
+from mudslide.tracer import TraceManager
 from mudslide.batch import TrajGenConst, TrajGenNormal, BatchedTraj
 
 from mudslide.models import TMModel, turbomole_is_installed
-from mudslide.tracer import YAMLTrace
 
 testdir = os.path.dirname(__file__)
 _refdir = os.path.join(testdir, "ref")
@@ -50,7 +49,7 @@ class TestTMModel(unittest.TestCase):
 
     def test_get_gs_ex_properties(self):
         """test for gs_ex_properties function"""
-        tm_model = TMModel(states=[0, 1, 2, 3], expert=True) 
+        tm_model = TMModel(states=[0, 1, 2, 3], expert=True)
 
         # yapf: disable
         mom = [ 5.583286976987380000, -2.713959745507320000,  0.392059702162967000,
@@ -70,8 +69,7 @@ class TestTMModel(unittest.TestCase):
         sample_stack.sample_stack[0]["zeta"]=0.003
         samples = 1
         nprocs = 1
-        trace_type = YAMLTrace
-        trace_options = {}
+        trace_type = "yaml"
         electronic_integration = 'exp'
         trace_options["location"] = ""
         trace_options["base_name"] = "TMtrace"
@@ -89,7 +87,7 @@ class TestTMModel(unittest.TestCase):
                        nprocs=nprocs,
                        dt=dt,
                        t0=t0,
-                       tracemanager=TraceManager(TraceType=trace_type, trace_kwargs=trace_options),
+                       tracemanager=TraceManager(TraceType=trace_type),
                        trace_every=every,
                        spawn_stack=sample_stack,
                        electronic_integration=electronic_integration)
