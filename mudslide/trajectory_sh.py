@@ -6,13 +6,14 @@ from __future__ import division
 import copy as cp
 import numpy as np
 
-from .propagation import rk4
+from .propagation import propagate_exponential, propagate_interpolated_rk4
 from .tracer import Trace
 from .math import poisson_prob_scale
 
 from typing import List, Dict, Union, Any
 from .typing import ElectronicT, ArrayLike, DtypeLike
 
+from .util import is_string
 
 class TrajectorySH(object):
     """Class to propagate a single FSSH trajectory"""
@@ -24,7 +25,7 @@ class TrajectorySH(object):
         "weight",
         "restarting",
         "hopping_probability", "zeta_list",
-        "state0" #deprecate
+        "state0"
         ]
 
     def __init__(self,
@@ -82,9 +83,8 @@ class TrajectorySH(object):
         self.time = float(options.get("t0", 0.0))
         self.nsteps = int(options.get("previous_steps", 0))
         self.trace_every = int(options.get("trace_every", 1))
-
-        # read out of options
         self.dt = float(options["dt"])
+
         self.outcome_type = options.get("outcome_type", "state")
 
         ss = options.get("seed_sequence", None)
@@ -161,7 +161,14 @@ class TrajectorySH(object):
             setattr(result, k, cp.deepcopy(v, memo) if v not in shallow_only else cp.copy(v))
         return result
 
-    def check_options(self, options: Dict, strict: bool = False):
+    def check_options(self, options: Dict, strict: bool = False) -> None:
+        """
+        Checks that the provided options are recognized by the trajectory type.
+        Optionally raises an exception if they are not recognized.
+
+        :param: options Dictionary of options/kwargs
+        :param: strict If True, unrecognized options trigger Exceptions.
+        """
         problems = []
 
         for x in options:
@@ -437,58 +444,17 @@ class TrajectorySH(object):
         if self.electronic_integration == "exp":
             # Use midpoint propagator
             W = self.hamiltonian_propagator(last_electronics, this_electronics)
-            diags, coeff = np.linalg.eigh(W)
 
-            # use W as temporary storage
-            U = np.linalg.multi_dot([coeff, np.diag(np.exp(-1j * diags * dt)), coeff.T.conj()])
-            np.dot(U, np.dot(self.rho, U.T.conj(), out=W), out=self.rho)
+            propagate_exponential(self.rho, W, self.dt)
         elif self.electronic_integration == "linear-rk4":
-            last_H = last_electronics.hamiltonian()
-            this_H = this_electronics.hamiltonian()
-
-            last_tau = last_electronics._derivative_coupling
-            this_tau = this_electronics._derivative_coupling
-
-            last_v = self.last_velocity
-            this_v = self.velocity
-
-            TV00 = np.einsum("ijx,x->ij", last_tau, last_v)
-            TV11 = np.einsum("ijx,x->ij", this_tau, this_v)
-            TV01 = np.einsum("ijx,x->ij", last_tau, this_v) + np.einsum("ijx,x->ij", this_tau, last_v)
-
-            HH = last_H
-            eigs, vecs = np.linalg.eigh(HH)
-
-            H0 = np.linalg.multi_dot([vecs.T, last_H, vecs])
-            H1 = np.linalg.multi_dot([vecs.T, this_H, vecs])
-            W00 = np.linalg.multi_dot([vecs.T, TV00, vecs])
-            W11 = np.linalg.multi_dot([vecs.T, TV11, vecs])
-            W01 = np.linalg.multi_dot([vecs.T, TV01, vecs])
-
-            def ydot(rho: ArrayLike, t: DtypeLike) -> ArrayLike:
-                assert t >= 0.0 and t <= dt
-                w0 = 1.0 - t / dt
-                w1 = t / dt
-
-                ergs = np.exp(1j * eigs * t).reshape([1, -1])
-                phases = np.dot(ergs.T, ergs.conj())
-
-                H = H0 * (w0 - 1.0) + H1 * w1
-                Hbar = H - 1j * (w0 * w0 * W00 + w1 * w1 * W11 + w0 * w1 * W01)
-                HI = Hbar * phases
-
-                out = -1j * (np.dot(HI, rho) - np.dot(rho, HI))
-                return out
-
             nsteps = self.starting_electronic_intervals
             while (dt / nsteps > self.max_electronic_dt):
                 nsteps *= 2
 
-            rho0 = np.linalg.multi_dot([vecs.T, self.rho, vecs])
-            tmprho = rk4(rho0, ydot, 0.0, dt, nsteps)
-            ergs = np.exp(1j * eigs * dt).reshape([1, -1])
-            phases = np.dot(ergs.T.conj(), ergs)
-            self.rho = np.linalg.multi_dot([vecs, tmprho * phases, vecs.T])
+            propagate_interpolated_rk4(self.rho,
+                    last_electronics.hamiltonian(), last_electronics.derivative_coupling_tensor(), self.last_velocity,
+                    this_electronics.hamiltonian(), this_electronics.derivative_coupling_tensor(), self.velocity,
+                    self.dt, nsteps)
         else:
             raise Exception("Unrecognized electronic integration option")
 
