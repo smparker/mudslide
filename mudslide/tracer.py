@@ -13,7 +13,7 @@ import shutil
 from typing import List, Any, Dict, Iterator
 from .typing import ArrayLike
 
-from .util import find_unique_name
+from .util import find_unique_name, is_string
 
 import yaml
 
@@ -257,19 +257,31 @@ class YAMLTrace(Trace_):
                     "weight" : self.weight
                     }
 
-DefaultTrace = InMemoryTrace
+def Trace(trace_type, *args, **kwargs):
+    if is_string(trace_type):
+        trace_type = trace_type.lower()
+        if trace_type == "default":
+            return InMemoryTrace(*args, **kwargs)
+        elif trace_type in [ "memory", "inmemory" ]:
+            return InMemoryTrace(*args, **kwargs)
+        elif trace_type in [ "yaml" ]:
+            return YAMLTrace(*args, **kwargs)
+    elif isinstance(trace_type, Trace_):
+        return trace_type
+    else:
+        raise Exception("Unrecognized Trace option")
 
 class TraceManager(object):
     """Manage the collection of observables from a set of trajectories"""
-    def __init__(self, TraceType=InMemoryTrace) -> None:
-        self.TraceType = TraceType
+    def __init__(self, trace_type="default") -> None:
+        self.trace_type = trace_type
 
         self.traces: List = []
         self.outcomes: ArrayLike
 
     def spawn_tracer(self) -> Trace_:
         """returns a Tracer object that will collect all of the observables for a given trajectory"""
-        return self.TraceType()
+        return Trace(self.trace_type)
 
     def merge_tracer(self, tracer: Trace_) -> None:
         """accepts a Tracer object and adds it to list of traces"""

@@ -7,7 +7,7 @@ import copy as cp
 import numpy as np
 
 from .propagation import rk4
-from .tracer import DefaultTrace
+from .tracer import Trace
 from .math import poisson_prob_scale
 
 from typing import List, Dict, Union, Any
@@ -16,7 +16,7 @@ from .typing import ElectronicT, ArrayLike, DtypeLike
 class TrajectorySH(object):
     """Class to propagate a single FSSH trajectory"""
 
-    def __init__(self, model: Any, x0: ArrayLike, p0: ArrayLike, rho0: ArrayLike, tracer: Any = None, queue: Any = None, **options: Any):
+    def __init__(self, model: Any, x0: ArrayLike, p0: ArrayLike, rho0: ArrayLike, tracer: Any = "default", queue: Any = None, **options: Any):
         """Constructor
         :param model: Model object defining problem
         :param x0: Initial position
@@ -27,7 +27,7 @@ class TrajectorySH(object):
         :param options: option dictionary
         """
         self.model = model
-        self.tracer = tracer if tracer is not None else DefaultTrace()
+        self.tracer = Trace(tracer)
         self.queue: Any = queue
         self.mass = model.mass
         self.position = np.array(x0, dtype=np.float64).reshape(model.ndim())
