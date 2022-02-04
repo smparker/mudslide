@@ -175,7 +175,8 @@ def main(argv=None, file=sys.stdout) -> None:
                            trace_every=args.every,
                            spawn_stack=args.sample_stack,
                            electronic_integration=args.electronic,
-                           hopping_probability=args.probability)
+                           hopping_probability=args.probability,
+                           strict_option_check=False)
         results = fssh.compute()
         outcomes = results.outcomes
 

@@ -16,6 +16,16 @@ from .typing import ElectronicT, ArrayLike, DtypeLike
 
 class TrajectorySH(object):
     """Class to propagate a single FSSH trajectory"""
+    recognized_options = [ "last_velocity", "bounds",
+        "duration", "dt", "t0", "previous_steps", "trace_every", "max_time",
+        "seed_sequence",
+        "outcome_type",
+        "electronics", "electronic_integration", "max_electronic_dt", "starting_electronic_intervals",
+        "weight",
+        "restarting",
+        "hopping_probability", "zeta_list",
+        "state0" #deprecate
+        ]
 
     def __init__(self,
                  model: Any,
@@ -24,6 +34,7 @@ class TrajectorySH(object):
                  rho0: ArrayLike,
                  tracer: Any = "default",
                  queue: Any = None,
+                 strict_option_check: bool = True,
                  **options: Any):
         """Constructor
         :param model: Model object defining problem
@@ -34,6 +45,8 @@ class TrajectorySH(object):
         :param queue: Trajectory queue
         :param options: option dictionary
         """
+        self.check_options(options, strict=strict_option_check)
+
         self.model = model
         self.tracer = Trace(tracer)
         self.queue: Any = queue
@@ -147,6 +160,21 @@ class TrajectorySH(object):
         for k, v in self.__dict__.items():
             setattr(result, k, cp.deepcopy(v, memo) if v not in shallow_only else cp.copy(v))
         return result
+
+    def check_options(self, options: Dict, strict: bool = False):
+        problems = []
+
+        for x in options:
+            if x not in self.recognized_options:
+                problems.append("Unrecognized option: {:s}".format(x))
+
+        if problems:
+            if not strict:
+                print("WARNING! Unrecognized options found.")
+            for x in problems:
+                print(x)
+            if strict:
+                raise Exception("Unrecognized options provided to TrajectorySH")
 
     def clone(self) -> 'TrajectorySH':
         """Clone existing trajectory for spawning

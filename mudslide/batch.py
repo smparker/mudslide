@@ -145,6 +145,8 @@ class BatchedTraj(object):
     number of electronic states, and dimension of nuclear space, respectively.
     """
 
+    batch_only_options = [ "samples", "nprocs" ]
+
     def __init__(self, model: ModelT, traj_gen: TrajGenT, trajectory_type: Any, tracemanager: Any = None, **inp: Any):
         """Constructor requires model and options input as kwargs
         :param model: object used to describe the model system
@@ -156,11 +158,8 @@ class BatchedTraj(object):
          Accepted keyword arguments and their defaults:
          | key                |   default                  |
          ---------------------|----------------------------|
-         | initial_time       | 0.0                        |
-         | samples            | 2000                       |
-         | dt                 | 20.0  ~ 0.5 fs             |
+         | t0                 | 0.0                        |
          | nprocs             | 1                          |
-         | outcome_type       | "state"                    |
          | seed               | None (date)                |
         """
         self.model = model
@@ -170,22 +169,17 @@ class BatchedTraj(object):
             self.tracemanager = tracemanager
         self.trajectory = trajectory_type
         self.traj_gen = traj_gen
-        self.options = {}
-
-        # time parameters
-        self.options["initial_time"] = inp.get("initial_time", 0.0)
+        self.batch_options = {}
 
         # statistical parameters
-        self.options["samples"] = inp.get("samples", 2000)
-        self.options["dt"] = inp.get("dt", 20.0)  # default to roughly half a femtosecond
+        self.batch_options["samples"]       = inp.get("samples", 2000)
+        self.batch_options["nprocs"]        = inp.get("nprocs", 1)
 
-        self.options["nprocs"] = inp.get("nprocs", 1)
-        self.options["outcome_type"] = inp.get("outcome_type", "state")
-
-        # everything else just gets copied over
+        # other options get copied over
+        self.traj_options = {}
         for x in inp:
-            if x not in self.options:
-                self.options[x] = inp[x]
+            if x not in self.batch_only_options:
+                self.traj_options[x] = inp[x]
 
     def compute(self) -> TraceManager:
         """Run batch of trajectories and return aggregate results
@@ -193,8 +187,8 @@ class BatchedTraj(object):
         :returns: TraceManager containing the results
         """
         # for now, define four possible outcomes of the simulation
-        nsamples = int(self.options["samples"])
-        nprocs = self.options["nprocs"]
+        nsamples = self.batch_options["samples"]
+        nprocs = self.batch_options["nprocs"]
 
         if nprocs > 1:
             logger.warning('nprocs {} specified, but parallelism is not currently handled'.format(nprocs))
@@ -209,7 +203,7 @@ class BatchedTraj(object):
         #    p.start()
 
         for x0, p0, initial, params in self.traj_gen(nsamples):
-            traj_input = self.options
+            traj_input = self.traj_options
             traj_input.update(params)
             traj = self.trajectory(self.model,
                                    x0,

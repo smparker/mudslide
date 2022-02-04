@@ -260,6 +260,7 @@ class EvenSamplingTrajectory(TrajectoryCum):
     of the cumulative probability distribution. This is an *experimental*
     in principle deterministic algorithm for FSSH simulations.
     """
+    recognized_options = TrajectoryCum.recognized_options + [ "spawn_stack", "quadrature", "mcsamples" ]
 
     def __init__(self, *args: Any, **options: Any):
         """Constructor (see TrajectoryCum constructor)"""
