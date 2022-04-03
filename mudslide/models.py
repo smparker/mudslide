@@ -579,7 +579,6 @@ class TMModel(AdiabaticModel_):
         self.sub_dir_stem = sub_dir_stem
         self.sub_dir_num = 0
 
-
         self.turbomole_init()
 
     def turbomole_init(self):
@@ -593,7 +592,6 @@ class TMModel(AdiabaticModel_):
 
         coords = []
         self.atom_order = []
-
 
         try:
             read_start = np.argwhere(np.array(["$coord\n" in line for line in lines]))[0][0]
@@ -622,7 +620,6 @@ class TMModel(AdiabaticModel_):
         self.mass = [masses[atom] for atom in self.atom_order]
         self.mass = [3 * [masses[atom]] for atom in self.atom_order]
         self.mass = np.array(self.mass, dtype=np.float64).reshape(self.ndim()) * amu_to_au
-
 
 
     def update_coords(self, X):
@@ -664,7 +661,6 @@ class TMModel(AdiabaticModel_):
             coord_file.write("".join(lines))            
 
 
-
     def call_and_parse_turbomole(self, outname="turbo.out"):
         with open(outname, "w") as f:
             ridft = subprocess.run("ridft", stdout=f)
@@ -695,9 +691,9 @@ class TMModel(AdiabaticModel_):
             for i in range(self.ndim() // 3):
                 grads.extend(
                 [
-                parsed_gradients[state]["dEdx"][i],
-                parsed_gradients[state]["dEdy"][i],
-                parsed_gradients[state]["dEdz"][i],
+                parsed_gradients[state]["d_dx"][i],
+                parsed_gradients[state]["d_dy"][i],
+                parsed_gradients[state]["d_dz"][i],
                 ]
                         )
             grads = np.array(grads)
@@ -706,14 +702,13 @@ class TMModel(AdiabaticModel_):
 
         self.force = -(self.gradients) 
 
-
         parsed_energies = data_dict["egrad"]["excited_state"][0]["energy"]
-        gs_energy = data_dict["egrad"]["ground"]["gs_energy"]
+        energy = data_dict["ridft"]["energy"]
         excited_energies = [
-            data_dict["egrad"]["excited_state"][i]["energy"] + gs_energy for i in range(len(data_dict["egrad"]["excited_state"]))
+            data_dict["egrad"]["excited_state"][i]["energy"] + energy for i in range(len(data_dict["egrad"]["excited_state"]))
         ]
 
-        self.energies = [gs_energy]
+        self.energies = [energy]
         self.energies.extend(excited_energies)
 
 
@@ -757,8 +752,6 @@ class TMModel(AdiabaticModel_):
         p.mkdir(parents = True, exist_ok = True)
         control_path = Path(self.turbomole_dir)/"control"
         subprocess.run(["cpc",p, control_path])          
-
-
 
 
 models =    { "simple" : TullySimpleAvoidedCrossing,
