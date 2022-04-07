@@ -36,7 +36,6 @@ class TMModel(AdiabaticModel_):
         self.nstates_ = len(self.states)
         self.sub_dir_stem = sub_dir_stem
         self.sub_dir_num = 0
-
         self.turbomole_init()
 
     def turbomole_init(self):
@@ -44,8 +43,6 @@ class TMModel(AdiabaticModel_):
         self.get_coords()
 
     def get_coords(self):
-        
-
         coords = []
         self.atom_order = []
         self.mass = []
@@ -55,7 +52,6 @@ class TMModel(AdiabaticModel_):
         coord_list = coord.rstrip().split("\n")
         for c in coord_list[1:]:
             c_list = c.split()
-            print(c_list)
             self.atom_order.append(c_list[3])
             coords.append([float(val) for val in c_list[:3]])
             self.mass.append(3 * [masses[c_list[3]]])
@@ -64,34 +60,25 @@ class TMModel(AdiabaticModel_):
         self.X = np.array(coords, dtype=np.float64).reshape(self.ndim())
         self.mass = np.array(self.mass, dtype=np.float64).reshape(self.ndim()) * amu_to_au
 
-
     def update_coords(self, X):
-
         self.coord_path = subprocess.run(["sdg", "-f", "coord"], capture_output=True, text=True).stdout.rstrip()
-
-
         X = X.reshape((self.ndim() // 3, 3))
         with open(self.coord_path, "r") as f:
             lines = f.readlines()
-            read_start = np.argwhere(np.array(["$coord\n" in line for line in lines]))[0][0]
+        regex = re.compile(r"\$coord\n|\$coord\s")
+        read_start = np.argwhere(np.array([bool(regex.match(line)) for line in lines]))[0][0]
 
         current_line = read_start +1
         for i, coord_list in enumerate(X):
-
-            lines[current_line] = "    {: .14f}  {: .14f}     {: .14f}      {}\n".format(coord_list[0], coord_list[1],
-                    coord_list[2], self.atom_order[i]
+            lines[current_line] = "    {: .14f}      {: .14f}      {: .14f}      {}\n".format(
+                                  coord_list[0], coord_list[1], coord_list[2], self.atom_order[i]
                     )
             current_line += 1
         
         with open(self.coord_path, "w") as coord_file:
             coord_file.write("".join(lines))            
 
-        
-            print("aminatomorder")
-            print(self.atom_order)
-        
     def call_and_parse_turbomole(self, outname="turbo.out"):
-
         with open(outname, "w") as f:
             ridft = subprocess.run("ridft", stdout=f)
             rdgrad = subprocess.run("rdgrad", stdout=f)
@@ -113,7 +100,6 @@ class TMModel(AdiabaticModel_):
         parsed_gradients = data_dict["rdgrad"]["gradient"]
         parsed_gradients.extend(data_dict["egrad"]["gradient"])
 
-
         self.gradients = np.zeros((self.nstates(),self.ndim()))
         for state in self.states:
             grads = []
@@ -128,7 +114,6 @@ class TMModel(AdiabaticModel_):
             grads = np.array(grads)
             self.gradients[state] = grads
 
-
         self.force = -(self.gradients) 
 
         parsed_energies = data_dict["egrad"]["excited_state"][0]["energy"]
@@ -139,7 +124,6 @@ class TMModel(AdiabaticModel_):
 
         self.energies = [energy]
         self.energies.extend(excited_energies)
-
 
     def V(self, X: ArrayLike) -> ArrayLike:
         out = np.zeros([self.nstates(), self.nstates()])
@@ -156,13 +140,8 @@ class TMModel(AdiabaticModel_):
         file locations.)
         """
         self.call_and_parse_turbomole()
-
         V = self.V(X)
-
         self.reference, self.hamiltonian = self._compute_basis_states(self.V(X), reference=reference)
-
-
-
 
     def update(self, X: ArrayLike, couplings: Any = None, gradients: Any = None): 
         out = cp.copy(self)
@@ -170,7 +149,6 @@ class TMModel(AdiabaticModel_):
         out.update_coords(X)
         out.compute(X, couplings=couplings, gradients=gradients, reference=self.reference)
         return out
-
 
     def clone(self):
         this_sub_dir = self.sub_dir_stem + "_" + str(self.sub_dir_num)
