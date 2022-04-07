@@ -4,21 +4,12 @@
 import numpy as np
 import math
 from scipy.special import erf
-import subprocess
-import turboparse
-import re
-import copy as cp
-
-from pathlib import Path
 
 from .electronics import DiabaticModel_, AdiabaticModel_
 
 from typing import Any
 from .typing import ArrayLike, DtypeLike
 from .constants import eVtoHartree
-from .periodic_table_atomic_mass import masses
-from .amu_to_au import amu_to_au 
-
 
 # Here are some helper functions that pad the model problems with fake electronic states.
 # Useful for debugging, so keeping it around
@@ -562,198 +553,6 @@ class LinearVibronic(DiabaticModel_):
         return out.reshape([5, 2, 2])
 
 
-class TMModel(AdiabaticModel_):
-    def __init__(
-        self,
-        turbomole_dir: str,
-        states: ArrayLike,
-        sub_dir_stem:str = "traj", 
-        representation: str = "adiabatic",
-        reference: Any = None,
-    ):
-        AdiabaticModel_.__init__(self, representation=representation, reference=reference)
-
-        self.turbomole_dir = turbomole_dir
-        self.states = states
-        self.nstates_ = len(self.states)
-        self.sub_dir_stem = sub_dir_stem
-        self.sub_dir_num = 0
-
-        self.turbomole_init()
-
-    def turbomole_init(self):
-        self.coord_path = Path(self.turbomole_dir)/"control"  
-        self.get_coords()
-        self.call_and_parse_turbomole()
-
-    def get_coords(self):
-        with open(self.coord_path, "r") as coord_file:
-            lines = coord_file.readlines()
-
-        coords = []
-        self.atom_order = []
-
-        try:
-            read_start = np.argwhere(np.array(["$coord\n" in line for line in lines]))[0][0]
-        except:
-            
-            self.coord_path = Path(self.turbomole_dir)/"coord"
-            with open(self.coord_path, "r") as coord_file:
-                lines = coord_file.readlines()
-            read_start = np.argwhere(np.array(["$coord\n" in line for line in lines]))[0][0]
-
-        first_char = ""
-        current_line = read_start + 1
-
-        while True:
-            line = lines[current_line]
-            first_char = line[0]
-            if first_char == "$":
-                break
-            line_split = re.split("\s+", line.strip())
-            self.atom_order.append(line_split[-1])
-            coords.extend([float(val) for val in line_split[0:3]])
-            current_line += 1
-    
-        self.ndim_ = len(coords)
-        self.X = np.array(coords, dtype=np.float64).reshape(self.ndim())
-        self.mass = [masses[atom] for atom in self.atom_order]
-        self.mass = [3 * [masses[atom]] for atom in self.atom_order]
-        self.mass = np.array(self.mass, dtype=np.float64).reshape(self.ndim()) * amu_to_au
-
-
-    def update_coords(self, X):
-
-        first_space = 4 * " "
-        first_space_neg = 3 * " "
-
-        space = 6 * " "
-        space_neg = 5 * " "
-
-        X = X.reshape((self.ndim() // 3, 3))
-
-        with open(self.coord_path, "r") as coord_file:
-            lines = coord_file.readlines()
-
-
-            read_start = np.argwhere(np.array(["$coord\n" in line for line in lines]))[0][0]
-
-        with open(self.coord_path, "w") as coord_file:
-            current_line = read_start + 1
-
-            for i, coord in enumerate(X):  
-                if coord[0] < 0:
-                    s1 = first_space_neg
-                else:
-                    s1 = first_space
-
-                if coord[1] < 0:
-                    s2 = space_neg
-                else:
-                    s2 = space
-
-                if coord[2] < 0:
-                    s3 = space_neg
-                else:
-                    s3 = space
-                lines[current_line] = s1 + f"{coord[0]:1.14f}" + s2 + f"{coord[1]:1.14f}" + s3 + f"{coord[2]:1.14f}" + space + self.atom_order[i] + "\n"  
-                current_line+=1
-            coord_file.write("".join(lines))            
-
-
-    def call_and_parse_turbomole(self, outname="turbo.out"):
-        with open(outname, "w") as f:
-            ridft = subprocess.run("ridft", stdout=f)
-            rdgrad = subprocess.run("rdgrad", stdout=f)
-            egrad = subprocess.run("egrad", stdout=f)
-    
-        with open(outname, "r") as f:
-            data_dict = turboparse.parse_turbo(f)
-
-        parsed_nac_coupling = data_dict["egrad"]["coupling"]
-        
-        self.derivative_coupling = np.zeros((self.nstates(), self.nstates(), self.ndim()))
-        for i in range(self.nstates()):
-            for j in range(self.nstates()):
-                if i != j:
-                    for dct in parsed_nac_coupling:
-                        if (dct["bra_state"] == i) and (dct["ket_state"] == j):
-                            self.derivative_coupling[i][j] = np.array(dct["d/dR"]).reshape(self.ndim(), order="F")
-                            self.derivative_coupling[j][i] = self.derivative_coupling[i][j]
-
-        parsed_gradients = data_dict["rdgrad"]["gradient"]
-        parsed_gradients.extend(data_dict["egrad"]["gradient"])
-
-
-        self.gradients = np.zeros((self.nstates(),self.ndim()))
-        for state in self.states:
-            grads = []
-            for i in range(self.ndim() // 3):
-                grads.extend(
-                [
-                parsed_gradients[state]["d_dx"][i],
-                parsed_gradients[state]["d_dy"][i],
-                parsed_gradients[state]["d_dz"][i],
-                ]
-                        )
-            grads = np.array(grads)
-            self.gradients[state] = grads
-
-
-        self.force = -(self.gradients) 
-
-        parsed_energies = data_dict["egrad"]["excited_state"][0]["energy"]
-        energy = data_dict["ridft"]["energy"]
-        excited_energies = [
-            data_dict["egrad"]["excited_state"][i]["energy"] + energy for i in range(len(data_dict["egrad"]["excited_state"]))
-        ]
-
-        self.energies = [energy]
-        self.energies.extend(excited_energies)
-
-
-    def V(self, X: ArrayLike) -> ArrayLike:
-        out = np.zeros([self.nstates(), self.nstates()])
-        for i, e in enumerate(self.states):
-            out[i][i] = self.energies[e]
-        return out
-
-    def compute(self, X, couplings, gradients, reference):
-        """
-        Calls Turbomole/Turboparse to generate electronic properties including
-        gradients, couplings, energies. For this to work, this class
-        needs to know where the "original" files/data sit, so that they
-        can get properly passed to Turbomole. (__init__() can get these
-        file locations.)
-        """
-        self.call_and_parse_turbomole()
-
-        V = self.V(X)
-
-        self.reference, self.hamiltonian = self._compute_basis_states(self.V(X), reference=reference)
-
-        dV = self.dV(X)
-
-
-    def dV(self, X: ArrayLike) -> ArrayLike:
-        return self.gradients
-
-    def update(self, X: ArrayLike, couplings: Any = None, gradients: Any = None): 
-        out = cp.copy(self)
-        out.position = X
-        out.update_coords(X)
-        out.compute(X, couplings=couplings, gradients=gradients, reference=self.reference)
-        return out
-
-
-    def cumSH(self):
-        this_sub_dir = self.sub_dir_stem + "_" + str(self.sub_dir_num)
-        p = Path(self.turbomole_dir)/this_sub_dir
-        p.mkdir(parents = True, exist_ok = True)
-        control_path = Path(self.turbomole_dir)/"control"
-        subprocess.run(["cpc",p, control_path])          
-
-
 models =    { "simple" : TullySimpleAvoidedCrossing,
               "dual"   : TullyDualAvoidedCrossing,
               "extended" : TullyExtendedCouplingReflection,
@@ -761,6 +560,5 @@ models =    { "simple" : TullySimpleAvoidedCrossing,
               "shin-metiu" : ShinMetiu,
               "modelx" : SubotnikModelX,
               "models" : SubotnikModelS,
-              "vibronic" : LinearVibronic,
-              "turbomole_model" : TMModel,
+              "vibronic" : LinearVibronic
               }
