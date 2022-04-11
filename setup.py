@@ -25,7 +25,7 @@ setup(
         'numpy>=1.19',
         'scipy',
         'typing_extensions',
-        'pyyaml'
+        'pyyaml',
         'turboparse'
         ],
     test_suite='nose.collector',
