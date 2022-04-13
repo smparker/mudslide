@@ -36,22 +36,27 @@ class TestTMModel(unittest.TestCase):
                 2.145175145340160000, 0.594918215579156000, 1.075977514428970000,
                 -2.269965412856570000,  0.495551832268249000,   1.487150300486560000]
 
-        traj = mudslide.TrajectorySH(model, positions, mom, 3, tracer = YAMLTrace(), dt = 20, max_time = 41, t0 = 1) 
+        traj = mudslide.TrajectorySH(model, positions, mom, 3, tracer = YAMLTrace(name = "TMtrace"), dt = 20, max_time = 21, t0 = 1) 
         results = traj.simulate()
 
-        with open("traj-0-log_0.yaml", "r") as f:
+        with open("TMtrace-0-log_0.yaml", "r") as f:
             data = yaml.safe_load(f) 
+            print("amindata")
+            print(data)
             
             gs_e_from_ridft = data[0]["electronics"]["hamiltonian"][0][0]
             ex_e_1_from_egrad = data[0]["electronics"]["hamiltonian"][1][1] 
             ex_e_2_from_egrad = data[0]["electronics"]["hamiltonian"][2][2] 
 
+
             dm_from_mudslide_t1 = data[0]["density_matrix"]
+            
             dm_from_mudslide_t2 = data[1]["density_matrix"]
 
             gs_grad_from_rdgrad = data[0]["electronics"]["force"][0] 
             ex_st_1_gradients_from_egrad = data[0]["electronics"]["force"][1]
             ex_st_2_gradients_from_egrad = data[0]["electronics"]["force"][2]
+
 
             derivative_coupling01_from_egrad = data[0]["electronics"]["derivative_coupling"][1][0]
             derivative_coupling02_from_egrad = data[1]["electronics"]["derivative_coupling"][1][0]
@@ -59,6 +64,7 @@ class TestTMModel(unittest.TestCase):
         gs_energy_ref =  -78.40037178008 
         excited_1_energy_ref = -78.10536751497386 
         excited_2_energy_ref = -78.08798681828038  
+
 
         dm_t_1_ref = np.array([ [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], 
                             [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], 
@@ -114,6 +120,13 @@ class TestTMModel(unittest.TestCase):
 
         np.testing.assert_almost_equal(derivative_coupling01_ref, derivative_coupling01_from_egrad, decimal = 6)
         np.testing.assert_almost_equal(derivative_coupling02_ref, derivative_coupling02_from_egrad, decimal = 6)
+
+    def tearDown(self):
+        turbomole_files = ["TMtrace-0.yaml", "dipl_a", "ciss_a", "TMtrace-0-log_0.yaml", "TMtrace-0-events.yaml", "egradmonlog.1",  "excitationlog.1" ]
+        for f in turbomole_files:
+            os.remove(f)
+
+
 
 if __name__ == '__main__':
     unittest.main()
