@@ -36,21 +36,20 @@ class TrajectorySH(object):
         if "last_velocity" in options:
             self.last_velocity[:] = options["last_velocity"]
         if np.isscalar(rho0):
-            if rho0 == "ground":
-                self.rho = np.zeros([model.nstates(),model.nstates()], dtype=np.complex128)
-                self.rho[0,0] = 1.0
-                self.state = 0
-            elif rho0 == "first_excited":
-                self.rho = np.zeros([model.nstates(),model.nstates()], dtype=np.complex128)
-                self.rho[1,1] = 1.0
-                self.state = 1
-            else:
-                Exception("Unrecognized initial state option")
+            try: 
+                state = int(rho0)
+                self.rho = np.zeros([model.nstates(), model.nstates()], dtype=np.complex128)
+                self.rho[state, state] = 1.0
+                self.state = state
+            except:
+                print("anything")
+                raise Exception("Unrecognized initial state option")
         else:
             try:
                 self.rho = np.copy(rho0)
                 self.state = int(options["state0"])
             except:
+                print("anything_later")
                 raise Exception("Unrecognized initial state option")
 
         # function duration_initialize should get us ready to for future continue_simulating calls
@@ -72,6 +71,7 @@ class TrajectorySH(object):
         ss = options.get("seed_sequence", None)
         self.seed_sequence = ss if isinstance(ss, np.random.SeedSequence) else np.random.SeedSequence(ss)
         self.random_state = np.random.default_rng(self.seed_sequence)
+
 
         self.electronics = options.get("electronics", None)
         self.hopping = 0.0
@@ -123,6 +123,7 @@ class TrajectorySH(object):
         :return: uniform random number between 0 and 1
         """
         return self.random_state.uniform()
+
 
     def currently_interacting(self) -> bool:
         """Determines whether trajectory is currently inside an interaction region
@@ -413,17 +414,21 @@ class TrajectorySH(object):
         self.last_position = self.position
         self.position += self.velocity * self.dt + 0.5 * acceleration * self.dt * self.dt
 
+
     def advance_velocity(self, last_electronics: ElectronicT, this_electronics: ElectronicT) -> None:
         """
         Move classical velocity forward one step
 
         :param electronics: ElectronicStates from current step
         """
+
+
         last_acceleration = self.force(last_electronics) / self.mass
         this_acceleration = self.force(this_electronics) / self.mass
 
         self.last_velocity = self.velocity
         self.velocity += 0.5 * (last_acceleration + this_acceleration) * self.dt
+
 
     def surface_hopping(self, last_electronics: ElectronicT, this_electronics: ElectronicT):
         """Compute probability of hopping, generate random number, and perform hops
