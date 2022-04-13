@@ -42,14 +42,12 @@ class TrajectorySH(object):
                 self.rho[state, state] = 1.0
                 self.state = state
             except:
-                print("anything")
                 raise Exception("Unrecognized initial state option")
         else:
             try:
                 self.rho = np.copy(rho0)
                 self.state = int(options["state0"])
             except:
-                print("anything_later")
                 raise Exception("Unrecognized initial state option")
 
         # function duration_initialize should get us ready to for future continue_simulating calls
