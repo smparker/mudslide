@@ -9,6 +9,9 @@ import turboparse
 import re
 import copy as cp
 
+import os
+import shutil
+
 from pathlib import Path
 
 from .electronics import ElectronicModel_ 
@@ -19,7 +22,15 @@ from .typing import ArrayLike, DtypeLike
 from .constants import eVtoHartree, amu_to_au
 from .periodic_table import masses
 
+def turbomole_is_installed():
+    # needs to have turbodir set
+    has_turbodir = "TURBODIR" in os.environ
+    # check that the scripts directory is available by testing for `sysname`
+    has_scripts = shutil.which("sysname") is not None
+    # check that the bin directory is available by testing for `sdg`
+    has_bin = shutil.which("sdg") is not None
 
+    return has_turbodir and has_scripts and has_bin
 
 class TMModel(ElectronicModel_):
     def __init__(
@@ -42,6 +53,9 @@ class TMModel(ElectronicModel_):
 
         self.turbomole_modules = turbomole_modules
         self.turbomole_init()
+
+        assert turbomole_is_installed()
+        assert all([ shutil.which(x) is not None for x in self.turbomole_modules.values() ])
 
     
     def nstates(self):

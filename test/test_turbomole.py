@@ -16,6 +16,8 @@ from mudslide import TMModel
 from mudslide.tracer import YAMLTrace
 
 
+@unittest.skipUnless(mudslide.turbomole_model.turbomole_is_installed(),
+        "Turbomole must be installed")
 class TestTMModel(unittest.TestCase):
     """Test Suite for TMModel class"""
     
