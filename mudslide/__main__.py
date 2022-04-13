@@ -99,9 +99,9 @@ def main(argv = None, file=sys.stdout) -> None:
     for k in kpoints:
         traj_gen: Any = None
         if args.ksampling == "none":
-            traj_gen = TrajGenConst(args.position, k, "ground", seed=args.seed)
+            traj_gen = TrajGenConst(args.position, k, 0, seed=args.seed)
         elif args.ksampling == "normal":
-            traj_gen = TrajGenNormal(args.position, k, "ground", sigma=args.normal/k, seed = args.seed)
+            traj_gen = TrajGenNormal(args.position, k, 0, sigma=args.normal/k, seed = args.seed)
 
         dt = (args.dt / k) if args.scale_dt else args.dt
 
