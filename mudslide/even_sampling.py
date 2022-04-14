@@ -12,7 +12,6 @@ from .integration import quadrature
 
 from typing import Optional, List, Any, Dict, Union
 from .typing import ArrayLike, ElectronicT
-from .turbomole_model import TMModel
 
 class SpawnStack(object):
     """Data structure to inform how new traces are spawned and weighted"""
@@ -146,20 +145,6 @@ class EvenSamplingTrajectory(TrajectoryCum):
         if spawn_stack is None:
             spawn_stack = self.spawn_stack
 
-#
-#You should basically always have to returning a 
-#clone and a model.clone will return a copy which 
-#that also copies the resources it will need 
-#So you don’t want this to do anything special 
-#based on the specific model – you just want this 
-#here should always do a clone (in evensampling trajectory) 
-#and then you should make a clone behave sensibly for a 
-#TMModel and every other model. For all the diabatic model – 
-#you can make a base clone – all that does is the return of the copy of the current data  
-#
-        if isinstance(self.model, TMModel):
-            self.model.clone()
-        print("Srizinevensampling")
         out = EvenSamplingTrajectory(
                 self.model,
                 self.position,
