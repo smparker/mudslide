@@ -56,7 +56,6 @@ class TMModel(ElectronicModel_):
 
         assert turbomole_is_installed()
         assert all([ shutil.which(x) is not None for x in self.turbomole_modules.values() ])
-
     
     def nstates(self):
             return self.nstates_
@@ -65,16 +64,14 @@ class TMModel(ElectronicModel_):
             return self.ndim_
 
     def turbomole_init(self):
-        self.coord_path = Path(self.turbomole_dir)/"control"  
+        self.coord_path = subprocess.run(["sdg", "-f", "coord"], capture_output=True, text=True).stdout.rstrip()
         self.get_coords()
 
     def get_coords(self):
         coords = []
         self.atom_order = []
         self.mass = []
-
         coord = subprocess.run(["sdg", "coord"], capture_output= True, text = True).stdout
-    
         coord_list = coord.rstrip().split("\n")
 
         for c in coord_list[1:]:
@@ -87,35 +84,31 @@ class TMModel(ElectronicModel_):
         self.X = np.array(coords, dtype=np.float64).reshape(self.ndim())
         self.mass = np.array(self.mass, dtype=np.float64).reshape(self.ndim()) * amu_to_au
 
-
     def update_coords(self, X):
-        self.coord_path = subprocess.run(["sdg", "-f", "coord"], capture_output=True, text=True).stdout.rstrip()
         X = X.reshape((self.ndim() // 3, 3))
+
         with open(self.coord_path, "r") as f:
             lines = f.readlines()
-        regex = re.compile(r"\$coord\n|\$coord\s")
-        read_start = np.argwhere(np.array([bool(regex.match(line)) for line in lines]))[0][0]
 
-        current_line = read_start +1
+        regex = re.compile(r"\$coord\n|\$coord\s")
+        coordline = 0
+        for i, line in enumerate(lines):
+            if regex.match(line) is not None:
+                coordline = i
+                break
+        # Reached end of file without finding $coord.
+        if line == "":
+            raise ValueError(f"$coord entry not found in file: {self.coord_path}!")
+
+        coordline +=1
         for i, coord_list in enumerate(X):
-            lines[current_line] = "    {: .14f}      {: .14f}      {: .14f}      {}\n".format(
+            lines[coordline] = "{:20.14f}{:22.14f}{:22.14f}{:>7}\n".format( 
                                   coord_list[0], coord_list[1], coord_list[2], self.atom_order[i]
                     )
-            current_line += 1
-        
+            coordline += 1
+
         with open(self.coord_path, "w") as coord_file:
             coord_file.write("".join(lines))            
-
-
-    def call_turbomole(self, outname="turbo.out"):
-        # Open file/run Turbomole
-        with open(outname, "w") as f:
-            for turbomole_module in self.turbomole_modules.values():
-                tur_output = subprocess.run(turbomole_module, stdout=f) 
-
-        # Parse results with Turboparse
-        with open(outname, "r") as f:
-            data_dict = turboparse.parse_turbo(f)
 
         # Now add results to model
     def call_turbomole(self, outname="turbo.out"):
@@ -174,12 +167,6 @@ class TMModel(ElectronicModel_):
 
         self.force = -(self.gradients) 
 
-    def V(self, X: ArrayLike) -> ArrayLike:
-        out = np.zeros([self.nstates(), self.nstates()])
-        for i, e in enumerate(self.states):
-            out[i][i] = self.energies[e]
-        return out
-
     def compute(self, X, couplings, gradients, reference):
         """
         Calls Turbomole/Turboparse to generate electronic properties including
@@ -189,8 +176,6 @@ class TMModel(ElectronicModel_):
         file locations.)
         """
         self.call_turbomole()
-        self.reference, self.hamiltonian = self._compute_basis_states(self.V(X), reference=reference)
-
 
     def update(self, X: ArrayLike, couplings: Any = None, gradients: Any = None): 
         out = cp.copy(self)
@@ -198,37 +183,3 @@ class TMModel(ElectronicModel_):
         out.update_coords(X)
         out.compute(X, couplings=couplings, gradients=gradients, reference=self.reference)
         return out
-
-    def _compute_basis_states(self, V: ArrayLike, reference: Any = None) -> Tuple[ArrayLike,ArrayLike]:
-        """Computes coefficient matrix for basis states
-        if a diabatic representation is chosen, no transformation takes place
-        :param V: potential matrix
-        :param reference: ElectronicStates from previous step used only to fix phase
-        """
-        if self.representation == "adiabatic":
-            en, co = np.linalg.eigh(V)
-            nst = self.nstates()
-            coeff = co[:,:nst]
-            energies = en[:nst]
-
-            if reference is not None:
-                try:
-                    for mo in range(self.nstates()):
-                        if (np.dot(coeff[:,mo], reference[:,mo]) < 0.0):
-                            coeff[:,mo] *= -1.0
-                except:
-                    raise Exception("Failed to regularize new ElectronicStates from a reference object %s" % (reference))
-            return coeff, np.diag(energies)
-        elif self.representation == "diabatic":
-            raise Exception("Adiabatic models can only be run in adiabatic mode")
-            return None
-        else:
-            raise Exception("Unrecognized representation")
-
-    def clone(self):
-        this_sub_dir = self.sub_dir_stem + "_" + str(self.sub_dir_num)
-        p = Path(self.turbomole_dir)/this_sub_dir
-        p.mkdir(parents = True, exist_ok = True)
-        control_path = Path(self.turbomole_dir)/"control"
-        subprocess.run(["cpc",p, control_path])          
-
