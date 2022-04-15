@@ -56,6 +56,7 @@ class TMModel(ElectronicModel_):
 
         assert turbomole_is_installed()
         assert all([ shutil.which(x) is not None for x in self.turbomole_modules.values() ])
+
     
     def nstates(self):
             return self.nstates_
@@ -71,7 +72,9 @@ class TMModel(ElectronicModel_):
         coords = []
         self.atom_order = []
         self.mass = []
+
         coord = subprocess.run(["sdg", "coord"], capture_output= True, text = True).stdout
+    
         coord_list = coord.rstrip().split("\n")
 
         for c in coord_list[1:]:
@@ -83,6 +86,7 @@ class TMModel(ElectronicModel_):
         self.ndim_ = 3 * len(coords)
         self.X = np.array(coords, dtype=np.float64).reshape(self.ndim())
         self.mass = np.array(self.mass, dtype=np.float64).reshape(self.ndim()) * amu_to_au
+
 
     def update_coords(self, X):
         X = X.reshape((self.ndim() // 3, 3))
@@ -164,7 +168,6 @@ class TMModel(ElectronicModel_):
                         )
             grads = np.array(grads)
             self.gradients[state] = grads
-
         self.force = -(self.gradients) 
 
     def compute(self, X, couplings, gradients, reference):
@@ -176,10 +179,7 @@ class TMModel(ElectronicModel_):
         file locations.)
         """
         self.call_turbomole()
-
-    def update(self, X: ArrayLike, couplings: Any = None, gradients: Any = None): 
-        out = cp.copy(self)
-        out.position = X
-        out.update_coords(X)
-        out.compute(X, couplings=couplings, gradients=gradients, reference=self.reference)
-        return out
+        self.hamiltonian = np.zeros([self.nstates(), self.nstates()])
+        for i, e in enumerate(self.states):
+            self.hamiltonian[i][i] = self.energies[e]
+        return self.hamiltonian
