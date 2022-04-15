@@ -4,12 +4,20 @@
 import numpy as np
 import math
 from scipy.special import erf
+import subprocess
+import turboparse
+import re
+import copy as cp
+
+from pathlib import Path
 
 from .electronics import DiabaticModel_, AdiabaticModel_
 
 from typing import Any
 from .typing import ArrayLike, DtypeLike
 from .constants import eVtoHartree
+from .periodic_table import masses
+
 
 # Here are some helper functions that pad the model problems with fake electronic states.
 # Useful for debugging, so keeping it around
@@ -560,5 +568,5 @@ models =    { "simple" : TullySimpleAvoidedCrossing,
               "shin-metiu" : ShinMetiu,
               "modelx" : SubotnikModelX,
               "models" : SubotnikModelS,
-              "vibronic" : LinearVibronic
+              "vibronic" : LinearVibronic,
               }
