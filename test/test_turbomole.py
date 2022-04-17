@@ -38,13 +38,12 @@ class TestTMModel(unittest.TestCase):
                 2.145175145340160000, 0.594918215579156000, 1.075977514428970000,
                 -2.269965412856570000,  0.495551832268249000,   1.487150300486560000]
 
-        traj = mudslide.TrajectorySH(model, positions, mom, 3, tracer = YAMLTrace(), dt = 20, max_time = 41, t0 = 1) 
+        traj = mudslide.TrajectorySH(model, positions, mom, 3, tracer = YAMLTrace(name = "TMtrace"), dt = 20, max_time = 21, t0 = 1)
+
         results = traj.simulate()
 
-        with open("traj-0-log_0.yaml", "r") as f:
+        with open("TMtrace-0-log_0.yaml", "r") as f:
             data = yaml.safe_load(f) 
-            print("amindata")
-            print(data)
             
             gs_e_from_ridft = data[0]["electronics"]["hamiltonian"][0][0]
             ex_e_1_from_egrad = data[0]["electronics"]["hamiltonian"][1][1] 
@@ -118,6 +117,14 @@ class TestTMModel(unittest.TestCase):
 
         np.testing.assert_almost_equal(derivative_coupling01_ref, derivative_coupling01_from_egrad, decimal = 6)
         np.testing.assert_almost_equal(derivative_coupling02_ref, derivative_coupling02_from_egrad, decimal = 6)
+
+
+
+    def tearDown(self):
+        turbomole_files = ["TMtrace-0.yaml", "dipl_a", "ciss_a", "TMtrace-0-log_0.yaml", "TMtrace-0-events.yaml", "egradmonlog.1",  "excitationlog.1" ]
+        for f in turbomole_files:
+            os.remove(f)
+
 
 if __name__ == '__main__':
     unittest.main()
