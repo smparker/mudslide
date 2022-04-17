@@ -57,6 +57,7 @@ class TMModel(ElectronicModel_):
         assert turbomole_is_installed()
         assert all([ shutil.which(x) is not None for x in self.turbomole_modules.values() ])
 
+    
     def nstates(self):
             return self.nstates_
 
@@ -71,7 +72,9 @@ class TMModel(ElectronicModel_):
         coords = []
         self.atom_order = []
         self.mass = []
+
         coord = subprocess.run(["sdg", "coord"], capture_output= True, text = True).stdout
+    
         coord_list = coord.rstrip().split("\n")
 
         for c in coord_list[1:]:
@@ -83,6 +86,7 @@ class TMModel(ElectronicModel_):
         self.ndim_ = 3 * len(coords)
         self.X = np.array(coords, dtype=np.float64).reshape(self.ndim())
         self.mass = np.array(self.mass, dtype=np.float64).reshape(self.ndim()) * amu_to_au
+
 
     def update_coords(self, X):
         X = X.reshape((self.ndim() // 3, 3))
@@ -99,6 +103,7 @@ class TMModel(ElectronicModel_):
         # Reached end of file without finding $coord.
         if line == "":
             raise ValueError(f"$coord entry not found in file: {self.coord_path}!")
+
         coordline +=1
         for i, coord_list in enumerate(X):
             lines[coordline] = "{:20.14f}{:22.14f}{:22.14f}{:>7}\n".format( 
