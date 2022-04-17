@@ -43,6 +43,7 @@ class ElectronicModel_(object):
         """
         raise NotImplementedError("ElectronicModels need a compute function")
 
+
     def update(self, X: ArrayLike, couplings: Any = None, gradients: Any = None) -> 'ElectronicModel_':
         """
         Convenience function that copies the present object, updates the position,
@@ -64,6 +65,11 @@ class ElectronicModel_(object):
             }
         return out
 
+## 
+
+##    def clone(self):
+##        return self
+        
 class DiabaticModel_(ElectronicModel_):
     '''
     Base class to handle model problems given in
@@ -97,6 +103,8 @@ class DiabaticModel_(ElectronicModel_):
         out.position = X
         out.compute(X, couplings=couplings, gradients=gradients, reference=self.reference)
         return out
+
+
 
     def _compute_basis_states(self, V: ArrayLike, reference: Any = None) -> Tuple[ArrayLike,ArrayLike]:
         """Computes coefficient matrix for basis states
@@ -155,12 +163,16 @@ class DiabaticModel_(ElectronicModel_):
 
         return out
 
+
+
     def V(self, X: ArrayLike) -> ArrayLike:
         raise NotImplementedError("Diabatic models must implement the function V")
         
     def dV(self, X: ArrayLike) -> ArrayLike:
         raise NotImplementedError("Diabatic models must implement the function dV")
 
+        print("srzindV")
+        print(dV)
 
 class AdiabaticModel_(ElectronicModel_):
     '''
@@ -234,6 +246,8 @@ class AdiabaticModel_(ElectronicModel_):
         out = np.zeros([nst, ndim], dtype=np.float64)
         for ist in range(self.nstates()):
             out[ist,:] += -np.einsum("i,ix->x", coeff[:,ist], half[:,ist,:])
+        print("ISSRIZINCRAZY_DV")
+        print(out)
         return out
 
     def _compute_force_matrix(self, coeff: ArrayLike, dV: ArrayLike) -> ArrayLike:
