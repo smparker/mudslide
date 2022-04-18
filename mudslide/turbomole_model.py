@@ -183,3 +183,10 @@ class TMModel(ElectronicModel_):
         for i, e in enumerate(self.states):
             self.hamiltonian[i][i] = self.energies[e]
         return self.hamiltonian
+
+    def update(self, X: ArrayLike, couplings: Any = None, gradients: Any = None):
+         out = cp.copy(self)
+         out.position = X
+         out.update_coords(X)
+         out.compute(X, couplings=couplings, gradients=gradients, reference=self.reference)
+         return out
