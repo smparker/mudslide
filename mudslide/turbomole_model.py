@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """Implementations of the one-dimensional two-state models Tully demonstrated FSSH on in Tully, J.C. <I>J. Chem. Phys.</I> 1990 <B>93</B> 1061."""
-
 import numpy as np
 import math
 from scipy.special import erf
@@ -56,7 +55,6 @@ class TMModel(ElectronicModel_):
 
         assert turbomole_is_installed()
         assert all([ shutil.which(x) is not None for x in self.turbomole_modules.values() ])
-
     
     def nstates(self):
             return self.nstates_
@@ -72,9 +70,7 @@ class TMModel(ElectronicModel_):
         coords = []
         self.atom_order = []
         self.mass = []
-
         coord = subprocess.run(["sdg", "coord"], capture_output= True, text = True).stdout
-    
         coord_list = coord.rstrip().split("\n")
 
         for c in coord_list[1:]:
@@ -87,14 +83,13 @@ class TMModel(ElectronicModel_):
         self.X = np.array(coords, dtype=np.float64).reshape(self.ndim())
         self.mass = np.array(self.mass, dtype=np.float64).reshape(self.ndim()) * amu_to_au
 
-
     def update_coords(self, X):
         X = X.reshape((self.ndim() // 3, 3))
 
         with open(self.coord_path, "r") as f:
             lines = f.readlines()
 
-        regex = re.compile(r"\$coord\n|\$coord\s")
+        regex = re.compile(r"\s*\$coord\n|\s*\$coord\s")
         coordline = 0
         for i, line in enumerate(lines):
             if regex.match(line) is not None:
@@ -106,7 +101,7 @@ class TMModel(ElectronicModel_):
 
         coordline +=1
         for i, coord_list in enumerate(X):
-            lines[coordline] = "{:20.14f}{:22.14f}{:22.14f}{:>7}\n".format( 
+            lines[coordline] = "{:26.16e}{:28.16e}{:28.16e}{:>7}\n".format( 
                                   coord_list[0], coord_list[1], coord_list[2], self.atom_order[i]
                     )
             coordline += 1
@@ -131,10 +126,8 @@ class TMModel(ElectronicModel_):
         parsed_gradients = data_dict[self.turbomole_modules["gs_grads"]]["gradient"]
 
         # Check for presence of egrad turbomole module
-
         if "egrad" in self.turbomole_modules.values():
             # egrad updates to energy
-            parsed_energies = data_dict["egrad"]["excited_state"][0]["energy"]
             excited_energies = [
                 data_dict["egrad"]["excited_state"][i]["energy"]
                 + energy for i in range(len(data_dict["egrad"]["excited_state"]))
@@ -149,7 +142,7 @@ class TMModel(ElectronicModel_):
                 j = dct["ket_state"]
 
                 self.derivative_coupling[i][j] = np.array(dct["d/dR"]).reshape(self.ndim(), order="F")
-                self.derivative_coupling[j][i] = self.derivative_coupling[i][j]
+                self.derivative_coupling[j][i] = -(self.derivative_coupling[i][j])
 
             # egrad updates to gradients
             parsed_gradients.extend(data_dict["egrad"]["gradient"])
