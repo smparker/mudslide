@@ -242,7 +242,7 @@ h def2-SV(P)
 *
 $dft
    functional pbe
-   gridsize   m3
+   gridsize   3
    weight derivatives
 $scfconv   12
 $scfdamp   start=0.700  step=0.050  min=0.050
