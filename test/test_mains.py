@@ -152,7 +152,6 @@ class TestTSACc(unittest.TestCase, TrajectoryTest):
     seed = 756396545
     method = "cumulative-sh"
     electronic = "linear-rk4"
-    log = "yaml"
 
     def test_tsac_c(self):
         for k in [10, 20]:

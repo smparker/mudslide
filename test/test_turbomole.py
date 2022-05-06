@@ -40,7 +40,7 @@ class TestTMModel(unittest.TestCase):
                 2.145175145340160000, 0.594918215579156000, 1.075977514428970000,
                 -2.269965412856570000,  0.495551832268249000,   1.487150300486560000]
 
-        traj = mudslide.TrajectorySH(model, positions, mom, 3, tracer = YAMLTrace(name = "TMtrace"), dt = 20, max_time = 61, t0 = 1)
+        traj = mudslide.TrajectorySH(model, positions, mom, 3, tracer = YAMLTrace(base_name = "TMtrace"), dt = 20, max_time = 61, t0 = 1)
         results = traj.simulate()
 
         with open("TMtrace-0-log_0.yaml", "r") as f:
