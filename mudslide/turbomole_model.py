@@ -8,8 +8,7 @@ import turboparse
 import re
 import copy as cp
 
-import os
-import shutil
+import os, sys, io, shutil
 
 from pathlib import Path
 
@@ -82,6 +81,12 @@ class TMModel(ElectronicModel_):
         result = subprocess.run(sdg_command.split(), capture_output=True, text=True)
         return result.stdout.rstrip()
 
+    def run_single(self, module, stdout=sys.stdout):
+        output = subprocess.run(module, capture_output=True, text=True)
+        print(output.stdout, file=stdout)
+        if "abnormal" in output.stderr:
+            raise Exception("Call to {} ended abnormally".format(module))
+
     def turbomole_init(self):
         self.coord_path = self.sdg("coord", show_filename_only=True)
         self.get_coords()
@@ -109,7 +114,7 @@ class TMModel(ElectronicModel_):
         with open(self.coord_path, "r") as f:
             lines = f.readlines()
 
-        regex = re.compile(r"\s*\$coord\n|\s*\$coord\s")
+        regex = re.compile(r"\s*\$coord")
         coordline = 0
         for i, line in enumerate(lines):
             if regex.match(line) is not None:
@@ -131,10 +136,9 @@ class TMModel(ElectronicModel_):
 
         # Now add results to model
     def call_turbomole(self, outname="turbo.out"):
-
         with open(outname, "w") as f:
             for turbomole_module in self.turbomole_modules.values():
-                tur_output = subprocess.run(turbomole_module, stdout=f) 
+                self.run_single(turbomole_module, stdout=f)
 
         # Parse results with Turboparse
         with open(outname, "r") as f:
