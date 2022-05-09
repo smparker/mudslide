@@ -3,13 +3,17 @@
 
 import unittest
 import sys
-import os
+import os, shutil
 
 import mudslide
 import mudslide.__main__
 import mudslide.surface
 
 testdir = os.path.dirname(__file__)
+
+def clean_directory(dirname):
+    if os.path.isdir(dirname):
+        shutil.rmtree(dirname)
 
 def print_problem(problem, file=sys.stdout):
     what = problem["what"]
@@ -95,6 +99,9 @@ class TrajectoryTest(object):
         options += extra_options
 
         checkdir = os.path.join(testdir, "checks", self.method)
+        options += "--logdir {}".format(checkdir).split()
+
+        clean_directory(checkdir)
         os.makedirs(checkdir, exist_ok=True)
         outfile = os.path.join(checkdir, "{:s}_k{:d}.out".format(self.model, k))
         with open(outfile, "w") as f:
@@ -178,6 +185,7 @@ class TestES(unittest.TestCase, TrajectoryTest):
     seed = 84329
     method = "even-sampling"
     o = "averaged"
+    log="yaml"
 
     def test_es_tsac(self):
         for k in [10, 20]:

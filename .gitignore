@@ -6,4 +6,4 @@
 _build
 _static
 _templates
-test/check
+test/checks

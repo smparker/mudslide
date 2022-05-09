@@ -80,7 +80,7 @@ class TrajectorySH(object):
 
         self.weight = float(options.get("weight", 1.0))
 
-        self.restart = options.get("restart", False)
+        self.restarting = options.get("restarting", False)
         self.force_quit = False
 
         self.hopping_probability = options.get("hopping_probability", "tully")
@@ -88,6 +88,35 @@ class TrajectorySH(object):
             raise Exception("hopping_probability accepts only \"tully\" or \"poisson\" options")
 
         self.zeta = 0.0
+
+    @classmethod
+    def restart(cls, model, log, **options) -> 'TrajectorySH':
+        last_snap = log[-1]
+        penultimate_snap = log[-2]
+
+        x = last_snap["position"]
+        p = last_snap["momentum"]
+        last_velocity = penultimate_snap["momentum"] / model.mass
+        t0 = last_snap["time"]
+        dt = t0 - penultimate_snap["time"]
+        k = last_snap["active"]
+        rho = last_snap["density_matrix"]
+        weight = log.weight
+        previous_steps = len(log)
+
+        # use inferred data if available, but let kwargs override
+        for key, val in [ ["dt", dt] ]:
+            if key not in options:
+                options[key] = val
+
+        return cls(model, x, p, rho,
+                tracer=log,
+                state0=k, t0=t0,
+                last_velocity=last_velocity,
+                weight=weight,
+                previous_steps=previous_steps,
+                restarting=True,
+                **options)
 
     def update_weight(self, weight: float) -> None:
         """Update weight held by trajectory and by trace"""
@@ -508,10 +537,11 @@ class TrajectorySH(object):
         """
         last_electronics = None
 
-        if not self.restart:
+        if self.electronics is None:
             self.electronics = self.model.update(self.position)
 
-        self.trace()
+        if not self.restarting:
+            self.trace()
 
         # propagation
         while (True):

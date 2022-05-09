@@ -54,6 +54,7 @@ def main(argv = None, file=sys.stdout) -> None:
     parser.add_argument('-O', '--outfile', default="sh.pickle", type=str, help="name of pickled file to produce (%(default)s)")
     parser.add_argument('-z', '--seed', default=None, type=int, help="random seed (None)")
     parser.add_argument("--log", choices=["memory", "yaml"], default="memory", help="how to store trajectory data")
+    parser.add_argument('--logdir', default="", type=str, help="directory to put log results (%(default)s)")
     parser.add_argument('--published', dest="published", action="store_true", help="override ranges to use those found in relevant papers (%(default)s)")
 
     args = parser.parse_args(argv)
@@ -86,6 +87,9 @@ def main(argv = None, file=sys.stdout) -> None:
     trajectory_type = methods[args.method]
 
     trace_type = { "memory" : InMemoryTrace, "yaml" : YAMLTrace }[args.log]
+    trace_options = {}
+    if args.log == "yaml":
+        trace_options["location"] = args.logdir
 
     all_results = []
 
@@ -113,7 +117,8 @@ def main(argv = None, file=sys.stdout) -> None:
                            nprocs = args.nprocs,
                            dt = dt,
                            bounds = [ -abs(args.bounds), abs(args.bounds) ],
-                           tracemanager = TraceManager(TraceType=trace_type),
+                           tracemanager = TraceManager(TraceType=trace_type,
+                               trace_kwargs=trace_options),
                            trace_every = args.every,
                            spawn_stack = args.sample_stack,
                            electronic_integration=args.electronic,

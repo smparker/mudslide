@@ -241,7 +241,7 @@ class YAMLTrace(Trace_):
             yaml.safe_dump([event_dict], f, explicit_start=False)
 
     def clone(self):
-        out = YAMLTrace(name=self.base_name, weight=float(self.weight), log_pitch=self.log_pitch)
+        out = YAMLTrace(base_name=self.base_name, weight=float(self.weight), location=self.location, log_pitch=self.log_pitch)
 
         out.logsize = self.logsize
         out.nlogs = self.nlogs
@@ -249,10 +249,10 @@ class YAMLTrace(Trace_):
 
         out.logfiles = [ "{}-log_{}.yaml".format(out.unique_name, i) for i in range(out.nlogs) ]
         for selflog, outlog in zip(self.logfiles, out.logfiles):
-            shutil.copy(selflog, outlog)
+            shutil.copy(os.path.join(self.location, selflog), os.path.join(self.location, outlog))
         out.active_logfile = out.logfiles[-1]
 
-        shutil.copy(self.event_log, out.event_log)
+        shutil.copy(os.path.join(self.location, self.event_log), os.path.join(self.location, out.event_log))
 
         out.write_main_log()
 
@@ -301,15 +301,18 @@ DefaultTrace = InMemoryTrace
 
 class TraceManager(object):
     """Manage the collection of observables from a set of trajectories"""
-    def __init__(self, TraceType=InMemoryTrace) -> None:
+    def __init__(self, TraceType=InMemoryTrace, trace_args=[], trace_kwargs={}) -> None:
         self.TraceType = TraceType
+
+        self.trace_args = trace_args
+        self.trace_kwargs = trace_kwargs
 
         self.traces: List = []
         self.outcomes: ArrayLike
 
     def spawn_tracer(self) -> Trace_:
         """returns a Tracer object that will collect all of the observables for a given trajectory"""
-        return self.TraceType()
+        return self.TraceType(*self.trace_args, **self.trace_kwargs)
 
     def merge_tracer(self, tracer: Trace_) -> None:
         """accepts a Tracer object and adds it to list of traces"""
