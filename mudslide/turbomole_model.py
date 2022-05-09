@@ -13,7 +13,7 @@ import shutil
 
 from pathlib import Path
 
-from .electronics import ElectronicModel_ 
+from .electronics import ElectronicModel_
 
 from typing import Tuple, Any
 
@@ -57,20 +57,40 @@ class TMModel(ElectronicModel_):
         assert all([ shutil.which(x) is not None for x in self.turbomole_modules.values() ])
     
     def nstates(self):
-            return self.nstates_
+        return self.nstates_
 
     def ndim(self):
-            return self.ndim_
+        return self.ndim_
+
+    def sdg(self, dg, file=None, show_keyword=False, show_body=False, show_filename_only=False, discard_comments=False, quiet=False):
+        sdg_command = "sdg"
+        if file is not None:
+            sdg_command += " -s {}".format(file)
+        if show_keyword:
+            sdg_command += " -t"
+        if show_body:
+            sdg_command += " -b"
+        if show_filename_only:
+            sdg_command += " -f"
+        if discard_comments:
+            sdg_command += " -c"
+        if quiet:
+            sdg_command += " -q"
+
+        sdg_command += " {}".format(dg)
+
+        result = subprocess.run(sdg_command.split(), capture_output=True, text=True)
+        return result.stdout.rstrip()
 
     def turbomole_init(self):
-        self.coord_path = subprocess.run(["sdg", "-f", "coord"], capture_output=True, text=True).stdout.rstrip()
+        self.coord_path = self.sdg("coord", show_filename_only=True)
         self.get_coords()
 
     def get_coords(self):
         coords = []
         self.atom_order = []
         self.mass = []
-        coord = subprocess.run(["sdg", "coord"], capture_output= True, text = True).stdout
+        coord = self.sdg("coord")
         coord_list = coord.rstrip().split("\n")
 
         for c in coord_list[1:]:
