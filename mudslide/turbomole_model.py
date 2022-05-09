@@ -45,7 +45,7 @@ class TMModel(ElectronicModel_):
         self.turbomole_dir = turbomole_dir
         self.states = states
         self.nstates_ = len(self.states)
-        
+
         self.sub_dir_stem = sub_dir_stem
         self.sub_dir_num = 0
 
@@ -54,7 +54,7 @@ class TMModel(ElectronicModel_):
 
         assert turbomole_is_installed()
         assert all([ shutil.which(x) is not None for x in self.turbomole_modules.values() ])
-    
+
     def nstates(self):
         return self.nstates_
 
@@ -126,13 +126,13 @@ class TMModel(ElectronicModel_):
 
         coordline +=1
         for i, coord_list in enumerate(X):
-            lines[coordline] = "{:26.16e}{:28.16e}{:28.16e}{:>7}\n".format( 
+            lines[coordline] = "{:26.16e}{:28.16e}{:28.16e}{:>7}\n".format(
                                   coord_list[0], coord_list[1], coord_list[2], self.atom_order[i]
                     )
             coordline += 1
 
         with open(self.coord_path, "w") as coord_file:
-            coord_file.write("".join(lines))            
+            coord_file.write("".join(lines))
 
         # Now add results to model
     def call_turbomole(self, outname="turbo.out"):
@@ -185,7 +185,7 @@ class TMModel(ElectronicModel_):
                         )
             grads = np.array(grads)
             self.gradients[state] = grads
-        self.force = -(self.gradients) 
+        self.force = -(self.gradients)
 
     def compute(self, X, couplings, gradients, reference):
         """
