@@ -45,7 +45,7 @@ class TestTMModel(unittest.TestCase):
 
     def test_get_gs_ex_properties(self):
         """test for gs_ex_properties function"""
-        model = TMModel(states = [0,1,2,3], turbomole_dir = ".")
+        model = TMModel(states = [0,1,2,3], turbomole_dir = ".", expert=True)
         positions = model.X
 
         mom = [5.583286976987380000, -2.713959745507320000, 0.392059702162967000,

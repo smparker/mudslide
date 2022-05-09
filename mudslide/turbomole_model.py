@@ -38,6 +38,7 @@ class TMModel(ElectronicModel_):
         sub_dir_stem:str = "traj",
         representation: str = "adiabatic",
         reference: Any = None,
+        expert=False, # when False, will update turbomole parameters for best NAMD performance
         turbomole_modules = {"gs_energy": "ridft", "gs_grads": "rdgrad", "es_grads": "egrad"}
     ):
         ElectronicModel_.__init__(self, representation=representation, reference=reference)
@@ -49,11 +50,15 @@ class TMModel(ElectronicModel_):
         self.sub_dir_stem = sub_dir_stem
         self.sub_dir_num = 0
 
+        assert turbomole_is_installed()
+
         self.turbomole_modules = turbomole_modules
+        assert all([ shutil.which(x) is not None for x in self.turbomole_modules.values() ])
+
         self.turbomole_init()
 
-        assert turbomole_is_installed()
-        assert all([ shutil.which(x) is not None for x in self.turbomole_modules.values() ])
+        if not expert:
+            self.apply_suggested_parameters()
 
     def nstates(self):
         return self.nstates_
@@ -61,7 +66,7 @@ class TMModel(ElectronicModel_):
     def ndim(self):
         return self.ndim_
 
-    def sdg(self, dg, file=None, show_keyword=False, show_body=False, show_filename_only=False, discard_comments=False, quiet=False):
+    def sdg(self, dg, file=None, show_keyword=False, show_body=False, show_filename_only=False, discard_comments=True, quiet=False):
         sdg_command = "sdg"
         if file is not None:
             sdg_command += " -s {}".format(file)
@@ -80,6 +85,37 @@ class TMModel(ElectronicModel_):
 
         result = subprocess.run(sdg_command.split(), capture_output=True, text=True)
         return result.stdout.rstrip()
+
+    def adg(self, dg, data, newline=False):
+        if not isinstance(data, list):
+            data = [data]
+        lines = "\\n".join(["{}".format(x) for x in data])
+        if newline:
+            lines = "\\n" + lines
+        adg_command = "adg {} {}".format(dg, lines)
+        result = subprocess.run(adg_command.split(), capture_output=True, text=True)
+
+    def apply_suggested_parameters(self):
+        # weight derivatives are mandatory
+        sdg_dft = self.sdg("dft", show_body=True)
+        if "weight derivatives" not in sdg_dft:
+            current_dft = sdg_dft.split("\n")
+            self.adg("dft", current_dft + [" weight derivatives"], newline=True)
+
+        # prefer psuedowavefunction couplings with ETFs
+        sdg_nac = self.sdg("nacme")[6:].strip() # skip past $nacme
+        update_nac = False
+        if "response" in sdg_nac:
+            update_nac = True
+            sdg_nac = sdg_nac.replace("response", "pseudo")
+        if "do_etf" not in sdg_nac:
+            update_nac = True
+            sdg_nac += " do_etf"
+        if update_nac:
+            self.adg("nacme", sdg_nac)
+
+        # probably force phaser on as well
+
 
     def run_single(self, module, stdout=sys.stdout):
         output = subprocess.run(module, capture_output=True, text=True)
