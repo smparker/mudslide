@@ -2,10 +2,8 @@ event_log: test-traj-0-events.yaml
 log_pitch: 8
 logfiles:
 - test-traj-0-log_0.yaml
+- test-traj-0-log_1.yaml
 - test-traj-0-log_2.yaml
-- test-traj-0-log_3.yaml
-- test-traj-0-log_4.yaml
-- test-traj-0-log_5.yaml
 name: test-traj-0
-nlogs: 5
+nlogs: 3
 weight: 1.0

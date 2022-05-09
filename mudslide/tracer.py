@@ -211,12 +211,13 @@ class YAMLTrace(Trace_):
 
     def collect(self, trajectory_snapshot: Any) -> None:
         """collect and optionally process data"""
+        target_log = self.logsize // self.log_pitch
         isnap = self.logsize + 1
-        target_log = isnap // self.log_pitch
+
         if target_log != (self.nlogs - 1): # for zero based index, target_log == nlogs means we're out of logs
-            self.nlogs += 1
             self.active_logfile = "{}-log_{:d}.yaml".format(self.unique_name, self.nlogs)
             self.logfiles.append(self.active_logfile)
+            self.nlogs += 1
             self.write_main_log()
 
         with open(os.path.join(self.location, self.active_logfile), "a") as f:
@@ -266,8 +267,8 @@ class YAMLTrace(Trace_):
 
     def __getitem__(self, i: int) -> Any:
         """This is an inefficient way to loop through data"""
-        if i == -1:
-            i = self.logsize - 1
+        if i < 0:
+            i = self.logsize - abs(i)
 
         if i < 0 or i >= self.logsize:
             raise IndexError("Invalid index specified: {}".format(i))

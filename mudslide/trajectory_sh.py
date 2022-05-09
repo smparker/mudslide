@@ -36,7 +36,7 @@ class TrajectorySH(object):
         if "last_velocity" in options:
             self.last_velocity[:] = options["last_velocity"]
         if np.isscalar(rho0):
-            try: 
+            try:
                 state = int(rho0)
                 self.rho = np.zeros([model.nstates(), model.nstates()], dtype=np.complex128)
                 self.rho[state, state] = 1.0

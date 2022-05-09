@@ -8,19 +8,23 @@ import numpy as np
 import mudslide
 
 testdir = os.path.dirname(__file__)
-refdir = os.path.join(testdir, "ref", "tracer")
-checkdir = os.path.join(testdir, "check", "tracer")
+
+_refdir = os.path.join(testdir, "ref")
+_checkdir = os.path.join(testdir, "checks")
+
+def clean_directory(dirname):
+    if os.path.isdir(dirname):
+        shutil.rmtree(dirname)
 
 class TrajectoryTest(unittest.TestCase):
-    def setUp(self):
-        # clean out check dir
-        if os.path.isdir(checkdir):
-            shutil.rmtree(checkdir)
-
     def test_log_yaml(self):
+        refdir = os.path.join(_refdir, "tracer")
+        rundir = os.path.join(_checkdir, "tracer")
+        clean_directory(rundir)
+
         model = mudslide.models.TullySimpleAvoidedCrossing()
-        log = mudslide.YAMLTrace(base_name="test-traj", location=checkdir, log_pitch=8)
-        traj = mudslide.TrajectorySH(model, [-3.0], [10.0], 0, dt=4, tracer=log, max_time=150, zeta_list=[0.2, 0.2, 0.9])
+        log = mudslide.YAMLTrace(base_name="test-traj", location=rundir, log_pitch=8)
+        traj = mudslide.TrajectorySH(model, [-3.0], [10.0], 0, dt=4, tracer=log, max_time=80, zeta_list=[0.2, 0.2, 0.9])
         results = traj.simulate()
 
         main_log = results.main_log
