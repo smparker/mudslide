@@ -15,18 +15,18 @@ import yaml
 from mudslide import TMModel
 from mudslide.tracer import YAMLTrace
 
-#testdir = os.path.dirname(__file__)
-testdir = str(Path(__file__).parent)
+testdir = os.path.dirname(__file__)
+_refdir = os.path.join(testdir, "ref")
+_checkdir = os.path.join(testdir, "checks")
 
 @unittest.skipUnless(mudslide.turbomole_model.turbomole_is_installed(),
         "Turbomole must be installed")
 class TestTMModel(unittest.TestCase):
     """Test Suite for TMModel class"""
-    
     def setUp(self):
         self.turbomole_files = ["control"]
         for fl in self.turbomole_files:
-            shutil.copy(testdir+"/turbomole_files/"+fl,".")
+            shutil.copy(os.path.join(testdir, "turbomole_files", fl), ".")
 
     def test_get_gs_ex_properties(self):
         """test for gs_ex_properties function"""
