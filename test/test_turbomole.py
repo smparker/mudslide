@@ -19,14 +19,29 @@ testdir = os.path.dirname(__file__)
 _refdir = os.path.join(testdir, "ref")
 _checkdir = os.path.join(testdir, "checks")
 
+def clean_directory(dirname):
+    if os.path.isdir(dirname):
+        shutil.rmtree(dirname)
+
 @unittest.skipUnless(mudslide.turbomole_model.turbomole_is_installed(),
         "Turbomole must be installed")
 class TestTMModel(unittest.TestCase):
     """Test Suite for TMModel class"""
+    refdir = os.path.join(_refdir, "tm-c2h4")
+    rundir = os.path.join(_checkdir, "tm-c2h4")
+
     def setUp(self):
-        self.turbomole_files = ["control"]
-        for fl in self.turbomole_files:
-            shutil.copy(os.path.join(testdir, "turbomole_files", fl), ".")
+        clean_directory(self.rundir)
+        os.makedirs(self.rundir, exist_ok=True)
+
+        self.origin = os.getcwd()
+
+        os.chdir(self.rundir)
+        with os.scandir(self.refdir) as it:
+            for fil in it:
+                if fil.name.endswith(".input") and fil.is_file():
+                    filename = fil.name[:-6]
+                    shutil.copy(os.path.join(self.refdir, fil.name), filename)
 
     def test_get_gs_ex_properties(self):
         """test for gs_ex_properties function"""
@@ -302,9 +317,7 @@ class TestTMModel(unittest.TestCase):
         np.testing.assert_almost_equal(mom_t61_ref, mom_t61, decimal = 8)
 
     def tearDown(self):
-        turbomole_files = ["TMtrace-0.yaml", "control", "dipl_a", "ciss_a", "TMtrace-0-log_0.yaml", "TMtrace-0-events.yaml", "egradmonlog.1",  "excitationlog.1","energy",  "gradient",    "moments", "exspectrum"  ]
-        for f in turbomole_files:
-            os.remove(f)
+        os.chdir(self.origin)
 
 if __name__ == '__main__':
     unittest.main()
