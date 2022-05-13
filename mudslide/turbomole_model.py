@@ -116,10 +116,6 @@ class TMModel(ElectronicModel_):
 
         # probably force phaser on as well
 
-<<<<<<< HEAD
-
-=======
->>>>>>> ee4977a (postprocess gradients in a right way)
     def run_single(self, module, stdout=sys.stdout):
         output = subprocess.run(module, capture_output=True, text=True)
         print(output.stdout, file=stdout)
@@ -215,7 +211,6 @@ class TMModel(ElectronicModel_):
 
         self.gradients = np.array(parsed_gradients)
 
->>>>>>> ee4977a (postprocess gradients in a right way)
         self.force = -(self.gradients)
 
     def compute(self, X, couplings, gradients, reference):
