@@ -124,7 +124,6 @@ class TrajGenBoltzmann(object):
         seedseqs = self.seed_sequence.spawn(nsamples)
         for i in range(nsamples):
             x = self.position
-            print(self.position)
             p = self.random_state.normal(0.0, self.sigma)
             if self.scale:
                 avg_KE = 0.5 * np.dot(p**2, np.reciprocal(self.mass))/x.size
