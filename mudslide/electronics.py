@@ -171,9 +171,6 @@ class DiabaticModel_(ElectronicModel_):
     def dV(self, X: ArrayLike) -> ArrayLike:
         raise NotImplementedError("Diabatic models must implement the function dV")
 
-        print("srzindV")
-        print(dV)
-
 class AdiabaticModel_(ElectronicModel_):
     '''
     Base class to handle model problems that have an auxiliary electronic problem admitting
@@ -246,8 +243,6 @@ class AdiabaticModel_(ElectronicModel_):
         out = np.zeros([nst, ndim], dtype=np.float64)
         for ist in range(self.nstates()):
             out[ist,:] += -np.einsum("i,ix->x", coeff[:,ist], half[:,ist,:])
-        print("ISSRIZINCRAZY_DV")
-        print(out)
         return out
 
     def _compute_force_matrix(self, coeff: ArrayLike, dV: ArrayLike) -> ArrayLike:
