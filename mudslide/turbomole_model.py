@@ -116,7 +116,10 @@ class TMModel(ElectronicModel_):
 
         # probably force phaser on as well
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> ee4977a (postprocess gradients in a right way)
     def run_single(self, module, stdout=sys.stdout):
         output = subprocess.run(module, capture_output=True, text=True)
         print(output.stdout, file=stdout)
@@ -183,7 +186,7 @@ class TMModel(ElectronicModel_):
         # Now add results to model
         energy = data_dict[self.turbomole_modules["gs_energy"]]["energy"]
         self.energies = [energy]
-        parsed_gradients = data_dict[self.turbomole_modules["gs_grads"]]["gradient"]
+        parsed_gradients =[data_dict[self.turbomole_modules["gs_grads"]]["gradient"][0]["gradients"]]
 
         # Check for presence of egrad turbomole module
         if "egrad" in self.turbomole_modules.values():
@@ -205,22 +208,14 @@ class TMModel(ElectronicModel_):
                 self.derivative_coupling[j][i] = -(self.derivative_coupling[i][j])
 
             # egrad updates to gradients
-            parsed_gradients.extend(data_dict["egrad"]["gradient"])
+            for i in range (len(data_dict["egrad"]["gradient"])):
+                parsed_gradients.extend([data_dict["egrad"]["gradient"][i]["gradients"]])
 
         # Reshape gradients
-        self.gradients = np.zeros((self.nstates(),self.ndim()))
-        for state in self.states:
-            grads = []
-            for i in range(self.ndim() // 3):
-                grads.extend(
-                [
-                parsed_gradients[state]["d_dx"][i],
-                parsed_gradients[state]["d_dy"][i],
-                parsed_gradients[state]["d_dz"][i],
-                ]
-                        )
-            grads = np.array(grads)
-            self.gradients[state] = grads
+
+        self.gradients = np.array(parsed_gradients)
+
+>>>>>>> ee4977a (postprocess gradients in a right way)
         self.force = -(self.gradients)
 
     def compute(self, X, couplings, gradients, reference):
