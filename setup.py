@@ -26,7 +26,7 @@ setup(
         'scipy',
         'typing_extensions',
         'pyyaml',
-        'turboparse'
+        'turboparse==0.1.2'
         ],
     test_suite='nose.collector',
     tests_require=['nose'],
