@@ -119,10 +119,6 @@ class TrajGenBoltzmann(object):
             yield (x, p, self.initial_state, { "seed_sequence" : seedseqs[i] })
 
 
-
-
-
-
 class BatchedTraj(object):
     """Class to manage many TrajectorySH trajectories
 
