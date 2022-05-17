@@ -24,6 +24,6 @@ def boltzmann_velocities(mass, temperature, scale=True, seed=None):
         kbT2 = 0.5 * kt
         scal = np.sqrt(kbT2/avg_KE)
         p *= scal
-        p = p / mass
+    p = p / mass
     return p
 
