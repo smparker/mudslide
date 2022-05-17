@@ -19,8 +19,6 @@ from mudslide.math import boltzmann_velocities
 class TrajectoryTest(unittest.TestCase):
     def test_boltzmann(self):
         """test for boltzmann_velocity function"""
-        model = TMModel(states = [0,1,2,3], turbomole_dir = ".", expert=True)
-        positions = model.X
         mass = np.array ([ 
                         21874.6618344, 21874.6618344,21874.6618344,
                         21874.6618344,21874.6618344,21874.6618344, 
