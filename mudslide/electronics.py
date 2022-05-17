@@ -65,10 +65,6 @@ class ElectronicModel_(object):
             }
         return out
 
-## 
-
-##    def clone(self):
-##        return self
         
 class DiabaticModel_(ElectronicModel_):
     '''
