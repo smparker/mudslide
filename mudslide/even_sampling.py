@@ -12,7 +12,6 @@ from .integration import quadrature
 
 from typing import Optional, List, Any, Dict, Union
 from .typing import ArrayLike, ElectronicT
-from .turbomole_model import TMModel
 
 class SpawnStack(object):
     """Data structure to inform how new traces are spawned and weighted"""
