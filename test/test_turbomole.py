@@ -112,7 +112,6 @@ class TestTMModel(unittest.TestCase):
         ex_st_2_gradients_from_egrad_t61 = results[3]["electronics"]["force"][2]
         ex_st_3_gradients_from_egrad_t61 = results[3]["electronics"]["force"][3]
 
-
         derivative_coupling02_from_egrad_t61 = results[3]["electronics"]["derivative_coupling"][1][0]
 
         coord_t1 = results[0]["position"]
@@ -144,8 +143,6 @@ class TestTMModel(unittest.TestCase):
         excited_2_energy_ref_t61  = refs[3]["electronics"]["hamiltonian"][2][2]
         excited_3_energy_ref_t61  = refs[3]["electronics"]["hamiltonian"][3][3]
 
-
-
         dm_t_21_ref = refs[1]["density_matrix"]
         dm_t_41_ref = refs[2]["density_matrix"]
         dm_t_61_ref = refs[3]["density_matrix"]
@@ -155,82 +152,50 @@ class TestTMModel(unittest.TestCase):
         ex_st_2_gradients_t1_ref = refs[0]["electronics"]["force"][2]
         ex_st_3_gradients_t1_ref = refs[0]["electronics"]["force"][3]
 
-
-
         gs_gradients_t21_ref      = refs[1]["electronics"]["force"][0]
         ex_st_1_gradients_t21_ref = refs[1]["electronics"]["force"][1]
         ex_st_2_gradients_t21_ref = refs[1]["electronics"]["force"][2]
         ex_st_3_gradients_t21_ref = refs[1]["electronics"]["force"][3]
-
 
         gs_gradients_t41_ref      = refs[2]["electronics"]["force"][0]
         ex_st_1_gradients_t41_ref = refs[2]["electronics"]["force"][1]
         ex_st_2_gradients_t41_ref = refs[2]["electronics"]["force"][2]
         ex_st_3_gradients_t41_ref = refs[2]["electronics"]["force"][3]
 
-
         gs_gradients_t61_ref      = refs[3]["electronics"]["force"][0]
         ex_st_1_gradients_t61_ref = refs[3]["electronics"]["force"][1]
         ex_st_2_gradients_t61_ref = refs[3]["electronics"]["force"][2]
         ex_st_3_gradients_t61_ref = refs[3]["electronics"]["force"][3]
 
-
         derivative_coupling02_t61_ref = refs[3]["electronics"]["derivative_coupling"][1][0]
-
 
         coord_t1_ref = refs[0]["position"]
         coord_t21_ref = refs[1]["position"]
         coord_t41_ref = refs[2]["position"]
-
+        coord_t61_ref = refs[3]["position"]
 
         mom_t1_ref = refs[0]["momentum"]
         mom_t21_ref = refs[1]["momentum"]
         mom_t41_ref = refs[2]["momentum"]
         mom_t61_ref = refs[3]["momentum"]
 
-        self.assertAlmostEqual(gs_energy_ref_t1, gs_e_from_ridft_t1,places=8) 
-        self.assertAlmostEqual(excited_1_energy_ref_t1, ex_e_1_from_egrad_t1,places = 8)
-        self.assertAlmostEqual(excited_2_energy_ref_t1, ex_e_2_from_egrad_t1,places = 8)
-        self.assertAlmostEqual(excited_3_energy_ref_t1, ex_e_3_from_egrad_t1,places = 8)
+        ref_times = [ 0, 1, 2, 3]
+        states = [ 0, 1, 2, 3 ]
 
-        self.assertAlmostEqual(gs_energy_ref_t21, gs_e_from_ridft_t21,places = 8) 
-        self.assertAlmostEqual(excited_1_energy_ref_t21, ex_e_1_from_egrad_t21,places = 8)
-        self.assertAlmostEqual(excited_2_energy_ref_t21, ex_e_2_from_egrad_t21,places = 8)
-        self.assertAlmostEqual(excited_3_energy_ref_t21, ex_e_3_from_egrad_t21,places = 8)
+        for t in ref_times:
+            for s in states:
+                self.assertAlmostEqual(refs[t]["electronics"]["hamiltonian"][s][s],results[t]["electronics"]["hamiltonian"][s][s], places = 8)
+                np.testing.assert_almost_equal(refs[t]["electronics"]["force"][s],results[t]["electronics"]["force"][s], decimal = 8)
 
-        self.assertAlmostEqual(gs_energy_ref_t41, gs_e_from_ridft_t41,places = 8)
-        self.assertAlmostEqual(excited_1_energy_ref_t41, ex_e_1_from_egrad_t41,places = 8)
-        self.assertAlmostEqual(excited_2_energy_ref_t41, ex_e_2_from_egrad_t41,places = 8)
-        self.assertAlmostEqual(excited_3_energy_ref_t41, ex_e_3_from_egrad_t41,places = 8)
+        for t in ref_times[1:]:
+                np.testing.assert_almost_equal(refs[t]["density_matrix"],results[t]["density_matrix"], decimal = 8)
+                np.testing.assert_almost_equal(refs[t]["position"],results[t]["position"], decimal = 8)
+                np.testing.assert_almost_equal(refs[t]["momentum"],results[t]["momentum"], decimal = 8)
 
-        self.assertAlmostEqual(gs_energy_ref_t61, gs_e_from_ridft_t61,places = 8)
-        self.assertAlmostEqual(excited_1_energy_ref_t61, ex_e_1_from_egrad_t61,places = 8)
-        self.assertAlmostEqual(excited_2_energy_ref_t61, ex_e_2_from_egrad_t61,places = 8)
-        self.assertAlmostEqual(excited_3_energy_ref_t61, ex_e_3_from_egrad_t61,places = 8)
-
-        np.testing.assert_almost_equal(dm_t_21_ref, dm_from_mudslide_t21,decimal = 8)
-        np.testing.assert_almost_equal(dm_t_41_ref, dm_from_mudslide_t41, decimal = 8) 
-
-        np.testing.assert_almost_equal(gs_gradients_t1_ref,   gs_grad_from_rdgrad_t1,decimal = 8)
-        np.testing.assert_almost_equal(ex_st_1_gradients_t1_ref, ex_st_1_gradients_from_egrad_t1,decimal = 8)
-        np.testing.assert_almost_equal(ex_st_2_gradients_t1_ref, ex_st_2_gradients_from_egrad_t1,decimal = 8)
-        np.testing.assert_almost_equal(ex_st_3_gradients_t1_ref, ex_st_3_gradients_from_egrad_t1,decimal = 8)
-
-        np.testing.assert_almost_equal(gs_gradients_t61_ref, gs_grad_from_rdgrad_t61,decimal = 8)
-        np.testing.assert_almost_equal(ex_st_1_gradients_t61_ref, ex_st_1_gradients_from_egrad_t61,decimal = 8)
-        np.testing.assert_almost_equal(ex_st_2_gradients_t61_ref, ex_st_2_gradients_from_egrad_t61,decimal = 8)
-        np.testing.assert_almost_equal(ex_st_3_gradients_t61_ref, ex_st_3_gradients_from_egrad_t61,decimal = 8)
-
-        np.testing.assert_almost_equal(derivative_coupling02_t61_ref, derivative_coupling02_from_egrad_t61, decimal = 8)
-
-        np.testing.assert_almost_equal(coord_t1_ref, coord_t1, decimal = 8)
-        np.testing.assert_almost_equal(coord_t21_ref, coord_t21, decimal = 8)
-        np.testing.assert_almost_equal(coord_t41_ref, coord_t41, decimal = 8)
-
-        np.testing.assert_almost_equal(mom_t1_ref, mom_t1, decimal = 8)
-        np.testing.assert_almost_equal(mom_t21_ref, mom_t21, decimal = 8)
-        np.testing.assert_almost_equal(mom_t41_ref, mom_t41, decimal = 8)
-        np.testing.assert_almost_equal(mom_t61_ref, mom_t61, decimal = 8)
+        for t in ref_times:
+            for s1 in states:
+                for s2 in range(s1,3):
+                    np.testing.assert_almost_equal(refs[t]["electronics"]["derivative_coupling"][s1][s2], results[t]["electronics"]["derivative_coupling"][s1][s2], decimal = 8)
 
     def tearDown(self):
         os.chdir(self.origin)
