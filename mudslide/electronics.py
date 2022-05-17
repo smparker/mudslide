@@ -158,7 +158,6 @@ class DiabaticModel_(ElectronicModel_):
         return out
 
 
-
     def V(self, X: ArrayLike) -> ArrayLike:
         raise NotImplementedError("Diabatic models must implement the function V")
         
