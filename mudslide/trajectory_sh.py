@@ -13,10 +13,18 @@ from .math import poisson_prob_scale
 from typing import List, Dict, Union, Any
 from .typing import ElectronicT, ArrayLike, DtypeLike
 
+
 class TrajectorySH(object):
     """Class to propagate a single FSSH trajectory"""
 
-    def __init__(self, model: Any, x0: ArrayLike, p0: ArrayLike, rho0: ArrayLike, tracer: Any = None, queue: Any = None, **options: Any):
+    def __init__(self,
+                 model: Any,
+                 x0: ArrayLike,
+                 p0: ArrayLike,
+                 rho0: ArrayLike,
+                 tracer: Any = None,
+                 queue: Any = None,
+                 **options: Any):
         """Constructor
         :param model: Model object defining problem
         :param x0: Initial position
@@ -70,7 +78,6 @@ class TrajectorySH(object):
         self.seed_sequence = ss if isinstance(ss, np.random.SeedSequence) else np.random.SeedSequence(ss)
         self.random_state = np.random.default_rng(self.seed_sequence)
 
-
         self.electronics = options.get("electronics", None)
         self.hopping = 0.0
 
@@ -84,7 +91,7 @@ class TrajectorySH(object):
         self.force_quit = False
 
         self.hopping_probability = options.get("hopping_probability", "tully")
-        if self.hopping_probability not in [ "tully", "poisson" ]:
+        if self.hopping_probability not in ["tully", "poisson"]:
             raise Exception("hopping_probability accepts only \"tully\" or \"poisson\" options")
 
         self.zeta_list = list(options.get("zeta_list", []))
@@ -106,18 +113,22 @@ class TrajectorySH(object):
         previous_steps = len(log)
 
         # use inferred data if available, but let kwargs override
-        for key, val in [ ["dt", dt] ]:
+        for key, val in [["dt", dt]]:
             if key not in options:
                 options[key] = val
 
-        return cls(model, x, p, rho,
-                tracer=log,
-                state0=k, t0=t0,
-                last_velocity=last_velocity,
-                weight=weight,
-                previous_steps=previous_steps,
-                restarting=True,
-                **options)
+        return cls(model,
+                   x,
+                   p,
+                   rho,
+                   tracer=log,
+                   state0=k,
+                   t0=t0,
+                   last_velocity=last_velocity,
+                   weight=weight,
+                   previous_steps=previous_steps,
+                   restarting=True,
+                   **options)
 
     def update_weight(self, weight: float) -> None:
         """Update weight held by trajectory and by trace"""
@@ -132,10 +143,9 @@ class TrajectorySH(object):
         cls = self.__class__
         result = cls.__new__(cls)
         memo[id(self)] = result
-        shallow_only = [ "queue" ]
+        shallow_only = ["queue"]
         for k, v in self.__dict__.items():
-            setattr(result, k,
-                cp.deepcopy(v, memo) if v not in shallow_only else cp.copy(v))
+            setattr(result, k, cp.deepcopy(v, memo) if v not in shallow_only else cp.copy(v))
         return result
 
     def clone(self) -> 'TrajectorySH':
@@ -152,7 +162,6 @@ class TrajectorySH(object):
         """
         return self.random_state.uniform()
 
-
     def currently_interacting(self) -> bool:
         """Determines whether trajectory is currently inside an interaction region
 
@@ -160,7 +169,8 @@ class TrajectorySH(object):
         """
         if self.duration["box_bounds"] is None:
             return False
-        return np.all(self.duration["box_bounds"][0] < self.position) and np.all(self.position < self.duration["box_bounds"][1])
+        return np.all(self.duration["box_bounds"][0] < self.position) and np.all(
+            self.position < self.duration["box_bounds"][1])
 
     def duration_initialize(self, options: Dict[str, Any]) -> None:
         """Initializes variables related to continue_simulating
@@ -168,17 +178,16 @@ class TrajectorySH(object):
         :param options: dictionary with options
         """
 
-        duration = {} # type: Dict[str, Any]
+        duration = {}  # type: Dict[str, Any]
         duration['found_box'] = False
 
         bounds = options.get('bounds', None)
         if bounds:
-            duration["box_bounds"] = ( np.array(bounds[0], dtype=np.float64),
-                    np.array(bounds[1], dtype=np.float64) )
+            duration["box_bounds"] = (np.array(bounds[0], dtype=np.float64), np.array(bounds[1], dtype=np.float64))
         else:
             duration["box_bounds"] = None
-        duration["max_steps"] = options.get('max_steps', 100000) # < 0 interpreted as no limit
-        duration["max_time"] = options.get('max_time', 1e25) # set to an outrageous number by default
+        duration["max_steps"] = options.get('max_steps', 100000)  # < 0 interpreted as no limit
+        duration["max_time"] = options.get('max_time', 1e25)  # set to an outrageous number by default
 
         self.duration = duration
 
@@ -191,7 +200,8 @@ class TrajectorySH(object):
             return False
         elif self.duration["max_steps"] >= 0 and self.nsteps >= self.duration["max_steps"]:
             return False
-        elif self.time >= self.duration["max_time"] or np.isclose(self.time, self.duration["max_time"], atol=1e-8, rtol=0.0):
+        elif self.time >= self.duration["max_time"] or np.isclose(
+                self.time, self.duration["max_time"], atol=1e-8, rtol=0.0):
             return False
         elif self.duration["found_box"]:
             return self.currently_interacting()
@@ -210,30 +220,31 @@ class TrajectorySH(object):
             self.tracer.collect(self.snapshot())
             #self.trouble_shooter()
 
-    def snapshot(self) -> Dict[str,Any]:
+    def snapshot(self) -> Dict[str, Any]:
         """Collect data from run for logging
 
         :return: dictionary with all data from current time step
         """
         out = {
-            "time" : self.time,
-            "position"  : self.position.tolist(),
-            "momentum"  : (self.mass * self.velocity).tolist(),
-            "potential" : self.potential_energy().item(),
-            "kinetic"   : self.kinetic_energy().item(),
-            "energy"    : self.total_energy().item(),
-            "density_matrix" : self.rho.view(dtype=np.float64).tolist(),
-            "active"    : self.state,
-            "electronics" : self.electronics.as_dict(),
-            "hopping"   : self.hopping,
-            "zeta"   : self.zeta
-            }
+            "time": self.time,
+            "position": self.position.tolist(),
+            "momentum": (self.mass * self.velocity).tolist(),
+            "potential": self.potential_energy().item(),
+            "kinetic": self.kinetic_energy().item(),
+            "energy": self.total_energy().item(),
+            "density_matrix": self.rho.view(dtype=np.float64).tolist(),
+            "active": self.state,
+            "electronics": self.electronics.as_dict(),
+            "hopping": self.hopping,
+            "zeta": self.zeta
+        }
         return out
 
     def trouble_shooter(self):
         log = self.snapshot()
         with open("snapout.dat", "a") as file:
-            file.write("{}\t{}\t{}\t{}\t{}\n".format(log["time"], log["potential"], log["kinetic"], log["energy"], log["active"]))
+            file.write("{}\t{}\t{}\t{}\t{}\n".format(log["time"], log["potential"], log["kinetic"], log["energy"],
+                                                     log["active"]))
 
     def kinetic_energy(self) -> np.float64:
         """Kinetic energy
@@ -250,7 +261,7 @@ class TrajectorySH(object):
         """
         if electronics is None:
             electronics = self.electronics
-        return electronics.hamiltonian[self.state,self.state]
+        return electronics.hamiltonian[self.state, self.state]
 
     def total_energy(self, electronics: ElectronicT = None) -> DtypeLike:
         """
@@ -273,7 +284,7 @@ class TrajectorySH(object):
         """
         if electronics is None:
             electronics = self.electronics
-        return electronics.force[self.state,:]
+        return electronics.force[self.state, :]
 
     def NAC_matrix(self, electronics: ElectronicT = None, velocity: ArrayLike = None) -> ArrayLike:
         """
@@ -300,7 +311,7 @@ class TrajectorySH(object):
         u = direction / np.linalg.norm(direction)
         momentum = self.velocity * self.mass
         component = np.dot(u, momentum) * u
-        return 0.5 * np.einsum('m,m,m', 1.0/self.mass, component, component)
+        return 0.5 * np.einsum('m,m,m', 1.0 / self.mass, component, component)
 
     def draw_new_zeta(self) -> float:
         """
@@ -314,7 +325,6 @@ class TrajectorySH(object):
             return self.zeta_list.pop(0)
         else:
             return self.random()
-
 
     def hop_allowed(self, direction: ArrayLike, dE: float):
         """
@@ -332,9 +342,9 @@ class TrajectorySH(object):
         a = np.einsum('m,m,m', np.reciprocal(self.mass), u, u)
         b = 2.0 * np.dot(self.velocity, u)
         c = -2.0 * dE
-        return (b*b > 4.0 * a * c)
+        return (b * b > 4.0 * a * c)
 
-    def direction_of_rescale(self, source: int, target: int, electronics: ElectronicT=None) -> np.ndarray:
+    def direction_of_rescale(self, source: int, target: int, electronics: ElectronicT = None) -> np.ndarray:
         """
         Return direction in which to rescale momentum
 
@@ -364,7 +374,10 @@ class TrajectorySH(object):
         scal = min(roots, key=lambda x: abs(x))
         self.velocity += scal * M_inv * u
 
-    def hamiltonian_propagator(self, last_electronics: ElectronicT, this_electronics: ElectronicT, velo: ArrayLike = None) -> np.ndarray:
+    def hamiltonian_propagator(self,
+                               last_electronics: ElectronicT,
+                               this_electronics: ElectronicT,
+                               velo: ArrayLike = None) -> np.ndarray:
         """Compute the Hamiltonian used to propagate the electronic wavefunction
 
         :param elec_states: ElectronicStates at current time step
@@ -373,12 +386,15 @@ class TrajectorySH(object):
         if velo is None:
             velo = 0.5 * (self.velocity + self.last_velocity)
 
-        H = 0.5 * (this_electronics.hamiltonian + last_electronics.hamiltonian) # type: ignore
-        TV = 0.5 * np.einsum("ijx,x->ij", this_electronics.derivative_coupling + last_electronics.derivative_coupling, #type: ignore
-                velo)
-        return H -1j * TV
+        H = 0.5 * (this_electronics.hamiltonian + last_electronics.hamiltonian)  # type: ignore
+        TV = 0.5 * np.einsum(
+            "ijx,x->ij",
+            this_electronics.derivative_coupling + last_electronics.derivative_coupling,  #type: ignore
+            velo)
+        return H - 1j * TV
 
-    def propagate_electronics(self, last_electronics: ElectronicT, this_electronics: ElectronicT, dt: DtypeLike) -> None:
+    def propagate_electronics(self, last_electronics: ElectronicT, this_electronics: ElectronicT,
+                              dt: DtypeLike) -> None:
         """Propagates density matrix from t to t+dt
 
         The propagation assumes the electronic energies and couplings are static throughout.
@@ -393,7 +409,7 @@ class TrajectorySH(object):
             diags, coeff = np.linalg.eigh(W)
 
             # use W as temporary storage
-            U = np.linalg.multi_dot([ coeff, np.diag(np.exp(-1j * diags * dt)), coeff.T.conj() ])
+            U = np.linalg.multi_dot([coeff, np.diag(np.exp(-1j * diags * dt)), coeff.T.conj()])
             np.dot(U, np.dot(self.rho, U.T.conj(), out=W), out=self.rho)
         elif self.electronic_integration == "linear-rk4":
             last_H = last_electronics.hamiltonian
@@ -412,29 +428,29 @@ class TrajectorySH(object):
             HH = last_H
             eigs, vecs = np.linalg.eigh(HH)
 
-            H0  = np.linalg.multi_dot([vecs.T, last_H, vecs])
-            H1  = np.linalg.multi_dot([vecs.T, this_H, vecs])
+            H0 = np.linalg.multi_dot([vecs.T, last_H, vecs])
+            H1 = np.linalg.multi_dot([vecs.T, this_H, vecs])
             W00 = np.linalg.multi_dot([vecs.T, TV00, vecs])
             W11 = np.linalg.multi_dot([vecs.T, TV11, vecs])
             W01 = np.linalg.multi_dot([vecs.T, TV01, vecs])
 
             def ydot(rho: ArrayLike, t: DtypeLike) -> ArrayLike:
                 assert t >= 0.0 and t <= dt
-                w0 = 1.0 - t/dt
-                w1 = t/dt
+                w0 = 1.0 - t / dt
+                w1 = t / dt
 
                 ergs = np.exp(1j * eigs * t).reshape([1, -1])
                 phases = np.dot(ergs.T, ergs.conj())
 
                 H = H0 * (w0 - 1.0) + H1 * w1
-                Hbar = H - 1j * (w0*w0*W00 + w1*w1*W11 + w0*w1*W01)
+                Hbar = H - 1j * (w0 * w0 * W00 + w1 * w1 * W11 + w0 * w1 * W01)
                 HI = Hbar * phases
 
-                out = -1j * ( np.dot(HI, rho) - np.dot(rho, HI) )
+                out = -1j * (np.dot(HI, rho) - np.dot(rho, HI))
                 return out
 
             nsteps = self.starting_electronic_intervals
-            while (dt/nsteps > self.max_electronic_dt):
+            while (dt / nsteps > self.max_electronic_dt):
                 nsteps *= 2
 
             rho0 = np.linalg.multi_dot([vecs.T, self.rho, vecs])
@@ -445,7 +461,7 @@ class TrajectorySH(object):
         else:
             raise Exception("Unrecognized electronic integration option")
 
-    def advance_position(self, last_electronics: Union[ElectronicT,None], this_electronics: ElectronicT) -> None:
+    def advance_position(self, last_electronics: Union[ElectronicT, None], this_electronics: ElectronicT) -> None:
         """
         Move classical position forward one step
 
@@ -456,7 +472,6 @@ class TrajectorySH(object):
         self.last_position = self.position
         self.position += self.velocity * self.dt + 0.5 * acceleration * self.dt * self.dt
 
-
     def advance_velocity(self, last_electronics: ElectronicT, this_electronics: ElectronicT) -> None:
         """
         Move classical velocity forward one step
@@ -464,13 +479,11 @@ class TrajectorySH(object):
         :param electronics: ElectronicStates from current step
         """
 
-
         last_acceleration = self.force(last_electronics) / self.mass
         this_acceleration = self.force(this_electronics) / self.mass
 
         self.last_velocity = self.velocity
         self.velocity += 0.5 * (last_acceleration + this_acceleration) * self.dt
-
 
     def surface_hopping(self, last_electronics: ElectronicT, this_electronics: ElectronicT):
         """Compute probability of hopping, generate random number, and perform hops
@@ -480,7 +493,8 @@ class TrajectorySH(object):
         """
         H = self.hamiltonian_propagator(last_electronics, this_electronics)
 
-        gkndt = 2.0 * np.imag(self.rho[self.state,:] * H[:,self.state]) * self.dt / np.real(self.rho[self.state,self.state])
+        gkndt = 2.0 * np.imag(self.rho[self.state, :] * H[:, self.state]) * self.dt / np.real(self.rho[self.state,
+                                                                                                       self.state])
 
         # zero out 'self-hop' for good measure (numerical safety)
         gkndt[self.state] = 0.0
@@ -507,7 +521,7 @@ class TrajectorySH(object):
             probs = gkndt * poisson_prob_scale(np.sum(gkndt))
         else:
             raise Exception("Unrecognized option for hopping_probability")
-        self.hopping = np.sum(probs).item() # store total hopping probability
+        self.hopping = np.sum(probs).item()  # store total hopping probability
 
         self.zeta = self.draw_new_zeta()
         acc_prob = np.cumsum(probs)
@@ -519,11 +533,11 @@ class TrajectorySH(object):
                     hop_to = i
                     break
 
-            return [{ "target" : hop_to, "weight" : 1.0, "zeta" : self.zeta, "prob" : acc_prob[hop_to] }]
+            return [{"target": hop_to, "weight": 1.0, "zeta": self.zeta, "prob": acc_prob[hop_to]}]
         else:
             return []
 
-    def hop_to_it(self, hop_targets: List[Dict[str, Union[float,int]]], electronics: ElectronicT = None) -> None:
+    def hop_to_it(self, hop_targets: List[Dict[str, Union[float, int]]], electronics: ElectronicT = None) -> None:
         """
         Hop from the current active state to the given state, including
         rescaling the momentum
@@ -534,7 +548,8 @@ class TrajectorySH(object):
         hop_dict = hop_targets[0]
         hop_to = int(hop_dict["target"])
         elec_states = electronics if electronics is not None else self.electronics
-        new_potential, old_potential = elec_states.hamiltonian[hop_to, hop_to], elec_states.hamiltonian[self.state, self.state]
+        new_potential, old_potential = elec_states.hamiltonian[hop_to, hop_to], elec_states.hamiltonian[self.state,
+                                                                                                        self.state]
         delV = new_potential - old_potential
         rescale_vector = self.direction_of_rescale(self.state, hop_to)
         component_kinetic = self.mode_kinetic_energy(rescale_vector)
@@ -585,4 +600,3 @@ class TrajectorySH(object):
         self.trace(force=True)
 
         return self.tracer
-

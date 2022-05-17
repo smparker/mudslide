@@ -13,8 +13,10 @@ from .integration import quadrature
 from typing import Optional, List, Any, Dict, Union
 from .typing import ArrayLike, ElectronicT
 
+
 class SpawnStack(object):
     """Data structure to inform how new traces are spawned and weighted"""
+
     def __init__(self, sample_stack: List, weight: float = 1.0):
         self.sample_stack = sample_stack
         self.base_weight: float = weight
@@ -23,9 +25,9 @@ class SpawnStack(object):
         self.last_dw: float
 
         if sample_stack:
-            weights = np.array( [ s["dw"] for s in sample_stack ] )
+            weights = np.array([s["dw"] for s in sample_stack])
             mw = np.ones(len(sample_stack))
-            mw[1:] -= np.cumsum(weights[:len(weights)-1])
+            mw[1:] -= np.cumsum(weights[:len(weights) - 1])
             self.marginal_weights = mw
             self.last_dw = weights[0]
         else:
@@ -44,10 +46,10 @@ class SpawnStack(object):
             while izeta < len(self.sample_stack) and self.sample_stack[izeta]["zeta"] < current_value:
                 izeta += 1
 
-            if izeta != self.izeta: # it means there was a hop, so update last_dw
-                weights = np.array( [ s["dw"] for s in self.sample_stack ] )
+            if izeta != self.izeta:  # it means there was a hop, so update last_dw
+                weights = np.array([s["dw"] for s in self.sample_stack])
                 self.last_dw = np.sum(weights[self.izeta:izeta])
-                self.last_stack = self.sample_stack[self.izeta] # should actually probably be a merge operation
+                self.last_stack = self.sample_stack[self.izeta]  # should actually probably be a merge operation
 
             self.marginal_weight = self.marginal_weights[izeta] if izeta != len(self.sample_stack) else 0.0
             self.izeta = izeta
@@ -55,7 +57,7 @@ class SpawnStack(object):
             if self.izeta < len(self.sample_stack):
                 self.zeta_ = self.sample_stack[self.izeta]["zeta"]
             else:
-                self.zeta_ = 10.0 # should be impossible
+                self.zeta_ = 10.0  # should be impossible
 
         else:
             self.zeta_ = random_state.uniform()
@@ -96,25 +98,31 @@ class SpawnStack(object):
             return 1
 
     @classmethod
-    def from_quadrature(cls, nsamples: Union[List[int], int], weight: float = 1.0, method: str = "gl",
-            mcsamples: int = 1, random_state: Any = np.random.RandomState()) -> 'SpawnStack':
+    def from_quadrature(cls,
+                        nsamples: Union[List[int], int],
+                        weight: float = 1.0,
+                        method: str = "gl",
+                        mcsamples: int = 1,
+                        random_state: Any = np.random.RandomState()) -> 'SpawnStack':
         if not isinstance(nsamples, list):
-            nsamples = [ int(nsamples) ]
+            nsamples = [int(nsamples)]
 
         forest: List[Dict] = []
-        spawn_size = [ mcsamples ] + [ 1 ] * (len(nsamples) - 1)
+        spawn_size = [mcsamples] + [1] * (len(nsamples) - 1)
 
         for ns in reversed(nsamples):
             leaves = cp.copy(forest)
             samples, weights = quadrature(ns, 0.0, 1.0, method=method)
             spawnsize = spawn_size.pop(0)
-            forest = [ { "zeta" : s,
-                "dw" : dw,
-                "children" : cp.deepcopy(leaves),
-                "spawn_size" : spawnsize }
-                    for s, dw in zip(samples, weights) ] # type: ignore
+            forest = [{
+                "zeta": s,
+                "dw": dw,
+                "children": cp.deepcopy(leaves),
+                "spawn_size": spawnsize
+            } for s, dw in zip(samples, weights)]  # type: ignore
 
         return cls(forest, weight)
+
 
 class EvenSamplingTrajectory(TrajectoryCum):
     """Trajectory surface hopping using an even sampling approach
@@ -124,6 +132,7 @@ class EvenSamplingTrajectory(TrajectoryCum):
     of the cumulative probability distribution. This is an *experimental*
     in principle deterministic algorithm for FSSH simulations.
     """
+
     def __init__(self, *args: Any, **options: Any):
         """Constructor (see TrajectoryCum constructor)"""
         TrajectoryCum.__init__(self, *args, **options)
@@ -134,8 +143,10 @@ class EvenSamplingTrajectory(TrajectoryCum):
         elif isinstance(ss, list):
             quadrature = options.get("quadrature", "gl")
             mcsamples = options.get("mcsamples", 1)
-            self.spawn_stack = SpawnStack.from_quadrature(ss, method=quadrature,
-                    mcsamples=mcsamples, random_state=self.random_state)
+            self.spawn_stack = SpawnStack.from_quadrature(ss,
+                                                          method=quadrature,
+                                                          mcsamples=mcsamples,
+                                                          random_state=self.random_state)
         else:
             self.spawn_stack = SpawnStack(ss)
 
@@ -146,23 +157,23 @@ class EvenSamplingTrajectory(TrajectoryCum):
             spawn_stack = self.spawn_stack
 
         out = EvenSamplingTrajectory(
-                self.model,
-                self.position,
-                self.velocity * self.mass,
-                self.rho,
-                tracer=self.tracer.clone(),
-                queue = self.queue,
-                last_velocity = self.last_velocity,
-                state0 = self.state,
-                t0 = self.time+self.dt, # will start at the next step
-                previous_steps = self.nsteps+1, # will start at the next step
-                trace_every = self.trace_every,
-                dt = self.dt,
-                outcome_type = self.outcome_type,
-                seed_sequence = self.seed_sequence.spawn(1)[0],
-                electronics = self.electronics,
-                duration = self.duration,
-                spawn_stack = spawn_stack)
+            self.model,
+            self.position,
+            self.velocity * self.mass,
+            self.rho,
+            tracer=self.tracer.clone(),
+            queue=self.queue,
+            last_velocity=self.last_velocity,
+            state0=self.state,
+            t0=self.time + self.dt,  # will start at the next step
+            previous_steps=self.nsteps + 1,  # will start at the next step
+            trace_every=self.trace_every,
+            dt=self.dt,
+            outcome_type=self.outcome_type,
+            seed_sequence=self.seed_sequence.spawn(1)[0],
+            electronics=self.electronics,
+            duration=self.duration,
+            spawn_stack=spawn_stack)
         return out
 
     def hopper(self, probs: ArrayLike) -> List[Dict[str, Union[int, float]]]:
@@ -171,11 +182,11 @@ class EvenSamplingTrajectory(TrajectoryCum):
         :returns: [ (target_state, hop_weight) ]
         """
         accumulated = self.prob_cum
-        probs[self.state] = 0.0 # ensure self-hopping is nonsense
+        probs[self.state] = 0.0  # ensure self-hopping is nonsense
         gkdt = np.sum(probs)
 
         accumulated = 1 - (1 - accumulated) * np.exp(-gkdt)
-        if accumulated > self.zeta: # then hop
+        if accumulated > self.zeta:  # then hop
             zeta = self.zeta
             next_zeta = self.spawn_stack.next_zeta(accumulated, self.random_state)
 
@@ -184,15 +195,22 @@ class EvenSamplingTrajectory(TrajectoryCum):
             if self.spawn_stack.do_spawn():
                 nspawn = self.spawn_stack.spawn_size()
                 spawn_weight = 1.0 / nspawn
-                targets = [ { "target" : i,
-                              "weight" : hop_choice[i],
-                              "zeta" : zeta,
-                              "prob" : accumulated,
-                              "stack" : self.spawn_stack.spawn(spawn_weight * hop_choice[i])}
-                                    for i in range(self.model.nstates()) if i != self.state for j in range(nspawn) ]
+                targets = [{
+                    "target": i,
+                    "weight": hop_choice[i],
+                    "zeta": zeta,
+                    "prob": accumulated,
+                    "stack": self.spawn_stack.spawn(spawn_weight * hop_choice[i])
+                } for i in range(self.model.nstates()) if i != self.state for j in range(nspawn)]
             else:
                 target = self.random_state.choice(list(range(self.model.nstates())), p=hop_choice)
-                targets = [ {"target" : target, "weight" : 1.0, "zeta" : zeta, "prob" : accumulated, "stack" : self.spawn_stack.spawn() }]
+                targets = [{
+                    "target": target,
+                    "weight": 1.0,
+                    "zeta": zeta,
+                    "prob": accumulated,
+                    "stack": self.spawn_stack.spawn()
+                }]
 
             # reset probabilities and random
             self.zeta = next_zeta
@@ -221,7 +239,7 @@ class EvenSamplingTrajectory(TrajectoryCum):
                 spawn = self.clone(stack)
 
                 # trigger hop
-                TrajectoryCum.hop_to_it(spawn, [ hop ], electronics=spawn.electronics)
+                TrajectoryCum.hop_to_it(spawn, [hop], electronics=spawn.electronics)
                 spawn.update_weight(stack.weight())
 
                 # add to total trajectory queue

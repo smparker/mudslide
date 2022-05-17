@@ -12,15 +12,16 @@ import math
 from typing import Tuple, Any
 from .typing import ArrayLike
 
+
 class ElectronicModel_(object):
     '''
     Base class for handling electronic structure part of dynamics
     '''
+
     def __init__(self, representation: str = "adiabatic", reference: Any = None):
         self.representation = representation
         self.position: ArrayLike
         self.reference = reference
-
 
         self.hamiltonian: ArrayLike
         self.force: ArrayLike
@@ -43,7 +44,6 @@ class ElectronicModel_(object):
         """
         raise NotImplementedError("ElectronicModels need a compute function")
 
-
     def update(self, X: ArrayLike, couplings: Any = None, gradients: Any = None) -> 'ElectronicModel_':
         """
         Convenience function that copies the present object, updates the position,
@@ -56,23 +56,23 @@ class ElectronicModel_(object):
 
     def as_dict(self):
         out = {
-            "nstates" : self.nstates(),
-            "ndim" : self.ndim(),
-            "position" : self.position.tolist(),
-            "hamiltonian" : self.hamiltonian.tolist(),
-            "derivative_coupling" : self.derivative_coupling.tolist(),
-            "force" : self.force.tolist()
-            }
+            "nstates": self.nstates(),
+            "ndim": self.ndim(),
+            "position": self.position.tolist(),
+            "hamiltonian": self.hamiltonian.tolist(),
+            "derivative_coupling": self.derivative_coupling.tolist(),
+            "force": self.force.tolist()
+        }
         return out
 
-        
+
 class DiabaticModel_(ElectronicModel_):
     '''
     Base class to handle model problems given in
     simple diabatic forms.
     '''
     nstates_: int
-    ndim_ : int
+    ndim_: int
 
     def __init__(self, representation: str = "adiabatic", reference: Any = None):
         ElectronicModel_.__init__(self, representation=representation, reference=reference)
@@ -89,8 +89,7 @@ class DiabaticModel_(ElectronicModel_):
         self.reference, self.hamiltonian = self._compute_basis_states(self.V(X), reference=reference)
         dV = self.dV(X)
 
-        self.derivative_coupling = self._compute_derivative_coupling(self.reference,
-                dV, np.diag(self.hamiltonian))
+        self.derivative_coupling = self._compute_derivative_coupling(self.reference, dV, np.diag(self.hamiltonian))
 
         self.force = self._compute_force(dV, self.reference)
 
@@ -100,7 +99,7 @@ class DiabaticModel_(ElectronicModel_):
         out.compute(X, couplings=couplings, gradients=gradients, reference=self.reference)
         return out
 
-    def _compute_basis_states(self, V: ArrayLike, reference: Any = None) -> Tuple[ArrayLike,ArrayLike]:
+    def _compute_basis_states(self, V: ArrayLike, reference: Any = None) -> Tuple[ArrayLike, ArrayLike]:
         """Computes coefficient matrix for basis states
         if a diabatic representation is chosen, no transformation takes place
         :param V: potential matrix
@@ -111,10 +110,11 @@ class DiabaticModel_(ElectronicModel_):
             if reference is not None:
                 try:
                     for mo in range(self.nstates()):
-                        if (np.dot(coeff[:,mo], reference[:,mo]) < 0.0):
-                            coeff[:,mo] *= -1.0
+                        if (np.dot(coeff[:, mo], reference[:, mo]) < 0.0):
+                            coeff[:, mo] *= -1.0
                 except:
-                    raise Exception("Failed to regularize new ElectronicStates from a reference object %s" % (reference))
+                    raise Exception("Failed to regularize new ElectronicStates from a reference object %s" %
+                                    (reference))
             return (coeff, np.diag(energies))
         elif self.representation == "diabatic":
             return (np.eye(self.nstates(), dtype=np.float64), V)
@@ -130,7 +130,7 @@ class DiabaticModel_(ElectronicModel_):
 
         out = np.zeros([nst, ndim], dtype=np.float64)
         for ist in range(self.nstates()):
-            out[ist,:] += -np.einsum("i,ix->x", coeff[:,ist], half[:,ist,:])
+            out[ist, :] += -np.einsum("i,ix->x", coeff[:, ist], half[:, ist, :])
         return out
 
     def _compute_force_matrix(self, coeff: ArrayLike, dV: ArrayLike) -> ArrayLike:
@@ -151,18 +151,18 @@ class DiabaticModel_(ElectronicModel_):
                 if abs(dE) < 1.0e-10:
                     dE = np.copysign(1.0e-10, dE)
 
-                out[i,j,:] /= dE
-                out[j,i,:] /= -dE
-            out[j,j,:] = 0.0
+                out[i, j, :] /= dE
+                out[j, i, :] /= -dE
+            out[j, j, :] = 0.0
 
         return out
 
-
     def V(self, X: ArrayLike) -> ArrayLike:
         raise NotImplementedError("Diabatic models must implement the function V")
-        
+
     def dV(self, X: ArrayLike) -> ArrayLike:
         raise NotImplementedError("Diabatic models must implement the function dV")
+
 
 class AdiabaticModel_(ElectronicModel_):
     '''
@@ -173,7 +173,7 @@ class AdiabaticModel_(ElectronicModel_):
     ndim_: int
 
     def __init__(self, representation: str = "adiabatic", reference: Any = None):
-        if representation=="diabatic":
+        if representation == "diabatic":
             raise Exception('Adiabatic models can only be run in adiabatic mode')
         ElectronicModel_.__init__(self, representation=representation, reference=reference)
 
@@ -189,8 +189,7 @@ class AdiabaticModel_(ElectronicModel_):
         self.reference, self.hamiltonian = self._compute_basis_states(self.V(X), reference=reference)
         dV = self.dV(X)
 
-        self.derivative_coupling = self._compute_derivative_coupling(self.reference,
-                dV, np.diag(self.hamiltonian))
+        self.derivative_coupling = self._compute_derivative_coupling(self.reference, dV, np.diag(self.hamiltonian))
 
         self.force = self._compute_force(dV, self.reference)
 
@@ -200,7 +199,7 @@ class AdiabaticModel_(ElectronicModel_):
         out.compute(X, couplings=couplings, gradients=gradients, reference=self.reference)
         return out
 
-    def _compute_basis_states(self, V: ArrayLike, reference: Any = None) -> Tuple[ArrayLike,ArrayLike]:
+    def _compute_basis_states(self, V: ArrayLike, reference: Any = None) -> Tuple[ArrayLike, ArrayLike]:
         """Computes coefficient matrix for basis states
         if a diabatic representation is chosen, no transformation takes place
         :param V: potential matrix
@@ -209,16 +208,17 @@ class AdiabaticModel_(ElectronicModel_):
         if self.representation == "adiabatic":
             en, co = np.linalg.eigh(V)
             nst = self.nstates()
-            coeff = co[:,:nst]
+            coeff = co[:, :nst]
             energies = en[:nst]
 
             if reference is not None:
                 try:
                     for mo in range(self.nstates()):
-                        if (np.dot(coeff[:,mo], reference[:,mo]) < 0.0):
-                            coeff[:,mo] *= -1.0
+                        if (np.dot(coeff[:, mo], reference[:, mo]) < 0.0):
+                            coeff[:, mo] *= -1.0
                 except:
-                    raise Exception("Failed to regularize new ElectronicStates from a reference object %s" % (reference))
+                    raise Exception("Failed to regularize new ElectronicStates from a reference object %s" %
+                                    (reference))
             return coeff, np.diag(energies)
         elif self.representation == "diabatic":
             raise Exception("Adiabatic models can only be run in adiabatic mode")
@@ -235,7 +235,7 @@ class AdiabaticModel_(ElectronicModel_):
 
         out = np.zeros([nst, ndim], dtype=np.float64)
         for ist in range(self.nstates()):
-            out[ist,:] += -np.einsum("i,ix->x", coeff[:,ist], half[:,ist,:])
+            out[ist, :] += -np.einsum("i,ix->x", coeff[:, ist], half[:, ist, :])
         return out
 
     def _compute_force_matrix(self, coeff: ArrayLike, dV: ArrayLike) -> ArrayLike:
@@ -256,8 +256,8 @@ class AdiabaticModel_(ElectronicModel_):
                 if abs(dE) < 1.0e-14:
                     dE = np.copysign(1.0e-14, dE)
 
-                out[i,j,:] /= dE
-                out[j,i,:] /= -dE
+                out[i, j, :] /= dE
+                out[j, i, :] /= -dE
 
         return out
 
@@ -266,4 +266,3 @@ class AdiabaticModel_(ElectronicModel_):
 
     def dV(self, X: ArrayLike) -> ArrayLike:
         raise NotImplementedError("Diabatic models must implement the function dV")
-

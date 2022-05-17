@@ -10,6 +10,7 @@ from .trajectory_sh import TrajectorySH
 from typing import Any, List, Dict
 from .typing import ArrayLike
 
+
 class TrajectoryCum(TrajectorySH):
     """
     Trajectory surface hopping using a cumulative approach rather than instantaneous
@@ -19,6 +20,7 @@ class TrajectoryCum(TrajectorySH):
     threshold. Swarmed results should be identical to the traditional variety, but
     should be a bit easier to reproduce since far fewer random numbers are ever needed.
     """
+
     def __init__(self, *args: Any, **kwargs: Any):
         """Constructor (see TrajectorySH constructor)"""
         TrajectorySH.__init__(self, *args, **kwargs)
@@ -29,19 +31,19 @@ class TrajectoryCum(TrajectorySH):
     def snapshot(self) -> Dict:
         """returns loggable data"""
         out = {
-            "time"      : self.time,
-            "position"  : self.position.tolist(),
-            "momentum"  : (self.mass * self.velocity).tolist(),
-            "potential" : self.potential_energy().item(),
-            "kinetic"   : self.kinetic_energy().item(),
-            "energy"    : self.total_energy().item(),
-            "density_matrix" : self.rho.view(np.float64).tolist(),
-            "active"    : int(self.state),
-            "electronics" : self.electronics.as_dict(),
-            "hopping"   : float(self.hopping),
-            "zeta"      : float(self.zeta),
-            "prob_cum"  : float(self.prob_cum)
-            }
+            "time": self.time,
+            "position": self.position.tolist(),
+            "momentum": (self.mass * self.velocity).tolist(),
+            "potential": self.potential_energy().item(),
+            "kinetic": self.kinetic_energy().item(),
+            "energy": self.total_energy().item(),
+            "density_matrix": self.rho.view(np.float64).tolist(),
+            "active": int(self.state),
+            "electronics": self.electronics.as_dict(),
+            "hopping": float(self.hopping),
+            "zeta": float(self.zeta),
+            "prob_cum": float(self.prob_cum)
+        }
         return out
 
     def hopper(self, gkndt: ArrayLike) -> List[Dict]:
@@ -55,7 +57,7 @@ class TrajectoryCum(TrajectorySH):
         accumulated = np.longdouble(self.prob_cum)
         gkdt = np.sum(gkndt)
         accumulated += (accumulated - 1.0) * np.expm1(-gkdt)
-        if accumulated > self.zeta: # then hop
+        if accumulated > self.zeta:  # then hop
             # where to hop
             hop_choice = gkndt / gkdt
 
@@ -66,8 +68,7 @@ class TrajectoryCum(TrajectorySH):
             self.prob_cum = 0.0
             self.zeta = self.draw_new_zeta()
 
-            return [ {"target" : target, "weight" : 1.0, "zeta" : zeta, "prob" : accumulated} ]
+            return [{"target": target, "weight": 1.0, "zeta": zeta, "prob": accumulated}]
 
         self.prob_cum = accumulated
         return []
-

@@ -12,11 +12,14 @@ testdir = os.path.dirname(__file__)
 _refdir = os.path.join(testdir, "ref")
 _checkdir = os.path.join(testdir, "checks")
 
+
 def clean_directory(dirname):
     if os.path.isdir(dirname):
         shutil.rmtree(dirname)
 
+
 class TrajectoryTest(unittest.TestCase):
+
     def test_log_yaml(self):
         refdir = os.path.join(_refdir, "tracer")
         rundir = os.path.join(_checkdir, "tracer")
@@ -24,7 +27,12 @@ class TrajectoryTest(unittest.TestCase):
 
         model = mudslide.models.TullySimpleAvoidedCrossing()
         log = mudslide.YAMLTrace(base_name="test-traj", location=rundir, log_pitch=8)
-        traj = mudslide.TrajectorySH(model, [-3.0], [10.0], 0, dt=4, tracer=log, max_time=80, zeta_list=[0.2, 0.2, 0.9])
+        traj = mudslide.TrajectorySH(model, [-3.0], [10.0],
+                                     0,
+                                     dt=4,
+                                     tracer=log,
+                                     max_time=80,
+                                     zeta_list=[0.2, 0.2, 0.9])
         results = traj.simulate()
 
         main_log = results.main_log
@@ -33,7 +41,7 @@ class TrajectoryTest(unittest.TestCase):
 
         snap_t16 = results[16]
 
-        refs = mudslide.load_log(os.path.join(refdir,"test-traj-0.yaml"))
+        refs = mudslide.load_log(os.path.join(refdir, "test-traj-0.yaml"))
 
         ref_t16 = refs[16]
 
@@ -50,7 +58,12 @@ class TrajectoryTest(unittest.TestCase):
 
         model = mudslide.models.TullySimpleAvoidedCrossing()
         log = mudslide.YAMLTrace(base_name="test-traj", location=rundir, log_pitch=8)
-        traj = mudslide.TrajectorySH(model, [-3.0], [10.0], 0, dt=4, tracer=log, max_time=40, zeta_list=[0.2, 0.2, 0.9])
+        traj = mudslide.TrajectorySH(model, [-3.0], [10.0],
+                                     0,
+                                     dt=4,
+                                     tracer=log,
+                                     max_time=40,
+                                     zeta_list=[0.2, 0.2, 0.9])
         results = traj.simulate()
 
         main_log = results.main_log
@@ -62,7 +75,7 @@ class TrajectoryTest(unittest.TestCase):
         results2 = traj2.simulate()
         snap_t16 = results2[16]
 
-        refs = mudslide.load_log(os.path.join(refdir,"test-traj-0.yaml"))
+        refs = mudslide.load_log(os.path.join(refdir, "test-traj-0.yaml"))
         ref_t16 = refs[16]
 
         for prop in ["position", "momentum", "density_matrix"]:
@@ -72,6 +85,7 @@ class TrajectoryTest(unittest.TestCase):
         for prop in ["potential", "kinetic", "hopping"]:
             with self.subTest(property=prop):
                 self.assertAlmostEqual(snap_t16[prop], ref_t16[prop], places=8)
+
 
 if __name__ == '__main__':
     unittest.main()

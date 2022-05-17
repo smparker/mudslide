@@ -20,6 +20,7 @@ from .typing import ArrayLike, DtypeLike
 from .constants import eVtoHartree, amu_to_au
 from .periodic_table import masses
 
+
 def turbomole_is_installed():
     # needs to have turbodir set
     has_turbodir = "TURBODIR" in os.environ
@@ -30,17 +31,22 @@ def turbomole_is_installed():
 
     return has_turbodir and has_scripts and has_bin
 
+
 class TMModel(ElectronicModel_):
+
     def __init__(
         self,
         turbomole_dir: str,
         states: ArrayLike,
-        sub_dir_stem:str = "traj",
+        sub_dir_stem: str = "traj",
         representation: str = "adiabatic",
         reference: Any = None,
-        expert=False, # when False, will update turbomole parameters for best NAMD performance
-        turbomole_modules = {"gs_energy": "ridft", "gs_grads": "rdgrad", "es_grads": "egrad"}
-    ):
+        expert=False,  # when False, will update turbomole parameters for best NAMD performance
+        turbomole_modules={
+            "gs_energy": "ridft",
+            "gs_grads": "rdgrad",
+            "es_grads": "egrad"
+        }):
         ElectronicModel_.__init__(self, representation=representation, reference=reference)
 
         self.turbomole_dir = turbomole_dir
@@ -53,7 +59,7 @@ class TMModel(ElectronicModel_):
         assert turbomole_is_installed()
 
         self.turbomole_modules = turbomole_modules
-        assert all([ shutil.which(x) is not None for x in self.turbomole_modules.values() ])
+        assert all([shutil.which(x) is not None for x in self.turbomole_modules.values()])
 
         self.turbomole_init()
 
@@ -66,7 +72,14 @@ class TMModel(ElectronicModel_):
     def ndim(self):
         return self.ndim_
 
-    def sdg(self, dg, file=None, show_keyword=False, show_body=False, show_filename_only=False, discard_comments=True, quiet=False):
+    def sdg(self,
+            dg,
+            file=None,
+            show_keyword=False,
+            show_body=False,
+            show_filename_only=False,
+            discard_comments=True,
+            quiet=False):
         sdg_command = "sdg"
         if file is not None:
             sdg_command += " -s {}".format(file)
@@ -103,7 +116,7 @@ class TMModel(ElectronicModel_):
             self.adg("dft", current_dft + [" weight derivatives"], newline=True)
 
         # prefer psuedowavefunction couplings with ETFs
-        sdg_nac = self.sdg("nacme")[6:].strip() # skip past $nacme
+        sdg_nac = self.sdg("nacme")[6:].strip()  # skip past $nacme
         update_nac = False
         if "response" in sdg_nac:
             update_nac = True
@@ -159,11 +172,10 @@ class TMModel(ElectronicModel_):
         if line == "":
             raise ValueError(f"$coord entry not found in file: {self.coord_path}!")
 
-        coordline +=1
+        coordline += 1
         for i, coord_list in enumerate(X):
-            lines[coordline] = "{:26.16e}{:28.16e}{:28.16e}{:>7}\n".format(
-                                  coord_list[0], coord_list[1], coord_list[2], self.atom_order[i]
-                    )
+            lines[coordline] = "{:26.16e}{:28.16e}{:28.16e}{:>7}\n".format(coord_list[0], coord_list[1], coord_list[2],
+                                                                           self.atom_order[i])
             coordline += 1
 
         with open(self.coord_path, "w") as coord_file:
@@ -182,14 +194,14 @@ class TMModel(ElectronicModel_):
         # Now add results to model
         energy = data_dict[self.turbomole_modules["gs_energy"]]["energy"]
         self.energies = [energy]
-        parsed_gradients =[data_dict[self.turbomole_modules["gs_grads"]]["gradient"][0]["gradients"]]
+        parsed_gradients = [data_dict[self.turbomole_modules["gs_grads"]]["gradient"][0]["gradients"]]
 
         # Check for presence of egrad turbomole module
         if "egrad" in self.turbomole_modules.values():
             # egrad updates to energy
             excited_energies = [
-                data_dict["egrad"]["excited_state"][i]["energy"]
-                + energy for i in range(len(data_dict["egrad"]["excited_state"]))
+                data_dict["egrad"]["excited_state"][i]["energy"] + energy
+                for i in range(len(data_dict["egrad"]["excited_state"]))
             ]
             self.energies.extend(excited_energies)
 
@@ -204,7 +216,7 @@ class TMModel(ElectronicModel_):
                 self.derivative_coupling[j][i] = -(self.derivative_coupling[i][j])
 
             # egrad updates to gradients
-            for i in range (len(data_dict["egrad"]["gradient"])):
+            for i in range(len(data_dict["egrad"]["gradient"])):
                 parsed_gradients.extend([data_dict["egrad"]["gradient"][i]["gradients"]])
 
         # Reshape gradients
@@ -228,8 +240,8 @@ class TMModel(ElectronicModel_):
         return self.hamiltonian
 
     def update(self, X: ArrayLike, couplings: Any = None, gradients: Any = None):
-         out = cp.copy(self)
-         out.position = X
-         out.update_coords(X)
-         out.compute(X, couplings=couplings, gradients=gradients, reference=self.reference)
-         return out
+        out = cp.copy(self)
+        out.position = X
+        out.update_coords(X)
+        out.compute(X, couplings=couplings, gradients=gradients, reference=self.reference)
+        return out

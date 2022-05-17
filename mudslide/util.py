@@ -4,6 +4,7 @@
 import os
 import sys
 
+
 def find_unique_name(name: str, location="", always_enumerate: bool = False, ending: str = "") -> str:
     """
     Given an input basename, checks whether a file with the given name already exists.
@@ -23,4 +24,3 @@ def find_unique_name(name: str, location="", always_enumerate: bool = False, end
             return out
     raise Exception("No unique name could be made from base {}.".format(name))
     return ""
-

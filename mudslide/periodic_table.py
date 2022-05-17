@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-
 from __future__ import print_function
 
 import sys
@@ -12,6 +11,7 @@ DEBUG = False
 
 # masses of most common isotopes to 3 decimal points, from
 # http://physics.nist.gov/cgi-bin/Compositions/stand_alone.pl
+# yapf: disable
 masses = {
     'x' : 0.00000,
     'h' : 1.00782503223,
@@ -133,3 +133,4 @@ masses = {
     'ts': 292.20746,
     'og': 294.21392
 }
+# yapf: enable

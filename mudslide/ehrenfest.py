@@ -8,8 +8,10 @@ from .trajectory_sh import TrajectorySH
 from typing import Any
 from .typing import ArrayLike, DtypeLike, ElectronicT
 
+
 class Ehrenfest(TrajectorySH):
     """Ehrenfest dynamics"""
+
     def __init__(self, *args: Any, **kwargs: Any):
         TrajectorySH.__init__(self, *args, **kwargs)
 
@@ -34,4 +36,3 @@ class Ehrenfest(TrajectorySH):
     def surface_hopping(self, last_electronics: ElectronicT, this_electronics: ElectronicT):
         """Ehrenfest never hops"""
         return
-

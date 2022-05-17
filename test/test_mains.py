@@ -11,9 +11,11 @@ import mudslide.surface
 
 testdir = os.path.dirname(__file__)
 
+
 def clean_directory(dirname):
     if os.path.isdir(dirname):
         shutil.rmtree(dirname)
+
 
 def print_problem(problem, file=sys.stdout):
     what = problem["what"]
@@ -26,6 +28,7 @@ def print_problem(problem, file=sys.stdout):
         print("> %s" % (line2.rstrip()), file=file)
     else:
         print(what, file=file)
+
 
 def compare_line_by_line(f1, f2, typespec, tol=1e-3):
     """Compare two files line by line
@@ -40,7 +43,7 @@ def compare_line_by_line(f1, f2, typespec, tol=1e-3):
 
     def compare(x, y, typekey):
         if typekey == "f":
-            return abs(x-y) < tol
+            return abs(x - y) < tol
         elif typekey == "d":
             return x == y
         elif typekey == "s":
@@ -48,17 +51,18 @@ def compare_line_by_line(f1, f2, typespec, tol=1e-3):
         else:
             raise Exception("only float, integer, and string comparisons allowed right now")
 
-    types = { "f" : float, "d" : int, "s" : str }
-    typelist = [ types[x] for x in typespec ]
+    types = {"f": float, "d": int, "s": str}
+    typelist = [types[x] for x in typespec]
 
     failed = False
 
     problems = []
 
     for l1, l2 in zip(f1, f2):
-        if l1[0] == '#' and l2[0] == '#': continue
-        ldata = [ typ(x) for x, typ in zip(l1.split(), typelist) ]
-        rdata = [ typ(x) for x, typ in zip(l2.split(), typelist) ]
+        if l1[0] == '#' and l2[0] == '#':
+            continue
+        ldata = [typ(x) for x, typ in zip(l1.split(), typelist)]
+        rdata = [typ(x) for x, typ in zip(l2.split(), typelist)]
 
         lineproblems = []
         for i in range(len(ldata)):
@@ -66,21 +70,22 @@ def compare_line_by_line(f1, f2, typespec, tol=1e-3):
                 lineproblems.append(i)
 
         if lineproblems:
-            problems.append( { "what" : "incorrect data", "where": lineproblems, "a": l1, "b": l2 } )
+            problems.append({"what": "incorrect data", "where": lineproblems, "a": l1, "b": l2})
 
     try:
-        next(f1) # this should throw
-        problems.append( { "what" : "file1 is longer than file2" } )
+        next(f1)  # this should throw
+        problems.append({"what": "file1 is longer than file2"})
     except StopIteration:
         pass
 
     try:
-        next(f2) # this should throw
-        problems.append( { "what" : "file2 is longer than file1" } )
+        next(f2)  # this should throw
+        problems.append({"what": "file2 is longer than file1"})
     except StopIteration:
         pass
 
     return problems
+
 
 class TrajectoryTest(object):
     samples = 1
@@ -94,8 +99,10 @@ class TrajectoryTest(object):
     electronic = "exp"
     log = "memory"
 
-    def capture_traj_problems(self, k, tol, extra_options = []):
-        options = "-s {0:d} -m {1:s} -k {2:f} {2:f} -x {3:f} --dt {4:f} -n {5:d} -z {6:d} -o {7:s} -j {8:d} -a {9:s} --electronic {10:s} --log {11:s}".format(self.samples, self.model, k, self.x, self.dt, self.n, self.seed, self.o, self.j, self.method, self.electronic, self.log).split()
+    def capture_traj_problems(self, k, tol, extra_options=[]):
+        options = "-s {0:d} -m {1:s} -k {2:f} {2:f} -x {3:f} --dt {4:f} -n {5:d} -z {6:d} -o {7:s} -j {8:d} -a {9:s} --electronic {10:s} --log {11:s}".format(
+            self.samples, self.model, k, self.x, self.dt, self.n, self.seed, self.o, self.j, self.method,
+            self.electronic, self.log).split()
         options += extra_options
 
         checkdir = os.path.join(testdir, "checks", self.method)
@@ -108,7 +115,7 @@ class TrajectoryTest(object):
             mudslide.__main__.main(options, f)
 
         if self.o == "single":
-            form = "f" * (6 + 2*self.nstate) + "df"
+            form = "f" * (6 + 2 * self.nstate) + "df"
         elif self.o == "averaged":
             form = "ffff"
         reffile = os.path.join(testdir, "ref", self.method, "{:s}_k{:d}.ref".format(self.model, k))
@@ -118,6 +125,7 @@ class TrajectoryTest(object):
                 print_problem(p)
 
         return problems
+
 
 class TestTSAC(unittest.TestCase, TrajectoryTest):
     """Test Suite for tully simple avoided crossing"""
@@ -130,6 +138,7 @@ class TestTSAC(unittest.TestCase, TrajectoryTest):
                 probs = self.capture_traj_problems(k, 1e-3)
                 self.assertEqual(len(probs), 0)
 
+
 class TestDual(unittest.TestCase, TrajectoryTest):
     """Test Suite for tully dual avoided crossing"""
     model = "dual"
@@ -141,6 +150,7 @@ class TestDual(unittest.TestCase, TrajectoryTest):
                 probs = self.capture_traj_problems(k, 1e-3)
                 self.assertEqual(len(probs), 0)
 
+
 class TestExtended(unittest.TestCase, TrajectoryTest):
     """Test Suite for tully dual avoided crossing"""
     model = "extended"
@@ -151,6 +161,7 @@ class TestExtended(unittest.TestCase, TrajectoryTest):
             with self.subTest(k=k):
                 probs = self.capture_traj_problems(k, 1e-3)
                 self.assertEqual(len(probs), 0)
+
 
 class TestTSACc(unittest.TestCase, TrajectoryTest):
     """Test Suite for tully simple avoided crossing with cumulative hopping"""
@@ -166,6 +177,7 @@ class TestTSACc(unittest.TestCase, TrajectoryTest):
                 probs = self.capture_traj_problems(k, 1e-3)
                 self.assertEqual(len(probs), 0)
 
+
 class TestEhrenfest(unittest.TestCase, TrajectoryTest):
     """Test suite for ehrenfest trajectory"""
     model = "simple"
@@ -177,6 +189,7 @@ class TestEhrenfest(unittest.TestCase, TrajectoryTest):
         probs = self.capture_traj_problems(k, 1e-3)
         self.assertEqual(len(probs), 0)
 
+
 class TestES(unittest.TestCase, TrajectoryTest):
     """Test Suite for tully simple avoided crossing with cumulative hopping"""
     model = "simple"
@@ -185,7 +198,7 @@ class TestES(unittest.TestCase, TrajectoryTest):
     seed = 84329
     method = "even-sampling"
     o = "averaged"
-    log="yaml"
+    log = "yaml"
 
     def test_es_tsac(self):
         for k in [10, 20]:
@@ -193,12 +206,13 @@ class TestES(unittest.TestCase, TrajectoryTest):
                 probs = self.capture_traj_problems(k, 1e-3, extra_options=["--sample-stack", "5"])
                 self.assertEqual(len(probs), 0)
 
+
 class TestSurface(unittest.TestCase):
     """Test Suite for surface writer"""
 
     def test_surface(self):
         tol = 1e-3
-        for m in [ "simple", "extended", "dual", "super", "shin-metiu", "modelx", "models", "vibronic" ]:
+        for m in ["simple", "extended", "dual", "super", "shin-metiu", "modelx", "models", "vibronic"]:
             with self.subTest(m=m):
                 if m in ["vibronic"]:
                     options = "-m {:s} --x0 0 0 0 0 0 -s 2 -r -5 5".format(m).split()
@@ -219,6 +233,7 @@ class TestSurface(unittest.TestCase):
                     for p in problems:
                         print_problem(p)
                 self.assertEqual(len(problems), 0)
+
 
 if __name__ == '__main__':
     unittest.main()

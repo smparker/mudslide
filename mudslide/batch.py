@@ -17,6 +17,7 @@ from .typing import ModelT, TrajGenT, ArrayLike
 
 logger = logging.getLogger("mudslide")
 
+
 class TrajGenConst(object):
     """Canned class whose call function acts as a generator for static initial conditions
 
@@ -25,6 +26,7 @@ class TrajGenConst(object):
     :param initial_state: initial state specification should be either an integer or "ground"
     :param seed: entropy seed for random generator (unused)
     """
+
     def __init__(self, position: ArrayLike, momentum: ArrayLike, initial_state: Any, seed: Any = None):
         self.position = position
         self.momentum = momentum
@@ -38,11 +40,19 @@ class TrajGenConst(object):
         """
         seedseqs = self.seed_sequence.spawn(nsamples)
         for i in range(nsamples):
-            yield (self.position, self.momentum, self.initial_state, { "seed_sequence" : seedseqs[i] })
+            yield (self.position, self.momentum, self.initial_state, {"seed_sequence": seedseqs[i]})
+
 
 class TrajGenNormal(object):
     """Canned class whose call function acts as a generator for normally distributed initial conditions"""
-    def __init__(self, position: ArrayLike, momentum: ArrayLike, initial_state: Any, sigma: ArrayLike, seed: Any = None, seed_traj: Any = None):
+
+    def __init__(self,
+                 position: ArrayLike,
+                 momentum: ArrayLike,
+                 initial_state: Any,
+                 sigma: ArrayLike,
+                 seed: Any = None,
+                 seed_traj: Any = None):
         """
         :param position: center of normal distribution for position
         :param momentum: center of normal distribution for momentum
@@ -75,14 +85,22 @@ class TrajGenNormal(object):
             x = self.random_state.normal(self.position, self.position_deviation)
             k = self.random_state.normal(self.momentum, self.momentum_deviation)
 
-            if (self.kskip(k)): continue
-            yield (x, k, self.initial_state, { "seed_sequence" : seedseqs[i] })
+            if (self.kskip(k)):
+                continue
+            yield (x, k, self.initial_state, {"seed_sequence": seedseqs[i]})
+
 
 class TrajGenBoltzmann(object):
     """Generate momenta randomly according to the Boltzmann distribution"""
-    def __init__(self, position: ArrayLike, mass: ArrayLike, temperature: float,
-            initial_state: Any, scale: bool = True,
-            seed: Any = None, momentum_seed: Any = None):
+
+    def __init__(self,
+                 position: ArrayLike,
+                 mass: ArrayLike,
+                 temperature: float,
+                 initial_state: Any,
+                 scale: bool = True,
+                 seed: Any = None,
+                 momentum_seed: Any = None):
         """
         :param position: initial positions
         :param mass: array of particle masses
@@ -111,12 +129,12 @@ class TrajGenBoltzmann(object):
             x = self.position
             p = self.random_state.normal(0.0, self.sigma)
             if self.scale:
-                avg_KE = 0.5 * np.dot(p**2, np.reciprocal(self.mass))/x.size
+                avg_KE = 0.5 * np.dot(p**2, np.reciprocal(self.mass)) / x.size
                 kbT2 = 0.5 * self.kt
-                scal = np.sqrt(kbT2/avg_KE)
+                scal = np.sqrt(kbT2 / avg_KE)
                 p *= scal
 
-            yield (x, p, self.initial_state, { "seed_sequence" : seedseqs[i] })
+            yield (x, p, self.initial_state, {"seed_sequence": seedseqs[i]})
 
 
 class BatchedTraj(object):
@@ -126,6 +144,7 @@ class BatchedTraj(object):
     that return the Hamiltonian at position x, gradient of the Hamiltonian at position x
     number of electronic states, and dimension of nuclear space, respectively.
     """
+
     def __init__(self, model: ModelT, traj_gen: TrajGenT, trajectory_type: Any, tracemanager: Any = None, **inp: Any):
         """Constructor requires model and options input as kwargs
         :param model: object used to describe the model system
@@ -154,14 +173,14 @@ class BatchedTraj(object):
         self.options = {}
 
         # time parameters
-        self.options["initial_time"]  = inp.get("initial_time", 0.0)
+        self.options["initial_time"] = inp.get("initial_time", 0.0)
 
         # statistical parameters
-        self.options["samples"]       = inp.get("samples", 2000)
-        self.options["dt"]            = inp.get("dt", 20.0) # default to roughly half a femtosecond
+        self.options["samples"] = inp.get("samples", 2000)
+        self.options["dt"] = inp.get("dt", 20.0)  # default to roughly half a femtosecond
 
-        self.options["nprocs"]        = inp.get("nprocs", 1)
-        self.options["outcome_type"]  = inp.get("outcome_type", "state")
+        self.options["nprocs"] = inp.get("nprocs", 1)
+        self.options["outcome_type"] = inp.get("outcome_type", "state")
 
         # everything else just gets copied over
         for x in inp:
@@ -180,7 +199,6 @@ class BatchedTraj(object):
         if nprocs > 1:
             logger.warning('nprocs {} specified, but parallelism is not currently handled'.format(nprocs))
 
-
         traj_queue: Any = queue.Queue()
         results_queue: Any = queue.Queue()
 
@@ -193,8 +211,13 @@ class BatchedTraj(object):
         for x0, p0, initial, params in self.traj_gen(nsamples):
             traj_input = self.options
             traj_input.update(params)
-            traj = self.trajectory(self.model, x0, p0, initial, self.tracemanager.spawn_tracer(),
-                    queue=traj_queue, **traj_input)
+            traj = self.trajectory(self.model,
+                                   x0,
+                                   p0,
+                                   initial,
+                                   self.tracemanager.spawn_tracer(),
+                                   queue=traj_queue,
+                                   **traj_input)
             traj_queue.put(traj)
 
         while not traj_queue.empty():
@@ -213,6 +236,7 @@ class BatchedTraj(object):
         self.tracemanager.outcomes = self.tracemanager.outcome()
         return self.tracemanager
 
+
 def traj_runner(traj_queue: Any, results_queue: Any) -> None:
     """Runner for computing jobs from queue
 
@@ -225,4 +249,3 @@ def traj_runner(traj_queue: Any, results_queue: Any) -> None:
             results = traj.simulate()
             results_queue.put(results)
         traj_queue.task_done()
-

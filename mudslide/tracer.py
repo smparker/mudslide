@@ -17,7 +17,9 @@ from .util import find_unique_name
 
 import yaml
 
+
 class Trace_(object):
+
     def __init__(self, weight: float = 1.0):
         self.weight: float = weight
 
@@ -45,7 +47,7 @@ class Trace_(object):
         for k, v in snap_dict.items():
             if isinstance(v, list):
                 o = np.array(v)
-                if k in [ "density_matrix" ]:
+                if k in ["density_matrix"]:
                     o = o.view(dtype=np.complex128)
                 out[k] = o
             elif isinstance(v, dict):
@@ -59,14 +61,15 @@ class Trace_(object):
 
     def print(self, file: Any = sys.stdout) -> None:
         nst = len(self[0]["density_matrix"])
-        headerlist =  [ "%12s" % x for x in [ "time", "x", "p", "V", "T", "E" ] ]
-        headerlist += [ "%12s" % x for x in [ "rho_{%d,%d}" % (i,i) for i in range(nst) ] ]
-        headerlist += [ "%12s" % x for x in [ "H_{%d,%d}" % (i,i) for i in range(nst) ] ]
-        headerlist += [ "%12s" % "active" ]
-        headerlist += [ "%12s" % "hopping" ]
+        headerlist = ["%12s" % x for x in ["time", "x", "p", "V", "T", "E"]]
+        headerlist += ["%12s" % x for x in ["rho_{%d,%d}" % (i, i) for i in range(nst)]]
+        headerlist += ["%12s" % x for x in ["H_{%d,%d}" % (i, i) for i in range(nst)]]
+        headerlist += ["%12s" % "active"]
+        headerlist += ["%12s" % "hopping"]
         print("#" + " ".join(headerlist), file=file)
         for i in self:
-            line = " {time:12.6f} {position[0]:12.6f} {momentum[0]:12.6f} {potential:12.6f} {kinetic:12.6f} {energy:12.6f} ".format(**i)
+            line = " {time:12.6f} {position[0]:12.6f} {momentum[0]:12.6f} {potential:12.6f} {kinetic:12.6f} {energy:12.6f} ".format(
+                **i)
             line += " ".join(["%12.6f" % x for x in np.real(np.diag(i["density_matrix"]))])
             line += " " + " ".join(["%12.6f" % x for x in np.real(np.diag(i["electronics"]["hamiltonian"]))])
             line += " {active:12d} {hopping:12e}".format(**i)
@@ -91,8 +94,10 @@ class Trace_(object):
 
         return out
 
+
 class InMemoryTrace(Trace_):
     """Collect results from a single trajectory"""
+
     def __init__(self, weight: float = 1.0):
         self.data: List = []
         self.hops: List = []
@@ -103,13 +108,7 @@ class InMemoryTrace(Trace_):
         self.data.append(trajectory_snapshot)
 
     def hop(self, time: float, hop_from: int, hop_to: int, zeta: float, prob: float) -> None:
-        self.hops.append({
-            "time" : time,
-            "from" : hop_from,
-            "to"   : hop_to,
-            "zeta" : zeta,
-            "prob" : prob
-            })
+        self.hops.append({"time": time, "from": hop_from, "to": hop_to, "zeta": zeta, "prob": prob})
 
     def record_event(self, event_dict):
         self.hops.append(event_dict)
@@ -125,16 +124,13 @@ class InMemoryTrace(Trace_):
         return len(self.data)
 
     def as_dict(self) -> Dict:
-        return {
-                "hops" : self.hops,
-                "data" : self.data,
-                "weight" : self.weight
-                }
+        return {"hops": self.hops, "data": self.data, "weight": self.weight}
+
 
 class YAMLTrace(Trace_):
     """Collect results from a single trajectory and write to yaml files"""
-    def __init__(self, base_name: str = "traj", weight: float = 1.0,
-            log_pitch = 512, location="", load_main_log=None):
+
+    def __init__(self, base_name: str = "traj", weight: float = 1.0, log_pitch=512, location="", load_main_log=None):
 
         self.weight: float = weight
         self.log_pitch = log_pitch
@@ -144,21 +140,24 @@ class YAMLTrace(Trace_):
         if not os.path.isdir(self.location) and self.location != "":
             os.makedirs(self.location, exist_ok=True)
 
-        if load_main_log is None: # initialize
+        if load_main_log is None:  # initialize
             self.logsize = 0
             self.nlogs = 1
             self.active_logsize = 0
             self.active_logfile = ""
-            self.logfiles = [ ]
+            self.logfiles = []
 
-            self.unique_name = find_unique_name(base_name, location=self.location, always_enumerate = True, ending=".yaml")
+            self.unique_name = find_unique_name(base_name,
+                                                location=self.location,
+                                                always_enumerate=True,
+                                                ending=".yaml")
 
             # set log names
             self.main_log = self.unique_name + ".yaml"
             self.active_logfile = self.unique_name + "-log_0.yaml"
             self.event_log = self.unique_name + "-events.yaml"
 
-            self.logfiles = [ self.active_logfile ]
+            self.logfiles = [self.active_logfile]
 
             # create empty files
             open(os.path.join(self.location, self.main_log), "x").close()
@@ -175,7 +174,9 @@ class YAMLTrace(Trace_):
             self.logfiles = logdata["logfiles"]
             self.main_log = self.unique_name + ".yaml"
             if self.main_log != os.path.basename(load_main_log):
-                raise Exception("It looks like the log file {} was renamed. This is undefined behavior for now!".format(load_main_log))
+                raise Exception(
+                    "It looks like the log file {} was renamed. This is undefined behavior for now!".format(
+                        load_main_log))
             self.active_logfile = self.logfiles[-1]
             self.nlogs = logdata["nlogs"]
             self.log_pitch = logdata["log_pitch"]
@@ -186,25 +187,25 @@ class YAMLTrace(Trace_):
             with open(os.path.join(self.location, self.active_logfile), "r") as f:
                 activelog = yaml.safe_load(f)
                 self.active_logsize = len(activelog)
-            self.logsize = self.log_pitch * (self.nlogs-1) + self.active_logsize
+            self.logsize = self.log_pitch * (self.nlogs - 1) + self.active_logsize
 
     def files(self, absolute_path=True):
-        rel_files = self.logfiles + [ self.main_log, self.event_log ]
+        rel_files = self.logfiles + [self.main_log, self.event_log]
         if absolute_path:
-            return [ os.path.join(self.location, x) for x in rel_files ]
+            return [os.path.join(self.location, x) for x in rel_files]
         else:
             return rel_files
 
     def write_main_log(self):
         """Writes main log file, which points to other files for logging information"""
         out = {
-            "name" : self.unique_name,
-            "logfiles" : self.logfiles,
-            "nlogs" : self.nlogs,
-            "log_pitch" : self.log_pitch,
-            "event_log" : self.event_log,
-            "weight" : self.weight
-            }
+            "name": self.unique_name,
+            "logfiles": self.logfiles,
+            "nlogs": self.nlogs,
+            "log_pitch": self.log_pitch,
+            "event_log": self.event_log,
+            "weight": self.weight
+        }
 
         with open(os.path.join(self.location, self.main_log), "w") as f:
             yaml.safe_dump(out, f)
@@ -214,7 +215,7 @@ class YAMLTrace(Trace_):
         target_log = self.logsize // self.log_pitch
         isnap = self.logsize + 1
 
-        if target_log != (self.nlogs - 1): # for zero based index, target_log == nlogs means we're out of logs
+        if target_log != (self.nlogs - 1):  # for zero based index, target_log == nlogs means we're out of logs
             self.active_logfile = "{}-log_{:d}.yaml".format(self.unique_name, self.nlogs)
             self.logfiles.append(self.active_logfile)
             self.nlogs += 1
@@ -226,14 +227,7 @@ class YAMLTrace(Trace_):
         self.logsize += 1
 
     def hop(self, time: float, hop_from: int, hop_to: int, zeta: float, prob: float) -> None:
-        hop_data = {
-            "event": "hop",
-            "time" : time,
-            "from" : hop_from,
-            "to"   : hop_to,
-            "zeta" : zeta,
-            "prob" : prob
-            }
+        hop_data = {"event": "hop", "time": time, "from": hop_from, "to": hop_to, "zeta": zeta, "prob": prob}
         self.record_event(hop_data)
 
     def record_event(self, event_dict):
@@ -241,13 +235,16 @@ class YAMLTrace(Trace_):
             yaml.safe_dump([event_dict], f, explicit_start=False)
 
     def clone(self):
-        out = YAMLTrace(base_name=self.base_name, weight=float(self.weight), location=self.location, log_pitch=self.log_pitch)
+        out = YAMLTrace(base_name=self.base_name,
+                        weight=float(self.weight),
+                        location=self.location,
+                        log_pitch=self.log_pitch)
 
         out.logsize = self.logsize
         out.nlogs = self.nlogs
         out.active_logsize = self.active_logsize
 
-        out.logfiles = [ "{}-log_{}.yaml".format(out.unique_name, i) for i in range(out.nlogs) ]
+        out.logfiles = ["{}-log_{}.yaml".format(out.unique_name, i) for i in range(out.nlogs)]
         for selflog, outlog in zip(self.logfiles, out.logfiles):
             shutil.copy(os.path.join(self.location, selflog), os.path.join(self.location, outlog))
         out.active_logfile = out.logfiles[-1]
@@ -286,21 +283,21 @@ class YAMLTrace(Trace_):
         with open(os.path.join(self.location, self.main_log), "r") as f:
             info = yaml.safe_load(f)
 
-            return {
-                    "hops" : info["hops"],
-                    "data" : [ x for x in self ],
-                    "weight" : self.weight
-                    }
+            return {"hops": info["hops"], "data": [x for x in self], "weight": self.weight}
+
 
 def load_log(main_log_name):
     # assuming online yaml logs for now
     out = YAMLTrace(load_main_log=main_log_name)
     return out
 
+
 DefaultTrace = InMemoryTrace
+
 
 class TraceManager(object):
     """Manage the collection of observables from a set of trajectories"""
+
     def __init__(self, TraceType=InMemoryTrace, trace_args=[], trace_kwargs={}) -> None:
         self.TraceType = TraceType
 
@@ -329,8 +326,8 @@ class TraceManager(object):
         return self.traces[i]
 
     def outcome(self) -> ArrayLike:
-        weight_norm = sum( (t.weight for t in self.traces) )
-        outcome = sum((t.weight * t.outcome() for t in self.traces))/weight_norm
+        weight_norm = sum((t.weight for t in self.traces))
+        outcome = sum((t.weight * t.outcome() for t in self.traces)) / weight_norm
         return outcome
 
     def counts(self) -> ArrayLike:
@@ -343,8 +340,8 @@ class TraceManager(object):
         print("------------------------------------", file=file)
         print("# of trajectories: {}".format(len(self.traces)), file=file)
 
-        nhops = [ len(t.hops) for t in self.traces ]
-        hop_stats = [ np.sum( (t.weight for t in self.traces if len(t.hops)==i) )/norm for i in range(max(nhops)+1) ]
+        nhops = [len(t.hops) for t in self.traces]
+        hop_stats = [np.sum((t.weight for t in self.traces if len(t.hops) == i)) / norm for i in range(max(nhops) + 1)]
         print("{:5s} {:16s}".format("nhops", "percentage"), file=file)
         for i, w in enumerate(hop_stats):
             print("{:5d} {:16.12f}".format(i, w), file=file)
@@ -353,18 +350,14 @@ class TraceManager(object):
             print(file=file)
             print("{:>6s} {:>16s} {:>6s} {:>12s}".format("trace", "runtime", "nhops", "weight"), file=file)
             for i, t in enumerate(self.traces):
-                print("{:6d} {:16.4f} {:6d} {:12.6f}".format(i, t.data[-1]["time"], len(t.hops), t.weight/norm), file=file)
+                print("{:6d} {:16.4f} {:6d} {:12.6f}".format(i, t.data[-1]["time"], len(t.hops), t.weight / norm),
+                      file=file)
 
     def as_dict(self) -> Dict:
-        out = {
-                "hops" : [],
-                "data" : [],
-                "weight" : []
-            }
+        out = {"hops": [], "data": [], "weight": []}
         for x in self.traces:
             out["hops"].append(x.as_dict()["hops"])
             out["data"].append(x.as_dict()["data"])
             out["weight"].append(x.as_dict()["weight"])
 
         return out
-
