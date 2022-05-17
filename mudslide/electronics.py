@@ -100,8 +100,6 @@ class DiabaticModel_(ElectronicModel_):
         out.compute(X, couplings=couplings, gradients=gradients, reference=self.reference)
         return out
 
-
-
     def _compute_basis_states(self, V: ArrayLike, reference: Any = None) -> Tuple[ArrayLike,ArrayLike]:
         """Computes coefficient matrix for basis states
         if a diabatic representation is chosen, no transformation takes place
