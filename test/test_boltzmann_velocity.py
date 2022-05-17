@@ -1,19 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""Unit testing for Turbomole_class"""
+"""Unit testing for boltzmann function"""
 
 import numpy as np
-import os
-import shutil
 import unittest
-import sys
-from pathlib import Path
-import mudslide
-import yaml
-
-from mudslide import TMModel
-from mudslide.tracer import YAMLTrace
 from mudslide.math import boltzmann_velocities
 
 class TrajectoryTest(unittest.TestCase):
