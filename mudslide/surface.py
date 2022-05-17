@@ -8,7 +8,7 @@ import sys
 import argparse
 import numpy as np
 
-from .models import models
+from .models import scattering_models as models
 
 from typing import Any, List
 from .typing import ArrayLike

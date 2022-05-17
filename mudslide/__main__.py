@@ -14,7 +14,7 @@ from .even_sampling import EvenSamplingTrajectory
 from .ehrenfest import Ehrenfest
 from .batch import TrajGenConst, TrajGenNormal, BatchedTraj
 from .tracer import InMemoryTrace, YAMLTrace, TraceManager
-from .models import models
+from .models import scattering_models as models
 
 import argparse as ap
 

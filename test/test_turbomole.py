@@ -12,7 +12,7 @@ from pathlib import Path
 import mudslide
 import yaml
 
-from mudslide import TMModel
+from mudslide.models import TMModel
 from mudslide.tracer import YAMLTrace
 
 testdir = os.path.dirname(__file__)
