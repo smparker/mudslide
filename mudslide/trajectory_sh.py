@@ -36,16 +36,13 @@ class TrajectorySH(object):
         if "last_velocity" in options:
             self.last_velocity[:] = options["last_velocity"]
         if np.isscalar(rho0):
-            if rho0 == "ground":
-                self.rho = np.zeros([model.nstates(),model.nstates()], dtype=np.complex128)
-                self.rho[0,0] = 1.0
-                self.state = 0
-            elif rho0 == "first_excited":
-                self.rho = np.zeros([model.nstates(),model.nstates()], dtype=np.complex128)
-                self.rho[1,1] = 1.0
-                self.state = 1
-            else:
-                Exception("Unrecognized initial state option")
+            try:
+                state = int(rho0)
+                self.rho = np.zeros([model.nstates(), model.nstates()], dtype=np.complex128)
+                self.rho[state, state] = 1.0
+                self.state = state
+            except:
+                raise Exception("Unrecognized initial state option")
         else:
             try:
                 self.rho = np.copy(rho0)
@@ -73,6 +70,7 @@ class TrajectorySH(object):
         self.seed_sequence = ss if isinstance(ss, np.random.SeedSequence) else np.random.SeedSequence(ss)
         self.random_state = np.random.default_rng(self.seed_sequence)
 
+
         self.electronics = options.get("electronics", None)
         self.hopping = 0.0
 
@@ -82,7 +80,7 @@ class TrajectorySH(object):
 
         self.weight = float(options.get("weight", 1.0))
 
-        self.restart = options.get("restart", False)
+        self.restarting = options.get("restarting", False)
         self.force_quit = False
 
         self.hopping_probability = options.get("hopping_probability", "tully")
@@ -91,6 +89,35 @@ class TrajectorySH(object):
 
         self.zeta_list = list(options.get("zeta_list", []))
         self.zeta = 0.0
+
+    @classmethod
+    def restart(cls, model, log, **options) -> 'TrajectorySH':
+        last_snap = log[-1]
+        penultimate_snap = log[-2]
+
+        x = last_snap["position"]
+        p = last_snap["momentum"]
+        last_velocity = penultimate_snap["momentum"] / model.mass
+        t0 = last_snap["time"]
+        dt = t0 - penultimate_snap["time"]
+        k = last_snap["active"]
+        rho = last_snap["density_matrix"]
+        weight = log.weight
+        previous_steps = len(log)
+
+        # use inferred data if available, but let kwargs override
+        for key, val in [ ["dt", dt] ]:
+            if key not in options:
+                options[key] = val
+
+        return cls(model, x, p, rho,
+                tracer=log,
+                state0=k, t0=t0,
+                last_velocity=last_velocity,
+                weight=weight,
+                previous_steps=previous_steps,
+                restarting=True,
+                **options)
 
     def update_weight(self, weight: float) -> None:
         """Update weight held by trajectory and by trace"""
@@ -124,6 +151,7 @@ class TrajectorySH(object):
         :return: uniform random number between 0 and 1
         """
         return self.random_state.uniform()
+
 
     def currently_interacting(self) -> bool:
         """Determines whether trajectory is currently inside an interaction region
@@ -428,17 +456,21 @@ class TrajectorySH(object):
         self.last_position = self.position
         self.position += self.velocity * self.dt + 0.5 * acceleration * self.dt * self.dt
 
+
     def advance_velocity(self, last_electronics: ElectronicT, this_electronics: ElectronicT) -> None:
         """
         Move classical velocity forward one step
 
         :param electronics: ElectronicStates from current step
         """
+
+
         last_acceleration = self.force(last_electronics) / self.mass
         this_acceleration = self.force(this_electronics) / self.mass
 
         self.last_velocity = self.velocity
         self.velocity += 0.5 * (last_acceleration + this_acceleration) * self.dt
+
 
     def surface_hopping(self, last_electronics: ElectronicT, this_electronics: ElectronicT):
         """Compute probability of hopping, generate random number, and perform hops
@@ -520,10 +552,11 @@ class TrajectorySH(object):
         """
         last_electronics = None
 
-        if not self.restart:
+        if self.electronics is None:
             self.electronics = self.model.update(self.position)
 
-        self.trace()
+        if not self.restarting:
+            self.trace()
 
         # propagation
         while (True):

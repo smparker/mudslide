@@ -14,7 +14,7 @@ from .even_sampling import EvenSamplingTrajectory
 from .ehrenfest import Ehrenfest
 from .batch import TrajGenConst, TrajGenNormal, BatchedTraj
 from .tracer import InMemoryTrace, YAMLTrace, TraceManager
-from .models import models
+from .models import scattering_models as models
 
 import argparse as ap
 
@@ -54,6 +54,7 @@ def main(argv = None, file=sys.stdout) -> None:
     parser.add_argument('-O', '--outfile', default="sh.pickle", type=str, help="name of pickled file to produce (%(default)s)")
     parser.add_argument('-z', '--seed', default=None, type=int, help="random seed (None)")
     parser.add_argument("--log", choices=["memory", "yaml"], default="memory", help="how to store trajectory data")
+    parser.add_argument('--logdir', default="", type=str, help="directory to put log results (%(default)s)")
     parser.add_argument('--published', dest="published", action="store_true", help="override ranges to use those found in relevant papers (%(default)s)")
 
     args = parser.parse_args(argv)
@@ -86,6 +87,9 @@ def main(argv = None, file=sys.stdout) -> None:
     trajectory_type = methods[args.method]
 
     trace_type = { "memory" : InMemoryTrace, "yaml" : YAMLTrace }[args.log]
+    trace_options = {}
+    if args.log == "yaml":
+        trace_options["location"] = args.logdir
 
     all_results = []
 
@@ -99,9 +103,9 @@ def main(argv = None, file=sys.stdout) -> None:
     for k in kpoints:
         traj_gen: Any = None
         if args.ksampling == "none":
-            traj_gen = TrajGenConst(args.position, k, "ground", seed=args.seed)
+            traj_gen = TrajGenConst(args.position, k, 0, seed=args.seed)
         elif args.ksampling == "normal":
-            traj_gen = TrajGenNormal(args.position, k, "ground", sigma=args.normal/k, seed = args.seed)
+            traj_gen = TrajGenNormal(args.position, k, 0, sigma=args.normal/k, seed = args.seed)
 
         dt = (args.dt / k) if args.scale_dt else args.dt
 
@@ -113,7 +117,8 @@ def main(argv = None, file=sys.stdout) -> None:
                            nprocs = args.nprocs,
                            dt = dt,
                            bounds = [ -abs(args.bounds), abs(args.bounds) ],
-                           tracemanager = TraceManager(TraceType=trace_type),
+                           tracemanager = TraceManager(TraceType=trace_type,
+                               trace_kwargs=trace_options),
                            trace_every = args.every,
                            spawn_stack = args.sample_stack,
                            electronic_integration=args.electronic,

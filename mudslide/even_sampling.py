@@ -154,14 +154,13 @@ class EvenSamplingTrajectory(TrajectoryCum):
                 queue = self.queue,
                 last_velocity = self.last_velocity,
                 state0 = self.state,
-                t0 = self.time+self.dt, # will restart at the next step
-                previous_steps = self.nsteps+1, # will restart at the next step
+                t0 = self.time+self.dt, # will start at the next step
+                previous_steps = self.nsteps+1, # will start at the next step
                 trace_every = self.trace_every,
                 dt = self.dt,
                 outcome_type = self.outcome_type,
                 seed_sequence = self.seed_sequence.spawn(1)[0],
                 electronics = self.electronics,
-                restart = True,
                 duration = self.duration,
                 spawn_stack = spawn_stack)
         return out

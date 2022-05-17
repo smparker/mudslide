@@ -43,6 +43,7 @@ class ElectronicModel_(object):
         """
         raise NotImplementedError("ElectronicModels need a compute function")
 
+
     def update(self, X: ArrayLike, couplings: Any = None, gradients: Any = None) -> 'ElectronicModel_':
         """
         Convenience function that copies the present object, updates the position,
@@ -64,6 +65,7 @@ class ElectronicModel_(object):
             }
         return out
 
+        
 class DiabaticModel_(ElectronicModel_):
     '''
     Base class to handle model problems given in
@@ -155,12 +157,12 @@ class DiabaticModel_(ElectronicModel_):
 
         return out
 
+
     def V(self, X: ArrayLike) -> ArrayLike:
         raise NotImplementedError("Diabatic models must implement the function V")
         
     def dV(self, X: ArrayLike) -> ArrayLike:
         raise NotImplementedError("Diabatic models must implement the function dV")
-
 
 class AdiabaticModel_(ElectronicModel_):
     '''

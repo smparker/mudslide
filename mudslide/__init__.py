@@ -10,6 +10,7 @@ from .cumulative_sh import *
 from .even_sampling import *
 from .ehrenfest import *
 from .batch import *
+from .tracer import *
 
 from . import models
-from .import math
+from . import math
