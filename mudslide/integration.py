@@ -14,7 +14,7 @@ def clenshaw_curtis(n: int, a: float = -1.0, b: float = 1.0) -> Tuple[ArrayLike,
     Computes the points and weights for a Clenshaw-Curtis integration
     from a to b. In other words, for the approximation to the integral
 
-    \int_a^b f(x) dx \approx \sum_{i=0}^{n} w_i f(x_i)
+    \\int_a^b f(x) dx \\approx \\sum_{i=0}^{n} w_i f(x_i)
 
     with the Clenshaw-Curtis quadrature, this function returns the
     positions x_i and the weights w_i.
@@ -63,7 +63,7 @@ def midpoint(n: int, a: float = -1.0, b: float = 1.0) -> Tuple[ArrayLike, ArrayL
     Returns the points and weights for a midpoint integration
     from a to b. In other words, for the approximation to the integral
 
-    \int_a^b f(x) dx \approx \frac{b-a}{n} \sum_{i=0}^n f((x_0 + x_1)/2)
+    \\int_a^b f(x) dx \\approx \\frac{b-a}{n} \\sum_{i=0}^n f((x_0 + x_1)/2)
     """
     assert b > a and n > 1
 
@@ -78,7 +78,7 @@ def trapezoid(n: int, a: float = -1.0, b: float = 1.0) -> Tuple[ArrayLike, Array
     Returns the points and weights for a trapezoid integration
     from a to b. In other words, for the approximation to the integral
 
-    \int_a^b f(x) dx \approx \frac{b-a}{n} \sum_{i=0}^n f((x_0 + x_1)/2)
+    \\int_a^b f(x) dx \\approx \\frac{b-a}{n} \\sum_{i=0}^n f((x_0 + x_1)/2)
     """
     assert b > a and n > 1
 
@@ -97,7 +97,7 @@ def simpson(n: int, a: float = -1.0, b: float = 1.0) -> Tuple[ArrayLike, ArrayLi
     Returns the points and weights for a simpson rule integration
     from a to b. In other words, for the approximation to the integral
 
-    \int_a^b f(x) dx \approx \frac{b-a}{n} \sum_{i=0}^n f((x_0 + x_1)/2)
+    \\int_a^b f(x) dx \\approx \\frac{b-a}{n} \\sum_{i=0}^n f((x_0 + x_1)/2)
     """
     assert b > a and n > 1
 
