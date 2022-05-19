@@ -141,12 +141,12 @@ the yield statement should be something like
 See `TrajGenConst` for an example.
 
 ## Surfaces
-Scans of the surfaces can be printed using the `surface` command that is included
+Scans of the surfaces can be printed using the `mudslide-surface` command that is included
 for the installation. For usage, make sure your `PATH` includes the installation
 directory for scripts (e.g., by running
 `export PATH=$(python -m site --user-base)/bin:$PATH`) and run
 
-    surface -h
+    mudslide-surface -h
 
 # Notes
 * This package is written to take advantage of doxygen!

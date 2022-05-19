@@ -350,6 +350,7 @@ class TrajectorySH(object):
 
         :param source: active state before hop
         :param target: active state after hop
+        :param electronics: electronic model information (used to pull derivative coupling)
 
         :return: unit vector pointing in direction of rescale
         """
@@ -359,9 +360,9 @@ class TrajectorySH(object):
 
     def rescale_component(self, direction: ArrayLike, reduction: DtypeLike) -> None:
         """
-        Rescales velocity in the specified direction and amount
+        Updates velocity by rescaling the *momentum* in the specified direction and amount
 
-        :param direction: the direction of the velocity to rescale
+        :param direction: the direction of the *momentum* to rescale
         :param reduction: how much kinetic energy should be damped
         """
         # normalize
@@ -385,6 +386,8 @@ class TrajectorySH(object):
         """
         if velo is None:
             velo = 0.5 * (self.velocity + self.last_velocity)
+        if last_electronics is None:
+            last_electronics = this_electronics
 
         H = 0.5 * (this_electronics.hamiltonian + last_electronics.hamiltonian)  # type: ignore
         TV = 0.5 * np.einsum(
@@ -489,7 +492,6 @@ class TrajectorySH(object):
         """Compute probability of hopping, generate random number, and perform hops
 
         :param elec_states: ElectronicStates from current step
-        :return: total probability of any hop occuring
         """
         H = self.hamiltonian_propagator(last_electronics, this_electronics)
 
@@ -537,7 +539,11 @@ class TrajectorySH(object):
         else:
             return []
 
-    def hop_to_it(self, hop_targets: List[Dict[str, Union[float, int]]], electronics: ElectronicT = None) -> None:
+    def hop_update(self, hop_from, hop_to):
+        """Handle any extra operations that need to occur after a hop"""
+        return
+
+    def hop_to_it(self, hop_targets: List[Dict[str, Union[float,int]]], electronics: ElectronicT = None) -> None:
         """
         Hop from the current active state to the given state, including
         rescaling the momentum
@@ -557,6 +563,7 @@ class TrajectorySH(object):
             hop_from = self.state
             self.state = hop_to
             self.rescale_component(rescale_vector, -delV)
+            self.hop_update(hop_from, hop_to)
             self.tracer.hop(self.time, hop_from, hop_to, float(hop_dict["zeta"]), float(hop_dict["prob"]))
 
     def simulate(self) -> 'Trace':

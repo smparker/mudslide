@@ -101,6 +101,7 @@ class InMemoryTrace(Trace_):
     def __init__(self, weight: float = 1.0):
         self.data: List = []
         self.hops: List = []
+        self.events: Dict = {}
         self.weight: float = weight
 
     def collect(self, trajectory_snapshot: Any) -> None:
@@ -112,6 +113,11 @@ class InMemoryTrace(Trace_):
 
     def record_event(self, event_dict):
         self.hops.append(event_dict)
+
+    def record_event(self, event_type: str, event: Dict):
+        if event_type not in self.events:
+            self.events[event_type] = []
+        self.events[event_type].append(event)
 
     def __iter__(self) -> Iterator:
         for snap in self.data:
@@ -334,13 +340,20 @@ class TraceManager(object):
         out = np.sum((t.outcome() for t in self.traces))
         return out
 
+    def event_list(self) -> List:
+        events = set()
+        for t in self.traces:
+            for e in t.events:
+                events.add(e)
+        return list(events)
+
     def summarize(self, verbose: bool = False, file: Any = sys.stdout) -> None:
         norm = sum((t.weight for t in self.traces))
         print("Using mudslide (v{})".format(__version__), file=file)
         print("------------------------------------", file=file)
         print("# of trajectories: {}".format(len(self.traces)), file=file)
 
-        nhops = [len(t.hops) for t in self.traces]
+        nhops = np.array([len(t.hops) for t in self.traces])
         hop_stats = [np.sum((t.weight for t in self.traces if len(t.hops) == i)) / norm for i in range(max(nhops) + 1)]
         print("{:5s} {:16s}".format("nhops", "percentage"), file=file)
         for i, w in enumerate(hop_stats):
@@ -352,6 +365,26 @@ class TraceManager(object):
             for i, t in enumerate(self.traces):
                 print("{:6d} {:16.4f} {:6d} {:12.6f}".format(i, t.data[-1]["time"], len(t.hops), t.weight / norm),
                       file=file)
+
+        event_list = self.event_list()
+        if event_list:
+            print("Types of events logged: ", ", ".join(event_list))
+
+        for e in event_list:
+            print(file=file)
+
+            print("Statistics for {} event".format(e), file=file)
+            nevents = np.array([ len(t.events[e]) if e in t.events else 0 for t in self.traces ])
+            if verbose:
+                print("{:>6s} {:>16s} {:>6s} {:>12s}".format("trace", "runtime", e, "weight"), file=file)
+                for i, nevent in enumerate(nevents):
+                    print("{:6d} {:16.4f} {:6d} {:12.6f}".format(i, t.data[-1]["time"], nevent, t.weight/norm), file=file)
+
+            print("  {} mean:      {:8.2f}".format(e, np.mean(nevents)),   file=file)
+            print("  {} deviation: {:8.2f}".format(e, np.std(nevents)),    file=file)
+            print("  {} min:       {:8.2f}".format(e, np.amin(nevents)),   file=file)
+            print("  {} max:       {:8.2f}".format(e, np.amax(nevents)),   file=file)
+            print("  {} median:    {:8.2f}".format(e, np.median(nevents)), file=file)
 
     def as_dict(self) -> Dict:
         out = {"hops": [], "data": [], "weight": []}

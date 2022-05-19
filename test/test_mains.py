@@ -88,6 +88,7 @@ def compare_line_by_line(f1, f2, typespec, tol=1e-3):
 
 
 class TrajectoryTest(object):
+    """Test base class"""
     samples = 1
     method = "fssh"
     x = -10
@@ -133,6 +134,7 @@ class TestTSAC(unittest.TestCase, TrajectoryTest):
     nstate = 2
 
     def test_tsac(self):
+        """Tully Simple Avoided Crossing"""
         for k in [8, 14, 20]:
             with self.subTest(k=k):
                 probs = self.capture_traj_problems(k, 1e-3)
@@ -145,6 +147,7 @@ class TestDual(unittest.TestCase, TrajectoryTest):
     nstate = 2
 
     def test_dual(self):
+        """Tully Dual Avoided Crossing"""
         for k in [20, 50, 100]:
             with self.subTest(k=k):
                 probs = self.capture_traj_problems(k, 1e-3)
@@ -152,11 +155,12 @@ class TestDual(unittest.TestCase, TrajectoryTest):
 
 
 class TestExtended(unittest.TestCase, TrajectoryTest):
-    """Test Suite for tully dual avoided crossing"""
+    """Test Suite for tully extended coupling"""
     model = "extended"
     nstate = 2
 
     def test_extended(self):
+        """Tully Extended Coupling"""
         for k in [10, 15, 20]:
             with self.subTest(k=k):
                 probs = self.capture_traj_problems(k, 1e-3)
@@ -172,6 +176,7 @@ class TestTSACc(unittest.TestCase, TrajectoryTest):
     electronic = "linear-rk4"
 
     def test_tsac_c(self):
+        """Tully Simple Avoided Crossing (FSSH-c)"""
         for k in [10, 20]:
             with self.subTest(k=k):
                 probs = self.capture_traj_problems(k, 1e-3)
@@ -185,10 +190,24 @@ class TestEhrenfest(unittest.TestCase, TrajectoryTest):
     method = "ehrenfest"
 
     def test_ehrenfest(self):
+        """Tully Simple Avoided Crossing (Ehrenfest)"""
         k = 15
         probs = self.capture_traj_problems(k, 1e-3)
         self.assertEqual(len(probs), 0)
 
+class TestAFSSH(unittest.TestCase, TrajectoryTest):
+    """Test suite for AFSSH trajectory"""
+    model = "dual"
+    nstate = 2
+    method = "afssh"
+    seed = 78341
+
+    def test_afssh(self):
+        """Tully Dual Avoided Crossing (A-FSSH)"""
+        k = 14
+        probs = self.capture_traj_problems(k, 1e-3)
+        self.assertEqual(len(probs), 0)
+        print(probs)
 
 class TestES(unittest.TestCase, TrajectoryTest):
     """Test Suite for tully simple avoided crossing with cumulative hopping"""
@@ -201,6 +220,7 @@ class TestES(unittest.TestCase, TrajectoryTest):
     log = "yaml"
 
     def test_es_tsac(self):
+        """Even Sampling"""
         for k in [10, 20]:
             with self.subTest(k=k):
                 probs = self.capture_traj_problems(k, 1e-3, extra_options=["--sample-stack", "5"])
@@ -211,6 +231,7 @@ class TestSurface(unittest.TestCase):
     """Test Suite for surface writer"""
 
     def test_surface(self):
+        """Surface Writer"""
         tol = 1e-3
         for m in ["simple", "extended", "dual", "super", "shin-metiu", "modelx", "models", "vibronic"]:
             with self.subTest(m=m):
