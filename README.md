@@ -1,8 +1,8 @@
 # Fewest Switches Surface Hopping [![Build Status](https://github.com/smparker/mudslide/actions/workflows/python-package.yml/badge.svg)](https://github.com/smparker/mudslide/actions/workflows/python-package.yml) [![Documentation Status](https://readthedocs.org/projects/mudslide/badge/?version=latest)](https://mudslide.readthedocs.io/en/latest/?badge=latest)
 Python implementation of Tully's Fewest Switches Surface Hopping (FSSH) for model problems including
 a propagator and an implementation of Tully's model problems described in Tully, J.C. _J. Chem. Phys._ (1990) **93** 1061.
-The current implementation probably works for more than two electronic states, is completely untested for more than
-one dimensional potentials.
+The current implementation works for diabatic as well as ab initio models, with two or more electronic states, and with one or more
+dimensional potentials.
 
 ## Contents
 * `mudslide` package that contains
@@ -18,7 +18,7 @@ one dimensional potentials.
     - `SubotnikModelX`
     - `SubotnikModelS`
     - `ShinMetiu`
-  - now some 2D models
+  - some 2D models
     - `Subotnik2D`
 * `mudslide` script that runs simple model trajectories
 * `mudslide-surface` script that prints 1D surface and couplings
@@ -26,9 +26,11 @@ one dimensional potentials.
 ## Requirements
 * numpy
 * scipy (for Shin-Metiu model)
+* pyyaml
+* turboparse
 
 ## Setup
-FSSH has switched to a proper python package structure, which means to work properly it now needs to be "installed". The
+Mudslide has switched to a proper python package structure, which means to work properly it now needs to be "installed". The
 most straightforward way to do this is
 
     cd /path/to/mudslide
@@ -59,7 +61,7 @@ provided. For example:
     simple_model = mudslide.models.TullySimpleAvoidedCrossing()
 
     # Generates trajectories always with starting position -5, starting momentum 10.0, on ground state
-    traj_gen = mudslide.TrajGenConst(-5.0, 10.0, "ground")
+    traj_gen = mudslide.TrajGenConst(-5.0, 10.0, 0)
 
     simulator = mudslide.BatchedTraj(simple_model, traj_gen, mudslide.TrajectorySH, samples = 4, bounds=[[-4],[4]])
     results = simulator.compute()
@@ -70,11 +72,11 @@ provided. For example:
     print("Probability of reflection on the excited state:   %12.4f" % outcomes[1,0])
     print("Probability of transmission on the excited state: %12.4f" % outcomes[1,1])
 
-will run 20 scattering simulations in parallel with a particle starting at -5.0 a.u. and traveling with an initial momentum of 10.0 a.u.
+will run 4 scattering simulations with a particle starting in the ground state (`0`) at `x=-5.0` a.u. and traveling with an initial momentum of `10.0` a.u.
 
 #### Options
-* `initial_state` - specify how the initial electronic state is chosen
-    * "ground" (default) - start on the ground state
+* `initial_state` - specify the initial electronic state
+    * 0 (default) - start on the ground state
 * `mass` - particle mass (default: 2000 a.u.)
 * `initial_time` - starting value of `time` variable (default: 0.0 a.u.)
 * `dt` - timestep (default: abs(0.05 / velocity)))
@@ -91,28 +93,42 @@ will run 20 scattering simulations in parallel with a particle starting at -5.0 
 * `trace_every` - save snapshot data every nth step (i.e., when `nsteps%trace_every==0`)
 
 ## Models
-The model provided to the FSSH class needs to have three functions implemented:
+A primary goal of mudslide is to include the flexibility for users to provide their own
+model classes. To interface with mudslide, a model class should derive from `mudslide.ElectronicModel_`
+and should implement
+* a `compute()` function that computes energies, forces, and derivative couplings
+* an `nstates()` function that returns the number of electronic states in the model
+* an `ndim()` function that returns the number of classical (vibrational) degrees of freedom in the model
+ 
+### compute() function
+The `compute()` function needs to have the following signature:
 
-* `V(self, x)` --- returns (nstates,nstates)-shaped numpy array containing the Hamiltonian matrix at nuclear position `x`
-* `dV(self, x)` --- returns (nstates,nstates,ndim)-shaped numpy array containing the gradient of the Hamiltonian matrix at nuclear position `x`
-* `nstates(self)` --- returns the number of electronic states in the model
-* `ndim(self)` --- returns the number nuclear degrees of freedom in the model
+    def compute(self, X: ArrayLike, couplings: Any = None, gradients: Any None, reference: Any = None) -> None
+
+The `X` input to the `compute()` function is an array of the positions. All other inputs are ignored for now
+but will eventually be used to allow the trajectory to enumerate precisely which quantities are desired at
+each call.
+At the end of the `compute()` function, the object must store
+* `self.hamiltonian` - An `nstates x nstates` array of the Hamiltonian (`nstates` is the number of electronic states)
+* `self.force` - An `nstates x ndim` array of the force on each PES (`ndim` is the number of classical degrees of freedom)
+* `self.derivative_coupling` - An `nstates x nstates x ndim` array where `self.derivative_coupling[i,j,:]` contains <i|d/dR|j>.
+
+See the file `mudslide/turbomole_model.py` for an example of a standalone ab initio model.
+
+### Diabatic Models
+For diabatic models, such as Tully's scattering models, there is a helper class, `mudslide.DiabaticModel_` to simplify construction of model classes.
+
+To use it, have your model derive from `mudslide.DiabaticModel_` and then you just need to implement two helper functions:
+* `V(self, x)` --- returns (nstates,nstates)-shaped numpy array containing the diabatic Hamiltonian matrix at nuclear position `x`
+* `dV(self, x)` --- returns (nstates,nstates,ndim)-shaped numpy array containing the gradient of the diabatic Hamiltonian matrix at nuclear position `x`
+
+And further define two class variables:
+* `nstates_` --- the number of electronic states in the model
+* `ndim_` --- the number nuclear degrees of freedom in the model
 
 In all cases, the input `x` ought to be a numpy array with `ndim` elements.
 
-For simple diabatic models, there is a helper class, `DiabaticModel_` that will
-simplify construction of classes for new models. If you derive your class from
-`DiabaticModel_`, you only need to implement `V()` and `dV()` in the diabatic basis,
-and define class variables `ndim_` and `nstates_` that hold the number of
-nuclear degrees of freedom and the number of electronic states, respectively. See
-the file `mudslide/models.py` for examples.
-
-The file models.py implements the three models in Tully's original paper. They are:
-
-* TullySimpleAvoidedCrossing
-* TullyDualAvoidedCrossing
-* TullyExtendedCouplingReflection
-
+See the file `mudslide/scattering_models.py` for examples, which includes, among other models, the original Tully models.
 Additional models included are:
 * `SuperExchange` - Oleg Prezhdo's three-state super exchange model from Wang, Trivedi, Prezhdo JCTC (2014) doi:10.1021/ct5003835
 * `SubotnikModelX` - 'Model X' from Subotnik JPCA (2011) doi: 10.1021/jp206557h
@@ -136,7 +152,7 @@ This should be a generator function that accepts a number of samples
 and returns a dictionary with starting conditions filled in, e.g.,
 the yield statement should be something like
 
-    yield { "position" : x0, "momentum" : p0, "initial_state" : "ground" }
+    yield { "position" : x0, "momentum" : p0, "initial_state" : 0 }
 
 See `TrajGenConst` for an example.
 
@@ -148,5 +164,3 @@ directory for scripts (e.g., by running
 
     mudslide-surface -h
 
-# Notes
-* This package is written to take advantage of doxygen!
