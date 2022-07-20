@@ -14,7 +14,6 @@ from typing import Optional, List, Any, Dict, Union
 from .typing import ArrayLike, ElectronicT
 from itertools import count
 
-
 class SpawnStack(object):
     """Data structure to inform how new traces are spawned and weighted"""
 
