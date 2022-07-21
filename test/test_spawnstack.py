@@ -7,15 +7,6 @@ import unittest
 from mudslide.even_sampling import SpawnStack
 import itertools
 
-def poly(coeffs, x):
-    """
-    Returns a nth order polynomial where n is len(coeffs).
-    Order of coeffs is from lowest to highest order, i.e.,
-    coeffs = [1, 2, 3, 4, 5, 6] returns
-        1 + 2x + 3x^2 + 4x^3 + 5x^4 + 6x^5
-    """
-    return sum([coeffs[i] * x ** i for i in range(len(coeffs))])
-
 class Test_ES(unittest.TestCase):
     def test_2D_integral(self):
         def two_d_poly_np(x, y): 
@@ -77,7 +68,7 @@ class Test_ES(unittest.TestCase):
         results_analytical_3D = 343/27
         self.assertAlmostEqual(results_3Dpoly, results_analytical_3D)
 
-    def test_append_layer(self):
+    def dimension(self):
         sample_stack = []
         ss = SpawnStack.from_quadrature (nsamples = [2,2,2]) 
 
