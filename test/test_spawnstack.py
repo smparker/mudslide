@@ -68,7 +68,7 @@ class Test_ES(unittest.TestCase):
         results_analytical_3D = 343/27
         self.assertAlmostEqual(results_3Dpoly, results_analytical_3D)
 
-    def dimension(self):
+    def test_dimension(self):
         sample_stack = []
         ss = SpawnStack.from_quadrature (nsamples = [2,2,2]) 
 
