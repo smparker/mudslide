@@ -168,69 +168,62 @@ class SpawnStack(object):
             if stack["children"] != []:
                 self.unpack(zeta_list, dw_list, stack["children"], depth=depth + 1)
 
+
     def unravel(self):
-        """
-        Calls unpack to recursively unpack a sample_stack and then
-        unravels the list of zetas and dws to create a list of tuples of
-        tuples of points and weights.
-
-        ss = SpawnStack.from_quadrature(nsamples = [2, 2])
-        pts_wts = ss.unravel()
-
-        where
-
-        pts_wts = [((x1, y1), (wx1, wy1)), ((x1, y2), (wx1, wy2)), ((x2, y1), (wx2, wy1)), ((x2, y2), (wx2, wy2))]
-        """
-        zetas = []
-        dws = []
-        self.unpack(zeta_list=zetas, dw_list=dws)
-
-        dim_list = []
-        for tpl in zetas:
-            dim_list.append(tpl[0])
-        dim = max(dim_list) + 1
-        main_list = []
-        coords = []
-        weights = []
-        last_depth = 0
-        for i, tpl in enumerate(zetas):
-            # When we recurse back up in depth, we need to remove num_to_pop items from coords/weights.
-            if tpl[0] < last_depth:
-                num_to_pop = last_depth - tpl[0] + 1
-                for j in range(num_to_pop):
+            """
+            Calls unpack to recursively unpack a sample_stack and then
+            unravels the list of zetas and dws to create a list of tuples of
+            tuples of points and weights.
+    
+            self = SpawnStack.from_quadrature(nsamples = [2, 2])
+            pts_wts = self.unravel()
+    
+            where
+    
+            pts_wts = [((x1, y1), (wx1, wy1)), ((x1, y2), (wx1, wy2)), ((x2, y1), (wx2, wy1)), ((x2, y2), (wx2, wy2))]
+            """
+            zetas = []
+            dws = []
+            self.unpack(zeta_list=zetas, dw_list=dws)
+    
+            dim_list = []
+            for tpl in zetas:
+                dim_list.append(tpl[0])
+            dim = max(dim_list) + 1
+            main_list = []
+            coords = []
+            weights = []
+            last_depth = 0
+            for i, tpl in enumerate(zetas):
+                # When we recurse back up in depth, we need to remove num_to_pop items from coords/weights.
+                if tpl[0] < last_depth:
+                    num_to_pop = last_depth - tpl[0] + 1
+                    for j in range(num_to_pop):
+                        coords.pop()
+                        weights.pop()
+                # Take care of the fact that the above doesn't work for 1D.
+                if (dim == 1) and (len(coords) != 0):
                     coords.pop()
                     weights.pop()
-            # Take care of the fact that the above doesn't work for 1D.
-            if (dim == 1) and (len(coords) != 0):
-                coords.pop()
-                weights.pop()
-            if tpl[0] == 0:
-                last_depth = tpl[0]
-                coords.append(tpl[1])
-                weights.append(dws[i][1])
-            if tpl[0] == 1:
-                last_depth = tpl[0]
-                if len(coords) > 1:
-                    coords[1] = tpl[1]
-                    weights[1] = dws[i][1]
-                else:
+                if tpl[0] == 0:
+                    last_depth = tpl[0]
                     coords.append(tpl[1])
                     weights.append(dws[i][1])
-            if tpl[0] == 2:
-                last_depth = tpl[0]
-                if len(coords) > 2:
-                    coords[2] = tpl[1]
-                    weights[2] = dws[i][1]
                 else:
-                    coords.append(tpl[1])
-                    weights.append(dws[i][1])
-            if len(coords) == dim:
-                main_list.append((tuple(coords), tuple(weights)))
+                    last_depth = tpl[0]
+                    if len(coords) > tpl[0]:
+                        coords[tpl[0]] = tpl[1]
+                        weights[tpl[0]] = dws[i][1]
+                    else:
+                        coords.append(tpl[1])
+                        weights.append(dws[i][1])
+                if len(coords) == dim:
+                    main_list.append((tuple(coords), tuple(weights)))
+    
+            # Return product of weights
+            points_weights = [(points, np.prod(weights)) for (points, weights) in main_list]
 
-        # Return product of weights
-        points_weights = [(points, np.prod(weights)) for (points, weights) in main_list]
-
-        return points_weights
+            return points_weights
 
     @classmethod
     def from_quadrature(
