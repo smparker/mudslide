@@ -586,7 +586,7 @@ class TrajectorySH(object):
             self.advance_position(last_electronics, self.electronics)
 
             # calculate electronics at new position
-            last_electronics, self.electronics = self.electronics, self.electronics.update(self.position)
+            last_electronics, self.electronics = self.electronics, self.model.update(self.position, electronics=self.electronics)
 
             # update velocity
             self.advance_velocity(last_electronics, self.electronics)
