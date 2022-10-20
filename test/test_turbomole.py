@@ -18,7 +18,6 @@ testdir = os.path.dirname(__file__)
 _refdir = os.path.join(testdir, "ref")
 _checkdir = os.path.join(testdir, "checks")
 
-
 def clean_directory(dirname):
     if os.path.isdir(dirname):
         shutil.rmtree(dirname)
@@ -47,7 +46,8 @@ class TestTMModel(unittest.TestCase):
 
     def test_get_gs_ex_properties(self):
         """test for gs_ex_properties function"""
-        model = TMModel(states=[0, 1, 2, 3], turbomole_dir=".", expert=True)
+        #model = TMModel(states=[0, 1, 2, 3], turbomole_dir=".", expert=True)
+        model = TMModel(states=[0, 1, 2, 3],  expert=True)
         positions = model.X
 
         # yapf: disable
