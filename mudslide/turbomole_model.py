@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+"""Implementations of the interface between turbomole and mudslide. Turbomole provides electronic parameters such as energies, 
+gradients, NAC coupling, etc to mudslide and mudslide performs molecular dynamics calculations """
+
 import numpy as np
 import math
 from scipy.special import erf
@@ -177,7 +181,7 @@ class TMModel(ElectronicModel_):
 
         coordline += 1
         for i, coord_list in enumerate(X):
-            lines[coordline] = "{:26.16e}{:28.16e}{:28.16e}{:>7}\n".format(
+            lines[coordline] = "{:26.16e} {:28.16e} {:28.16e} {:>7}\n".format(
                 coord_list[0], coord_list[1], coord_list[2], self.atom_order[i]
             )
             coordline += 1
@@ -248,21 +252,17 @@ class TMModel(ElectronicModel_):
     def update(self, X: ArrayLike, electronics: Any=None, couplings: Any = None, gradients: Any = None):
         out = cp.copy(self)
         out.position = X
-        #if electronics:
-        #    self.reference = electronics.reference
         out.update_coords(X)
         out.compute(X, couplings=couplings, gradients=gradients, reference=self.reference)
         return out
 
     def cpc(self,dest): 
         subprocess.run(["cpc", dest], cwd=self.workdir)
-        tmmodules_files=["control" ] 
-        for f in tmmodules_files:
+        file_list = ['ciss_a','exspectrum', 'statistics', 'dipl_a', 'excitationlog.1', 'moments', 'vecsao', 'control', 'gradient', 'energy', 'moments' ]
+        for f in file_list:
             if os.path.exists(os.path.join(os.path.abspath(self.workdir), f)) and not os.path.exists(os.path.join(dest,f)):
                 shutil.copy(os.path.join(os.path.abspath(self.workdir), f), dest)
         
-        subprocess.run(["cpc", dest], cwd=self.workdir)
-        file_list = ['ciss_a','exspectrum', 'statistics', 'dipl_a', 'excitationlog.1', 'moments', 'vecsao', 'control', 'gradient', 'energy', 'moments' ]
 
     def clone(self):
         model_clone = cp.deepcopy(self)
