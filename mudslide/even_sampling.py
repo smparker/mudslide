@@ -102,12 +102,12 @@ class SpawnStack(object):
         """
         A depth-first traversal of a sample_stack tree to append a
         layer to all leaves. The method builds the adjacency matrix as
-        it traverses the tree.
+        it traverses the tree. This works for arbitary depth of the stack.
 
         For example, call as:
 
             ss = SpawnStack(sample_stack=[])
-            self.append_layer(zetas=[1.0], dws=[1.0]),
+            ss.append_layer(zetas=[1.0], dws=[1.0]),
 
         which will append a layer recursively at the lowest layer.
 
@@ -173,7 +173,7 @@ class SpawnStack(object):
             """
             Calls unpack to recursively unpack a sample_stack and then
             unravels the list of zetas and dws to create a list of tuples of
-            tuples of points and weights.
+            tuples of points and weights. This works for arbitary dimensions.
     
             self = SpawnStack.from_quadrature(nsamples = [2, 2])
             pts_wts = self.unravel()
