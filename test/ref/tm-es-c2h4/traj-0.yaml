@@ -1,7 +1,7 @@
-event_log: TMtrace-1-events.yaml
+event_log: traj-0-events.yaml
 log_pitch: 512
 logfiles:
-- TMtrace-1-log_0.yaml
-name: TMtrace-1
+- traj-1-log_0.yaml
+name: traj-1
 nlogs: 1
 weight: 1.0
