@@ -1,0 +1,7 @@
+event_log: traj-7-events.yaml
+log_pitch: 512
+logfiles:
+- traj-7-log_0.yaml
+name: traj-7
+nlogs: 1
+weight: 1.6440168607616482e-07
