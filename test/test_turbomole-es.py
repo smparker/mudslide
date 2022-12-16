@@ -96,31 +96,31 @@ class TestTMModel(unittest.TestCase):
         results = fssh.compute()
         outcomes = results.outcomes
 
-        refs = mudslide.load_log(os.path.join(self.refdir, "traj-0.yaml"))
+        refs = mudslide.load_log(os.path.join(self.refdir, "traj-1.yaml"))
 
-        ref_times = [0, 1, 2, 3]
+        ref_times = [0, 1, 2]
         states = [0, 1, 2, 3]
 
         for t in ref_times:
             for s in states:
                 self.assertAlmostEqual(refs[t]["electronics"]["hamiltonian"][s][s],
-                                       results[0][t]["electronics"]["hamiltonian"][s][s],
+                                       results[1][t]["electronics"]["hamiltonian"][s][s],
                                        places=8)
 
                 np.testing.assert_almost_equal(refs[t]["electronics"]["force"][s],
-                                               results[0][t]["electronics"]["force"][s],
+                                               results[1][t]["electronics"]["force"][s],
                                                decimal=8)
 
         for t in ref_times:
-            np.testing.assert_almost_equal(refs[t]["density_matrix"], results[0][t]["density_matrix"], decimal=8)
-            np.testing.assert_almost_equal(refs[t]["position"], results[0][t]["position"], decimal=8)
-            np.testing.assert_almost_equal(refs[t]["momentum"], results[0][t]["momentum"], decimal=8)
+            np.testing.assert_almost_equal(refs[t]["density_matrix"], results[1][t]["density_matrix"], decimal=8)
+            np.testing.assert_almost_equal(refs[t]["position"], results[1][t]["position"], decimal=8)
+            np.testing.assert_almost_equal(refs[t]["momentum"], results[1][t]["momentum"], decimal=8)
 
         for t in ref_times:
             for s1 in states:
                 for s2 in range(s1, 3):
                     np.testing.assert_almost_equal(refs[t]["electronics"]["derivative_coupling"][s1][s2],
-                                                   results[0][t]["electronics"]["derivative_coupling"][s1][s2],
+                                                   results[1][t]["electronics"]["derivative_coupling"][s1][s2],
                                                    decimal=6)
 
     def tearDown(self):
