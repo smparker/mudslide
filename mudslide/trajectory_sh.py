@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+ooo
 """Propagate FSSH trajectory"""
 
 from __future__ import division
@@ -559,12 +560,15 @@ class TrajectorySH(object):
         delV = new_potential - old_potential
         rescale_vector = self.direction_of_rescale(self.state, hop_to)
         component_kinetic = self.mode_kinetic_energy(rescale_vector)
+        hop_from = self.state
+
         if self.hop_allowed(rescale_vector, -delV):
-            hop_from = self.state
             self.state = hop_to
             self.rescale_component(rescale_vector, -delV)
             self.hop_update(hop_from, hop_to)
             self.tracer.hop(self.time, hop_from, hop_to, float(hop_dict["zeta"]), float(hop_dict["prob"]))
+        else:
+            self.tracer.frustrated_hop(self.time, hop_from, hop_to, float(hop_dict["zeta"]), float(hop_dict["prob"]))
 
     def simulate(self) -> 'Trace':
         """
@@ -572,6 +576,10 @@ class TrajectorySH(object):
 
         :return: Trace of trajectory
         """
+
+        if not self.continue_simulating():
+            return self.tracer
+
         last_electronics = None
 
         if self.electronics is None:

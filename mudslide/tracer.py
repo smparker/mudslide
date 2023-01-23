@@ -236,6 +236,10 @@ class YAMLTrace(Trace_):
         hop_data = {"event": "hop", "time": time, "from": hop_from, "to": hop_to, "zeta": zeta, "prob": prob}
         self.record_event(hop_data)
 
+    def frustrated_hop(self, time: float, hop_from: int, hop_to: int, zeta: float, prob: float) -> None:
+        hop_data = {"event": "frustrated_hop", "time": time, "from": hop_from, "to": hop_to, "zeta": zeta, "prob": prob}
+        self.record_event(hop_data)
+
     def record_event(self, event_dict):
         with open(os.path.join(self.location, self.event_log), "a") as f:
             yaml.safe_dump([event_dict], f, explicit_start=False)
