@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-ooo
 """Propagate FSSH trajectory"""
 
 from __future__ import division
