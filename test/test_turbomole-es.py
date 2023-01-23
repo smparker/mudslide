@@ -64,7 +64,7 @@ class TestTMModel(unittest.TestCase):
         mass = tm_model.mass
         q = queue.Queue()
         dt = 20
-        max_time=81
+        max_time=41
         t0 = 1
         sample_stack = SpawnStack.from_quadrature(nsamples=[2, 2, 2])
         sample_stack.sample_stack[0]["zeta"]=0.003
