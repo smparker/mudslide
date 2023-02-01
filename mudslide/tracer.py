@@ -42,6 +42,10 @@ class Trace_(object):
     def __len__(self) -> int:
         return 0
 
+    def frustrated_hop(self, time: float, hop_from: int, hop_to: int, zeta: float, prob: float) -> None:
+        hop_data = {"event": "frustrated_hop", "time": time, "from": hop_from, "to": hop_to, "zeta": zeta, "prob": prob}
+        self.record_event(hop_data)
+
     def form_data(self, snap_dict: Dict) -> Dict:
         out = {}
         for k, v in snap_dict.items():
@@ -234,10 +238,6 @@ class YAMLTrace(Trace_):
 
     def hop(self, time: float, hop_from: int, hop_to: int, zeta: float, prob: float) -> None:
         hop_data = {"event": "hop", "time": time, "from": hop_from, "to": hop_to, "zeta": zeta, "prob": prob}
-        self.record_event(hop_data)
-
-    def frustrated_hop(self, time: float, hop_from: int, hop_to: int, zeta: float, prob: float) -> None:
-        hop_data = {"event": "frustrated_hop", "time": time, "from": hop_from, "to": hop_to, "zeta": zeta, "prob": prob}
         self.record_event(hop_data)
 
     def record_event(self, event_dict):
