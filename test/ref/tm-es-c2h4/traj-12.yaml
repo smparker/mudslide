@@ -1,7 +1,0 @@
-event_log: traj-12-events.yaml
-log_pitch: 512
-logfiles:
-- traj-12-log_0.yaml
-name: traj-12
-nlogs: 1
-weight: 0.0
