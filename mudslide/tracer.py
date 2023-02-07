@@ -21,7 +21,7 @@ import yaml
 class Trace_(object):
 
     def __init__(self, weight: float = 1.0):
-        self.weight: float = weight
+        self._weight: float = weight
 
     def collect(self, snapshot: Any) -> None:
         """add a single snapshot to the trace"""
@@ -41,10 +41,6 @@ class Trace_(object):
 
     def __len__(self) -> int:
         return 0
-
-    def frustrated_hop(self, time: float, hop_from: int, hop_to: int, zeta: float, prob: float) -> None:
-        hop_data = {"event": "frustrated_hop", "time": time, "from": hop_from, "to": hop_to, "zeta": zeta, "prob": prob}
-        self.record_event(hop_data)
 
     def form_data(self, snap_dict: Dict) -> Dict:
         out = {}
@@ -106,7 +102,7 @@ class InMemoryTrace(Trace_):
         self.data: List = []
         self.hops: List = []
         self.events: Dict = {}
-        self.weight: float = weight
+        self._weight: float = weight
 
     def collect(self, trajectory_snapshot: Any) -> None:
         """collect and optionally process data"""
@@ -134,7 +130,7 @@ class InMemoryTrace(Trace_):
         return len(self.data)
 
     def as_dict(self) -> Dict:
-        return {"hops": self.hops, "data": self.data, "weight": self.weight}
+        return {"hops": self.hops, "data": self.data, "weight": self._weight}
 
 
 class YAMLTrace(Trace_):
@@ -142,7 +138,7 @@ class YAMLTrace(Trace_):
 
     def __init__(self, base_name: str = "traj", weight: float = 1.0, log_pitch=512, location="", load_main_log=None):
 
-        self.weight: float = weight
+        self._weight: float = weight
         self.log_pitch = log_pitch
         self.base_name = base_name
         self.location = location
@@ -191,13 +187,18 @@ class YAMLTrace(Trace_):
             self.nlogs = logdata["nlogs"]
             self.log_pitch = logdata["log_pitch"]
             self.event_log = logdata["event_log"]
-            self.weight = logdata["weight"]
+            self._weight = logdata["weight"]
 
             # sizes assume log_pitch never changes. is that safe?
             with open(os.path.join(self.location, self.active_logfile), "r") as f:
                 activelog = yaml.safe_load(f)
                 self.active_logsize = len(activelog)
             self.logsize = self.log_pitch * (self.nlogs - 1) + self.active_logsize
+
+    @Trace_.weight.setter
+    def weight(self, w):
+        self._weight = float(w)
+        self.write_main_log()
 
     def files(self, absolute_path=True):
         rel_files = self.logfiles + [self.main_log, self.event_log]
@@ -214,7 +215,7 @@ class YAMLTrace(Trace_):
             "nlogs": self.nlogs,
             "log_pitch": self.log_pitch,
             "event_log": self.event_log,
-            "weight": self.weight
+            "weight": self._weight
         }
 
         with open(os.path.join(self.location, self.main_log), "w") as f:
@@ -293,7 +294,7 @@ class YAMLTrace(Trace_):
         with open(os.path.join(self.location, self.main_log), "r") as f:
             info = yaml.safe_load(f)
 
-            return {"hops": info["hops"], "data": [x for x in self], "weight": self.weight}
+            return {"hops": info["hops"], "data": [x for x in self], "weight": self._weight}
 
 
 def load_log(main_log_name):
