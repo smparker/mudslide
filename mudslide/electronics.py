@@ -12,6 +12,9 @@ import math
 from typing import Tuple, Any
 from .typing import ArrayLike
 
+from .typing import ArrayLike, ElectronicT
+
+
 
 class ElectronicModel_(object):
     '''
@@ -44,16 +47,21 @@ class ElectronicModel_(object):
         """
         raise NotImplementedError("ElectronicModels need a compute function")
 
-    def update(self, X: ArrayLike, couplings: Any = None, gradients: Any = None) -> 'ElectronicModel_':
+    def update(self, X: ArrayLike, electronics: Any = None, couplings: Any = None, gradients: Any = None) -> 'ElectronicModel_':
         """
         Convenience function that copies the present object, updates the position,
         calls compute, and then returns the new object
         """
         out = cp.copy(self)
+        if electronics:
+            self.reference = electronics.reference
         out.position = X
         out.compute(X, couplings=couplings, gradients=gradients, reference=self.reference)
         return out
 
+    def clone(self):
+        return self # needed this here to make sure that ES clone function works for all the models.
+    
     def as_dict(self):
         out = {
             "nstates": self.nstates(),
@@ -95,8 +103,10 @@ class DiabaticModel_(ElectronicModel_):
 
         self.force_matrix = self._compute_force_matrix(dV, self.reference)
 
-    def update(self, X: ArrayLike, couplings: Any = None, gradients: Any = None) -> 'DiabaticModel_':
+    def update(self, X: ArrayLike, electronics: Any = None, couplings: Any = None, gradients: Any = None) -> 'DiabaticModel_': 
         out = cp.copy(self)
+        if electronics:
+            self.reference = electronics.reference
         out.position = X
         out.compute(X, couplings=couplings, gradients=gradients, reference=self.reference)
         return out
@@ -197,8 +207,10 @@ class AdiabaticModel_(ElectronicModel_):
 
         self.force_matrix = self._compute_force_matrix(dV, self.reference)
 
-    def update(self, X: ArrayLike, couplings: Any = None, gradients: Any = None) -> 'AdiabaticModel_':
+    def update(self, X: ArrayLike, electronics: Any = None, couplings: Any = None, gradients: Any = None) -> 'AdiabaticModel_':
         out = cp.copy(self)
+        if electronics:
+            self.reference = electronics.reference
         out.position = X
         out.compute(X, couplings=couplings, gradients=gradients, reference=self.reference)
         return out

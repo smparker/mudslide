@@ -1,0 +1,12 @@
+- event: hop
+  from: 3
+  prob: 0.014577997053082603
+  time: 1.0
+  to: 0
+  zeta: 0.003
+- event: frustrated_hop
+  from: 0
+  prob: 0.5846468361131001
+  time: 21.0
+  to: 3
+  zeta: 0.21132486540518713
