@@ -1,31 +1,25 @@
-Trajectory Classes
+Trajectory Methods
 ====================================
 
-.. automodule:: mudslide
-   :members:
-   :show-inheritance:
-   :noindex:
+The classes documented here are responsible for running
+molecular dynamics simulations with different algorithms.
 
-.. autoclass:: TrajectorySH
+.. autoclass:: mudslide.TrajectorySH
    :members:
    :show-inheritance:
    :inherited-members:
-   :noindex:
 
-.. autoclass:: Ehrenfest
+.. autoclass:: mudslide.Ehrenfest
    :members:
    :show-inheritance:
    :inherited-members:
-   :noindex:
 
-.. autoclass:: TrajectoryCum
+.. autoclass:: mudslide.TrajectoryCum
    :members:
    :show-inheritance:
    :inherited-members:
-   :noindex:
 
-.. autoclass:: EvenSamplingTrajectory
+.. autoclass:: mudslide.EvenSamplingTrajectory
    :members:
    :show-inheritance:
    :inherited-members:
-   :noindex:

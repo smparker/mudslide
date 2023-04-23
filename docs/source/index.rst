@@ -11,10 +11,10 @@ Mudslide!
    :caption: Contents:
 
    intro
-   usage
    installation
+   components
+   usage
    library
-   modules
    references
 
 Indices and tables

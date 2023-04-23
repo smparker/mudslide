@@ -33,6 +33,9 @@ master_doc = 'index'
 # ones.
 extensions = [ 'sphinx.ext.autodoc', 'sphinxcontrib.bibtex' ]
 
+add_module_names = False
+toc_object_entries_show_parents = "hide"
+
 bibtex_bibfiles = [ "refs.bib" ]
 
 # Add any paths that contain templates here, relative to this directory.
