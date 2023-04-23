@@ -153,6 +153,26 @@ class TurboControl(object):
         atomic_masses *= amu_to_au
         return atomic_masses
 
+    def read_hessian(self):
+        """
+        Projected Hessian has a structure of
+        $hessian (projected)
+        1 1 0.000 0.000 0.000 0.000 0.000
+        1 2 0.000 0.000 0.000 0.000 0.000
+        2 1 0.000 0.000 0.000 0.000 0.000
+        ...
+        """
+        hessian = []
+        hess = self.sdg("hessian", show_body=True)
+        hess_list = hess.rstrip().split("\n")
+        ndim = 0
+        for h in hess_list:
+            h_list = h.split()
+            ndim = max(ndim, int(h_list[0]))
+            hessian.extend([float(val) for val in h_list[2:]])
+        H = np.array(hessian, dtype=np.float64).reshape(ndim, ndim)
+        return H
+
 
 class TMModel(ElectronicModel_, TurboControl):
     """A class to handle the electronic model for excited state Turbomole calculations"""
