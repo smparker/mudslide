@@ -3,29 +3,29 @@ Trajectory Classes
 
 .. automodule:: mudslide
    :members:
-   :undoc-members:
    :show-inheritance:
+   :noindex:
 
 .. autoclass:: TrajectorySH
    :members:
-   :undoc-members:
    :show-inheritance:
    :inherited-members:
+   :noindex:
 
 .. autoclass:: Ehrenfest
    :members:
-   :undoc-members:
    :show-inheritance:
    :inherited-members:
+   :noindex:
 
 .. autoclass:: TrajectoryCum
    :members:
-   :undoc-members:
    :show-inheritance:
    :inherited-members:
+   :noindex:
 
 .. autoclass:: EvenSamplingTrajectory
    :members:
-   :undoc-members:
    :show-inheritance:
    :inherited-members:
+   :noindex:
