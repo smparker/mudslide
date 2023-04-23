@@ -15,7 +15,7 @@ Mudslide!
    installation
    library
    modules
-   zreferences
+   references
 
 Indices and tables
 ==================
