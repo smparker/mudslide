@@ -174,7 +174,7 @@ class TurboControl(object):
         return H
 
 
-class TMModel(ElectronicModel_, TurboControl):
+class TMModel(ElectronicModel_):
     """A class to handle the electronic model for excited state Turbomole calculations"""
     def __init__(
         self,
@@ -192,18 +192,21 @@ class TMModel(ElectronicModel_, TurboControl):
         self.run_turbomole_dir = run_turbomole_dir
         unique_workdir = find_unique_name(self.workdir_stem, self.run_turbomole_dir, always_enumerate=True)
         work = os.path.join(os.path.abspath(self.run_turbomole_dir), unique_workdir)
-        TurboControl.__init__(self, workdir=work)
+        self.control = TurboControl(workdir=work)
         self.expert = expert
-        os.makedirs(self.workdir, exist_ok = True)
-        subprocess.run(["cpc", self.workdir], cwd=self.run_turbomole_dir)
+
+        os.makedirs(self.control.workdir, exist_ok = True)
+        subprocess.run(["cpc", self.control.workdir], cwd=self.run_turbomole_dir)
 
         self.states = states
         self.nstates_ = len(self.states)
 
-        assert turbomole_is_installed()
+        if not turbomole_is_installed():
+            raise RuntimeError("Turbomole is not installed")
 
         self.turbomole_modules = turbomole_modules
-        assert all([shutil.which(x) is not None for x in self.turbomole_modules.values()])
+        if not all([shutil.which(x) is not None for x in self.turbomole_modules.values()]):
+            raise RuntimeError("Turbomole modules not found")
 
         self.turbomole_init()
 
@@ -218,10 +221,10 @@ class TMModel(ElectronicModel_, TurboControl):
 
     def apply_suggested_parameters(self):
         # weight derivatives are mandatory
-        self.use_weight_derivatives(use=True)
+        self.control.use_weight_derivatives(use=True)
 
         # prefer psuedowavefunction couplings with ETFs
-        sdg_nac = self.sdg("nacme")[6:].strip()  # skip past $nacme
+        sdg_nac = self.control.sdg("nacme")[6:].strip()  # skip past $nacme
         update_nac = False
         if "response" in sdg_nac:
             update_nac = True
@@ -230,7 +233,7 @@ class TMModel(ElectronicModel_, TurboControl):
             update_nac = True
             sdg_nac += " do_etf"
         if update_nac:
-            self.adg("nacme", sdg_nac)
+            self.control.adg("nacme", sdg_nac)
 
         # probably force phaser on as well
 
@@ -239,13 +242,13 @@ class TMModel(ElectronicModel_, TurboControl):
 
     def setup_coords(self):
         """Setup the coordinates for the calculation"""
-        self.atom_order, self.X = self.read_coords()
+        self.atom_order, self.X = self.control.read_coords()
         self.ndim_ = len(self.X)
-        self.mass = self.get_masses(self.atom_order)
+        self.mass = self.control.get_masses(self.atom_order)
 
     def update_coords(self, X):
         X = X.reshape((self.ndim() // 3, 3))
-        coord_path = self.where_is_dg("coord", absolute_path=True)
+        coord_path = self.control.where_is_dg("coord", absolute_path=True)
 
         with open(coord_path, "r") as f:
             lines = f.readlines()
@@ -272,10 +275,10 @@ class TMModel(ElectronicModel_, TurboControl):
 
         # Now add results to model
 
-    def call_turbomole(self, outname="turbo.out"):
+    def call_turbomole(self, outname="turbo.out") -> None:
         with open(outname, "w") as f:
             for turbomole_module in self.turbomole_modules.values():
-                self.run_single(turbomole_module, stdout=f)
+                self.control.run_single(turbomole_module, stdout=f)
 
         # Parse results with Turboparse
         with open(outname, "r") as f:
@@ -315,7 +318,7 @@ class TMModel(ElectronicModel_, TurboControl):
 
         self.force = -(self.gradients)
 
-    def compute(self, X, couplings, gradients, reference):
+    def compute(self, X, couplings, gradients, reference) -> None:
         """
         Calls Turbomole/Turboparse to generate electronic properties including
         gradients, couplings, energies. For this to work, this class
@@ -323,12 +326,11 @@ class TMModel(ElectronicModel_, TurboControl):
         can get properly passed to Turbomole. (__init__() can get these
         file locations.)
         """
-        self.call_turbomole(outname = Path(self.workdir)/"turbo.out")
+        self.call_turbomole(outname = Path(self.control.workdir)/"turbo.out")
 
         self.hamiltonian = np.zeros([self.nstates(), self.nstates()])
         for i, e in enumerate(self.states):
             self.hamiltonian[i][i] = self.energies[e]
-        return self.hamiltonian
 
     def update(self, X: ArrayLike, electronics: Any=None, couplings: Any = None, gradients: Any = None):
         out = cp.copy(self)
@@ -341,9 +343,9 @@ class TMModel(ElectronicModel_, TurboControl):
     def clone(self):
         model_clone = cp.deepcopy(self)
         unique_workdir = find_unique_name(self.workdir_stem, self.run_turbomole_dir, always_enumerate=True)
-        model_clone.workdir = os.path.join(os.path.abspath(self.run_turbomole_dir), unique_workdir)
-        os.makedirs(model_clone.workdir, exist_ok = True)
-        self.cpc(model_clone.workdir)
+        model_clone.control.workdir = os.path.join(os.path.abspath(self.run_turbomole_dir), unique_workdir)
+        os.makedirs(model_clone.control.workdir, exist_ok = True)
+        self.cpc(model_clone.control.workdir)
 
         model_clone.turbomole_init()
         return model_clone
