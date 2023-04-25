@@ -64,19 +64,22 @@ class Trace_(object):
         return cp.deepcopy(self)
 
     def print(self, file: Any = sys.stdout) -> None:
-        nst = len(self[0]["density_matrix"])
+        has_electronic_wfn = "density_matrix" in self[0]
+        nst = len(self[0]["density_matrix"]) if has_electronic_wfn else 1
         headerlist = ["%12s" % x for x in ["time", "x", "p", "V", "T", "E"]]
-        headerlist += ["%12s" % x for x in ["rho_{%d,%d}" % (i, i) for i in range(nst)]]
-        headerlist += ["%12s" % x for x in ["H_{%d,%d}" % (i, i) for i in range(nst)]]
-        headerlist += ["%12s" % "active"]
-        headerlist += ["%12s" % "hopping"]
+        if has_electronic_wfn:
+            headerlist += ["%12s" % x for x in ["rho_{%d,%d}" % (i, i) for i in range(nst)]]
+            headerlist += ["%12s" % x for x in ["H_{%d,%d}" % (i, i) for i in range(nst)]]
+            headerlist += ["%12s" % "active"]
+            headerlist += ["%12s" % "hopping"]
         print("#" + " ".join(headerlist), file=file)
         for i in self:
             line = " {time:12.6f} {position[0]:12.6f} {momentum[0]:12.6f} {potential:12.6f} {kinetic:12.6f} {energy:12.6f} ".format(
                 **i)
-            line += " ".join(["%12.6f" % x for x in np.real(np.diag(i["density_matrix"]))])
-            line += " " + " ".join(["%12.6f" % x for x in np.real(np.diag(i["electronics"]["hamiltonian"]))])
-            line += " {active:12d} {hopping:12e}".format(**i)
+            if has_electronic_wfn:
+                line += " ".join(["%12.6f" % x for x in np.real(np.diag(i["density_matrix"]))])
+                line += " " + " ".join(["%12.6f" % x for x in np.real(np.diag(i["electronics"]["hamiltonian"]))])
+                line += " {active:12d} {hopping:12e}".format(**i)
             print(line, file=file)
 
     def outcome(self) -> ArrayLike:
@@ -98,6 +101,18 @@ class Trace_(object):
 
         return out
 
+    def write_trajectory(self, filename: str) -> None:
+        """Writes trajectory to an xyz file"""
+        ndim = self[-1]["position"].shape[0]
+        natoms = ndim // 3
+        with open(filename, "w") as f: # TODO needs to be fixed for more general cases. How to get the element?
+            for i, snap in enumerate(self):
+                print(f"{natoms:d}", file=f)
+                print(f"energy: {snap['energy']:g}; time: {snap['time']:f}; step: {i:d}", file=f)
+                coords = np.array(snap["position"]).reshape(natoms, 3)
+                el = "H"
+                for j in range(natoms):
+                    print(f"{el:3s} {coords[j, 0]:22.16f} {coords[j, 1]:22.16f} {coords[j, 2]:22.16f}", file=f)
 
 class InMemoryTrace(Trace_):
     """Collect results from a single trajectory"""

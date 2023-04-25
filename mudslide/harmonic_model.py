@@ -17,6 +17,7 @@ class HarmonicModel(ElectronicModel_):
     """
     ndim_: int = 1
     nstates_: int = 1
+    reference: Any = None
 
     def __init__(self, x0: ArrayLike, E0: float, H0: ArrayLike, mass: ArrayLike):
         """Constructor
@@ -41,7 +42,7 @@ class HarmonicModel(ElectronicModel_):
         if self.mass.shape != (self.ndim_,):
             raise ValueError("Incorrect shape of mass")
 
-    def compute(self, X: ArrayLike, gradients: Any = None, reference: Any = None) -> None:
+    def compute(self, X: ArrayLike, gradients: Any = None, couplings: Any = None, reference: Any = None) -> None:
         """Compute and store the energies and gradients
 
         Args:
@@ -57,7 +58,8 @@ class HarmonicModel(ElectronicModel_):
         energy = self.E0 + 0.5 * np.dot(dx.T, grad)
 
         self.energies = np.array([energy])
-        self.force = -grad
+        self.hamiltonian = np.array([energy])
+        self.force = -grad.reshape([1, self.ndim_])
 
     @classmethod
     def from_dict(cls, model_dict: dict) -> "HarmonicModel":

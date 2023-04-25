@@ -76,9 +76,12 @@ class ElectronicModel_(object):
             "ndim": self.ndim(),
             "position": self.position.tolist(),
             "hamiltonian": self.hamiltonian.tolist(),
-            "derivative_coupling": self.derivative_coupling.tolist(),
             "force": self.force.tolist()
         }
+
+        if hasattr(self, "derivative_coupling"):
+            out["derivative_coupling"] = self.derivative_coupling.tolist()
+
         return out
 
 
