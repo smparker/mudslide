@@ -17,9 +17,11 @@ from .typing import ArrayLike, ElectronicT
 
 
 class ElectronicModel_(object):
-    '''
+    """
     Base class for handling electronic structure part of dynamics
-    '''
+    """
+    ndim_: int
+    nstates_: int
 
     def __init__(self, representation: str = "adiabatic", reference: Any = None):
         self.representation = representation
@@ -29,6 +31,12 @@ class ElectronicModel_(object):
         self.hamiltonian: ArrayLike
         self.force: ArrayLike
         self.derivative_coupling: ArrayLike
+
+    def ndim(self) -> int:
+        return self.ndim_
+
+    def nstates(self) -> int:
+        return self.nstates_
 
     def compute(self, X: ArrayLike, couplings: Any = None, gradients: Any = None, reference: Any = None) -> None:
         """
@@ -61,16 +69,19 @@ class ElectronicModel_(object):
 
     def clone(self):
         return self # needed this here to make sure that ES clone function works for all the models.
-    
+
     def as_dict(self):
         out = {
             "nstates": self.nstates(),
             "ndim": self.ndim(),
             "position": self.position.tolist(),
             "hamiltonian": self.hamiltonian.tolist(),
-            "derivative_coupling": self.derivative_coupling.tolist(),
             "force": self.force.tolist()
         }
+
+        if hasattr(self, "derivative_coupling"):
+            out["derivative_coupling"] = self.derivative_coupling.tolist()
+
         return out
 
 

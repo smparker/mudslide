@@ -6,6 +6,7 @@ nonadiabatic molecular dynamics.
 """
 
 from .trajectory_sh import *
+from .adiabatic_md import *
 from .cumulative_sh import *
 from .even_sampling import *
 from .ehrenfest import *

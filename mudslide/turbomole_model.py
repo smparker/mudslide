@@ -35,47 +35,31 @@ def turbomole_is_installed():
 
     return has_turbodir and has_scripts and has_bin
 
+class TurboControl(object):
+    """A class to handle the control file for turbomole"""
+    def __init__(self, control_file="control", workdir=None):
+        # workdir is directory of control file
+        if control_file is not None:
+            self.workdir = os.path.abspath(os.path.dirname(control_file))
+        elif workdir is not None:
+            self.workdir = os.path.abspath(workdir)
+        else:
+            raise Exception("Must provide either control_file or workdir")
 
-class TMModel(ElectronicModel_):
+        # list of data groups and which file they are in, used to avoid rerunning sdg too much
+        self.dg_in_file = {}
 
-    def __init__(
-        self,
-        states: ArrayLike,
-        run_turbomole_dir: str = ".",
-        workdir_stem: str = "run_turbomole",
-        representation: str = "adiabatic",
-        reference: Any = None,
-        expert=False,  # when False, will update turbomole parameters for best NAMD performance
-        turbomole_modules={"gs_energy": "ridft", "gs_grads": "rdgrad", "es_grads": "egrad"},
-    ):
-        ElectronicModel_.__init__(self, representation=representation, reference=reference)
+    def check_turbomole_is_installed(self):
+        """Check that turbomole is installed, raise exception if not"""
+        if not turbomole_is_installed():
+            raise Exception("Turbomole is not installed")
 
-        self.workdir_stem = workdir_stem
-        self.run_turbomole_dir = run_turbomole_dir
-        unique_workdir = find_unique_name(self.workdir_stem, self.run_turbomole_dir, always_enumerate=True)
-        self.workdir = os.path.join(os.path.abspath(self.run_turbomole_dir), unique_workdir)
-        self.expert = expert
-        os.makedirs(self.workdir, exist_ok = True)
-        subprocess.run(["cpc", self.workdir], cwd=self.run_turbomole_dir)
-
-        self.states = states
-        self.nstates_ = len(self.states)
-
-        assert turbomole_is_installed()
-
-        self.turbomole_modules = turbomole_modules
-        assert all([shutil.which(x) is not None for x in self.turbomole_modules.values()])
-
-        self.turbomole_init()
-
-        if not self.expert:
-            self.apply_suggested_parameters()
-
-    def nstates(self):
-        return self.nstates_
-
-    def ndim(self):
-        return self.ndim_
+    def where_is_dg(self, dg, absolute_path=False):
+        """Find which file a data group is in"""
+        loc = self.dg_in_file[dg] if dg in self.dg_in_file else self.sdg(dg, show_filename_only=True)
+        if absolute_path:
+            loc = os.path.join(self.workdir, loc)
+        return loc
 
     def sdg(
         self,
@@ -87,6 +71,7 @@ class TMModel(ElectronicModel_):
         discard_comments=True,
         quiet=False,
     ):
+        """Convenience function to run show data group (sdg) on a control"""
         sdg_command = "sdg"
         if file is not None:
             sdg_command += " -s {}".format(file)
@@ -107,6 +92,7 @@ class TMModel(ElectronicModel_):
         return result.stdout.rstrip()
 
     def adg(self, dg, data, newline=False):
+        """Convenience function to run add data group (adg) on a control"""
         if not isinstance(data, list):
             data = [data]
         lines = "\\n".join(["{}".format(x) for x in data])
@@ -115,15 +101,130 @@ class TMModel(ElectronicModel_):
         adg_command = "adg {} {}".format(dg, lines)
         result = subprocess.run(adg_command.split(), capture_output=True, text=True, cwd=self.workdir)
 
+    def cpc(self,dest):
+        """Copy the control file and other files to a new directory"""
+        subprocess.run(["cpc", dest], cwd=self.workdir)
+        file_list = ['ciss_a','exspectrum', 'statistics', 'dipl_a', 'excitationlog.1', 'moments', 'vecsao', 'control', 'gradient', 'energy', 'moments' ]
+        for f in file_list:
+            if os.path.exists(os.path.join(os.path.abspath(self.workdir), f)) and not os.path.exists(os.path.join(dest,f)):
+                shutil.copy(os.path.join(os.path.abspath(self.workdir), f), dest)
+
+    def use_weight_derivatives(self, use=True):
+        """Check if weight derivatives are used in the control file"""
+        sdg_dft = self.sdg("dft", show_body=True)
+        if use: # make sure weight derivatives turned on
+            if "weight derivatives" not in sdg_dft:
+                current_dft = sdg_dft.split("\n")
+                self.adg("dft", current_dft + [" weight derivatives"], newline=True)
+        else: # remove weight derivatives
+            if "weight derivatives" in sdg_dft:
+                current_dft = sdg_dft.split("\n")
+                self.adg("dft", [x for x in current_dft if "weight derivatives" not in x], newline=True)
+
+    def run_single(self, module, stdout=sys.stdout):
+        """Run a single turbomole module"""
+        output = subprocess.run(module, capture_output=True, text=True, cwd=self.workdir)
+        print(output.stdout, file=stdout)
+        if "abnormal" in output.stderr:
+            raise Exception("Call to {} ended abnormally".format(module))
+
+    def read_coords(self):
+        """Read the coordinates from the control file
+        Returns: (symbols, coords) where symbols is a list of atomic symbols and
+            coords is a numpy array of shape (n_atoms * 3) with coordinates in angstroms
+        """
+        coords = []
+        symbols = []
+        self.mass = []
+        coord = self.sdg("coord")
+        coord_list = coord.rstrip().split("\n")
+
+        for c in coord_list[1:]:
+            c_list = c.split()
+            symbols.append(c_list[3])
+            coords.append([float(val) for val in c_list[:3]])
+
+        X = np.array(coords, dtype=np.float64).reshape(len(coords) * 3)
+        return symbols, X
+
+    def get_masses(self, symbols):
+        """Get the masses of the atoms in the system"""
+        atomic_masses = np.array([masses[s] for s in symbols for i in range(3)], dtype=np.float64)
+        atomic_masses *= amu_to_au
+        return atomic_masses
+
+    def read_hessian(self):
+        """
+        Projected Hessian has a structure of
+        $hessian (projected)
+        1 1 0.000 0.000 0.000 0.000 0.000
+        1 2 0.000 0.000 0.000 0.000 0.000
+        2 1 0.000 0.000 0.000 0.000 0.000
+        ...
+        """
+        hessian = []
+        hess = self.sdg("hessian", show_body=True)
+        hess_list = hess.rstrip().split("\n")
+        ndim = 0
+        for h in hess_list:
+            h_list = h.split()
+            ndim = max(ndim, int(h_list[0]))
+            hessian.extend([float(val) for val in h_list[2:]])
+        H = np.array(hessian, dtype=np.float64).reshape(ndim, ndim)
+        return H
+
+
+class TMModel(ElectronicModel_):
+    """A class to handle the electronic model for excited state Turbomole calculations"""
+    def __init__(
+        self,
+        states: ArrayLike,
+        run_turbomole_dir: str = ".",
+        workdir_stem: str = "run_turbomole",
+        representation: str = "adiabatic",
+        reference: Any = None,
+        expert=False,  # when False, will update turbomole parameters for best NAMD performance
+        turbomole_modules={"gs_energy": "ridft", "gs_grads": "rdgrad", "es_grads": "egrad"},
+    ):
+        ElectronicModel_.__init__(self, representation=representation, reference=reference)
+
+        self.workdir_stem = workdir_stem
+        self.run_turbomole_dir = run_turbomole_dir
+        unique_workdir = find_unique_name(self.workdir_stem, self.run_turbomole_dir, always_enumerate=True)
+        work = os.path.join(os.path.abspath(self.run_turbomole_dir), unique_workdir)
+        self.control = TurboControl(workdir=work)
+        self.expert = expert
+
+        os.makedirs(self.control.workdir, exist_ok = True)
+        subprocess.run(["cpc", self.control.workdir], cwd=self.run_turbomole_dir)
+
+        self.states = states
+        self.nstates_ = len(self.states)
+
+        if not turbomole_is_installed():
+            raise RuntimeError("Turbomole is not installed")
+
+        self.turbomole_modules = turbomole_modules
+        if not all([shutil.which(x) is not None for x in self.turbomole_modules.values()]):
+            raise RuntimeError("Turbomole modules not found")
+
+        self.turbomole_init()
+
+        if not self.expert:
+            self.apply_suggested_parameters()
+
+    def nstates(self):
+        return self.nstates_
+
+    def ndim(self):
+        return self.ndim_
+
     def apply_suggested_parameters(self):
         # weight derivatives are mandatory
-        sdg_dft = self.sdg("dft", show_body=True)
-        if "weight derivatives" not in sdg_dft:
-            current_dft = sdg_dft.split("\n")
-            self.adg("dft", current_dft + [" weight derivatives"], newline=True)
+        self.control.use_weight_derivatives(use=True)
 
         # prefer psuedowavefunction couplings with ETFs
-        sdg_nac = self.sdg("nacme")[6:].strip()  # skip past $nacme
+        sdg_nac = self.control.sdg("nacme")[6:].strip()  # skip past $nacme
         update_nac = False
         if "response" in sdg_nac:
             update_nac = True
@@ -132,41 +233,24 @@ class TMModel(ElectronicModel_):
             update_nac = True
             sdg_nac += " do_etf"
         if update_nac:
-            self.adg("nacme", sdg_nac)
+            self.control.adg("nacme", sdg_nac)
 
         # probably force phaser on as well
 
-    def run_single(self, module, stdout=sys.stdout):
-        output = subprocess.run(module, capture_output=True, text=True, cwd=self.workdir)
-        print(output.stdout, file=stdout)
-        if "abnormal" in output.stderr:
-            raise Exception("Call to {} ended abnormally".format(module))
-
     def turbomole_init(self):
-        self.coord_path = Path(self.workdir) / self.sdg("coord", show_filename_only=True)
-        self.get_coords()
+        self.setup_coords()
 
-    def get_coords(self):
-        coords = []
-        self.atom_order = []
-        self.mass = []
-        coord = self.sdg("coord")
-        coord_list = coord.rstrip().split("\n")
-
-        for c in coord_list[1:]:
-            c_list = c.split()
-            self.atom_order.append(c_list[3])
-            coords.append([float(val) for val in c_list[:3]])
-            self.mass.append(3 * [masses[c_list[3]]])
-
-        self.ndim_ = 3 * len(coords)
-        self.X = np.array(coords, dtype=np.float64).reshape(self.ndim())
-        self.mass = np.array(self.mass, dtype=np.float64).reshape(self.ndim()) * amu_to_au
+    def setup_coords(self):
+        """Setup the coordinates for the calculation"""
+        self.atom_order, self.X = self.control.read_coords()
+        self.ndim_ = len(self.X)
+        self.mass = self.control.get_masses(self.atom_order)
 
     def update_coords(self, X):
         X = X.reshape((self.ndim() // 3, 3))
+        coord_path = self.control.where_is_dg("coord", absolute_path=True)
 
-        with open(self.coord_path, "r") as f:
+        with open(coord_path, "r") as f:
             lines = f.readlines()
 
         regex = re.compile(r"\s*\$coord")
@@ -177,7 +261,7 @@ class TMModel(ElectronicModel_):
                 break
         # Reached end of file without finding $coord.
         if line == "":
-            raise ValueError(f"$coord entry not found in file: {self.coord_path}!")
+            raise ValueError(f"$coord entry not found in file: {coord_path}!")
 
         coordline += 1
         for i, coord_list in enumerate(X):
@@ -186,15 +270,15 @@ class TMModel(ElectronicModel_):
             )
             coordline += 1
 
-        with open(self.coord_path, "w") as coord_file:
+        with open(coord_path, "w") as coord_file:
             coord_file.write("".join(lines))
 
         # Now add results to model
 
-    def call_turbomole(self, outname="turbo.out"):
+    def call_turbomole(self, outname="turbo.out") -> None:
         with open(outname, "w") as f:
             for turbomole_module in self.turbomole_modules.values():
-                self.run_single(turbomole_module, stdout=f)
+                self.control.run_single(turbomole_module, stdout=f)
 
         # Parse results with Turboparse
         with open(outname, "r") as f:
@@ -234,7 +318,7 @@ class TMModel(ElectronicModel_):
 
         self.force = -(self.gradients)
 
-    def compute(self, X, couplings, gradients, reference):
+    def compute(self, X, couplings, gradients, reference) -> None:
         """
         Calls Turbomole/Turboparse to generate electronic properties including
         gradients, couplings, energies. For this to work, this class
@@ -242,12 +326,11 @@ class TMModel(ElectronicModel_):
         can get properly passed to Turbomole. (__init__() can get these
         file locations.)
         """
-        self.call_turbomole(outname = Path(self.workdir)/"turbo.out")
+        self.call_turbomole(outname = Path(self.control.workdir)/"turbo.out")
 
         self.hamiltonian = np.zeros([self.nstates(), self.nstates()])
         for i, e in enumerate(self.states):
             self.hamiltonian[i][i] = self.energies[e]
-        return self.hamiltonian
 
     def update(self, X: ArrayLike, electronics: Any=None, couplings: Any = None, gradients: Any = None):
         out = cp.copy(self)
@@ -256,20 +339,13 @@ class TMModel(ElectronicModel_):
         out.compute(X, couplings=couplings, gradients=gradients, reference=self.reference)
         return out
 
-    def cpc(self,dest): 
-        subprocess.run(["cpc", dest], cwd=self.workdir)
-        file_list = ['ciss_a','exspectrum', 'statistics', 'dipl_a', 'excitationlog.1', 'moments', 'vecsao', 'control', 'gradient', 'energy', 'moments' ]
-        for f in file_list:
-            if os.path.exists(os.path.join(os.path.abspath(self.workdir), f)) and not os.path.exists(os.path.join(dest,f)):
-                shutil.copy(os.path.join(os.path.abspath(self.workdir), f), dest)
-        
 
     def clone(self):
         model_clone = cp.deepcopy(self)
         unique_workdir = find_unique_name(self.workdir_stem, self.run_turbomole_dir, always_enumerate=True)
-        model_clone.workdir = os.path.join(os.path.abspath(self.run_turbomole_dir), unique_workdir)
-        os.makedirs(model_clone.workdir, exist_ok = True)
-        self.cpc(model_clone.workdir)
-        
+        model_clone.control.workdir = os.path.join(os.path.abspath(self.run_turbomole_dir), unique_workdir)
+        os.makedirs(model_clone.control.workdir, exist_ok = True)
+        self.cpc(model_clone.control.workdir)
+
         model_clone.turbomole_init()
         return model_clone
