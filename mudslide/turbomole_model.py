@@ -101,7 +101,7 @@ class TurboControl(object):
         adg_command = "adg {} {}".format(dg, lines)
         result = subprocess.run(adg_command.split(), capture_output=True, text=True, cwd=self.workdir)
 
-    def cpc(self,dest):
+    def cpc(self, dest):
         """Copy the control file and other files to a new directory"""
         subprocess.run(["cpc", dest], cwd=self.workdir)
         file_list = ['ciss_a','exspectrum', 'statistics', 'dipl_a', 'excitationlog.1', 'moments', 'vecsao', 'control', 'gradient', 'energy', 'moments' ]
@@ -339,13 +339,12 @@ class TMModel(ElectronicModel_):
         out.compute(X, couplings=couplings, gradients=gradients, reference=self.reference)
         return out
 
-
     def clone(self):
         model_clone = cp.deepcopy(self)
         unique_workdir = find_unique_name(self.workdir_stem, self.run_turbomole_dir, always_enumerate=True)
         model_clone.control.workdir = os.path.join(os.path.abspath(self.run_turbomole_dir), unique_workdir)
         os.makedirs(model_clone.control.workdir, exist_ok = True)
-        self.cpc(model_clone.control.workdir)
+        self.control.cpc(model_clone.control.workdir)
 
         model_clone.turbomole_init()
         return model_clone
