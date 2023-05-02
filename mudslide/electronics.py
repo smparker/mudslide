@@ -24,7 +24,7 @@ class ElectronicModel_(object):
     nstates_: int
 
     def __init__(self, representation: str = "adiabatic", reference: Any = None):
-        self.representation = representation
+        self._representation = representation
         self._position: ArrayLike
         self._reference = reference
 
@@ -139,7 +139,7 @@ class DiabaticModel_(ElectronicModel_):
         :param V: potential matrix
         :param reference: ElectronicStates from previous step used only to fix phase
         """
-        if self.representation == "adiabatic":
+        if self._representation == "adiabatic":
             energies, coeff = np.linalg.eigh(V)
             if reference is not None:
                 try:
@@ -150,7 +150,7 @@ class DiabaticModel_(ElectronicModel_):
                     raise Exception("Failed to regularize new ElectronicStates from a reference object %s" %
                                     (reference))
             return (coeff, np.diag(energies))
-        elif self.representation == "diabatic":
+        elif self._representation == "diabatic":
             return (np.eye(self.nstates(), dtype=np.float64), V)
         else:
             raise Exception("Unrecognized run mode")
@@ -174,7 +174,7 @@ class DiabaticModel_(ElectronicModel_):
 
     def _compute_derivative_coupling(self, coeff: ArrayLike, dV: ArrayLike, energies: ArrayLike) -> ArrayLike:
         r"""returns :math:`\phi_{i} | \nabla_\alpha \phi_{j} = d^\alpha_{ij}`"""
-        if self.representation == "diabatic":
+        if self._representation == "diabatic":
             return np.zeros([self.nstates(), self.nstates(), self.ndim()], dtype=np.float64)
 
         out = np.einsum("ip,xij,jq->pqx", coeff, dV, coeff)
@@ -243,7 +243,7 @@ class AdiabaticModel_(ElectronicModel_):
         :param V: potential matrix
         :param reference: ElectronicStates from previous step used only to fix phase
         """
-        if self.representation == "adiabatic":
+        if self._representation == "adiabatic":
             en, co = np.linalg.eigh(V)
             nst = self.nstates()
             coeff = co[:, :nst]
@@ -258,7 +258,7 @@ class AdiabaticModel_(ElectronicModel_):
                     raise Exception("Failed to regularize new ElectronicStates from a reference object %s" %
                                     (reference))
             return coeff, np.diag(energies)
-        elif self.representation == "diabatic":
+        elif self._representation == "diabatic":
             raise Exception("Adiabatic models can only be run in adiabatic mode")
             return None
         else:
@@ -283,7 +283,7 @@ class AdiabaticModel_(ElectronicModel_):
 
     def _compute_derivative_coupling(self, coeff: ArrayLike, dV: ArrayLike, energies: ArrayLike) -> ArrayLike:
         r"""returns :math:`\phi_{i} | \nabla_\alpha \phi_{j} = d^\alpha_{ij}`"""
-        if self.representation == "diabatic":
+        if self._representation == "diabatic":
             return np.zeros([self.nstates(), self.nstates(), self.ndim()], dtype=np.float64)
 
         out = np.einsum("ip,xij,jq->pqx", coeff, dV, coeff)
