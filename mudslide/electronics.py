@@ -28,7 +28,7 @@ class ElectronicModel_(object):
         self._position: ArrayLike
         self._reference = reference
 
-        self.hamiltonian: ArrayLike
+        self._hamiltonian: ArrayLike
         self.force: ArrayLike
         self.derivative_coupling: ArrayLike
 
@@ -40,11 +40,15 @@ class ElectronicModel_(object):
         """Number of electronic states"""
         return self.nstates_
 
+    def hamiltonian(self) -> ArrayLike:
+        """Return the electronic hamiltonian"""
+        return self._hamiltonian
+
     def compute(self, X: ArrayLike, couplings: Any = None, gradients: Any = None, reference: Any = None) -> None:
         """
         Central function for model objects. After the compute function exists, the following
         data must be provided:
-          - self.hamiltonian -> n x n array containing electronic hamiltonian
+          - self._hamiltonian -> n x n array containing electronic hamiltonian
           - self.force -> n x ndim array containing the force on each diagonal
           - self.derivative_coupling -> n x n x ndim array containing derivative couplings
 
@@ -92,7 +96,7 @@ class ElectronicModel_(object):
             "nstates": self.nstates(),
             "ndim": self.ndim(),
             "position": self._position.tolist(),
-            "hamiltonian": self.hamiltonian.tolist(),
+            "hamiltonian": self._hamiltonian.tolist(),
             "force": self.force.tolist()
         }
 
@@ -124,10 +128,10 @@ class DiabaticModel_(ElectronicModel_):
     def compute(self, X: ArrayLike, couplings: Any = None, gradients: Any = None, reference: Any = None) -> None:
         self._position = X
 
-        self._reference, self.hamiltonian = self._compute_basis_states(self.V(X), reference=reference)
+        self._reference, self._hamiltonian = self._compute_basis_states(self.V(X), reference=reference)
         dV = self.dV(X)
 
-        self.derivative_coupling = self._compute_derivative_coupling(self._reference, dV, np.diag(self.hamiltonian))
+        self.derivative_coupling = self._compute_derivative_coupling(self._reference, dV, np.diag(self._hamiltonian))
 
         self.force = self._compute_force(dV, self._reference)
 
@@ -220,10 +224,10 @@ class AdiabaticModel_(ElectronicModel_):
     def compute(self, X: ArrayLike, couplings: Any = None, gradients: Any = None, reference: Any = None) -> None:
         self._position = X
 
-        self._reference, self.hamiltonian = self._compute_basis_states(self.V(X), reference=reference)
+        self._reference, self._hamiltonian = self._compute_basis_states(self.V(X), reference=reference)
         dV = self.dV(X)
 
-        self.derivative_coupling = self._compute_derivative_coupling(self._reference, dV, np.diag(self.hamiltonian))
+        self.derivative_coupling = self._compute_derivative_coupling(self._reference, dV, np.diag(self._hamiltonian))
 
         self.force = self._compute_force(dV, self._reference)
 

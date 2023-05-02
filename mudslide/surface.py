@@ -76,7 +76,7 @@ def main(argv=None, file=sys.stdout) -> None:
         V = model.V(x)
         ndim = estates.ndim()
         diabats = [V[i, i] for i in range(nstates)]  # type: List[float]
-        energies = [estates.hamiltonian[i, i] for i in range(nstates)]  # type: List[float]
+        energies = [estates.hamiltonian()[i, i] for i in range(nstates)]  # type: List[float]
         dc = [estates.derivative_coupling[j, i, 0] for i in range(nstates) for j in range(i)]  # type: List[float]
         forces = [float(-estates.force[i, j]) for i in range(nstates) for j in range(ndim)]  # type: List[float]
         plist = list(x.flatten()) + diabats + energies + dc + forces  # type: List[float]

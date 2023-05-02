@@ -22,7 +22,7 @@ class Ehrenfest(TrajectorySH):
         """
         if electronics is None:
             electronics = self.electronics
-        return np.real(np.trace(np.dot(self.rho, electronics.hamiltonian)))
+        return np.real(np.trace(np.dot(self.rho, electronics.hamiltonian())))
 
     def force(self, electronics: ElectronicT = None) -> ArrayLike:
         """Ehrenfest potential energy = tr(rho * H')

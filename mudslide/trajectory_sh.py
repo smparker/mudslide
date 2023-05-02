@@ -261,7 +261,7 @@ class TrajectorySH(object):
         """
         if electronics is None:
             electronics = self.electronics
-        return electronics.hamiltonian[self.state, self.state]
+        return electronics.hamiltonian()[self.state, self.state]
 
     def total_energy(self, electronics: ElectronicT = None) -> DtypeLike:
         """
@@ -389,7 +389,7 @@ class TrajectorySH(object):
         if last_electronics is None:
             last_electronics = this_electronics
 
-        H = 0.5 * (this_electronics.hamiltonian + last_electronics.hamiltonian)  # type: ignore
+        H = 0.5 * (this_electronics.hamiltonian() + last_electronics.hamiltonian())  # type: ignore
         TV = 0.5 * np.einsum(
             "ijx,x->ij",
             this_electronics.derivative_coupling + last_electronics.derivative_coupling,  #type: ignore
@@ -415,8 +415,8 @@ class TrajectorySH(object):
             U = np.linalg.multi_dot([coeff, np.diag(np.exp(-1j * diags * dt)), coeff.T.conj()])
             np.dot(U, np.dot(self.rho, U.T.conj(), out=W), out=self.rho)
         elif self.electronic_integration == "linear-rk4":
-            last_H = last_electronics.hamiltonian
-            this_H = this_electronics.hamiltonian
+            last_H = last_electronics.hamiltonian()
+            this_H = this_electronics.hamiltonian()
 
             last_tau = last_electronics.derivative_coupling
             this_tau = this_electronics.derivative_coupling
@@ -554,8 +554,8 @@ class TrajectorySH(object):
         hop_dict = hop_targets[0]
         hop_to = int(hop_dict["target"])
         elec_states = electronics if electronics is not None else self.electronics
-        new_potential, old_potential = elec_states.hamiltonian[hop_to, hop_to], elec_states.hamiltonian[self.state,
-                                                                                                        self.state]
+        H = elec_states.hamiltonian()
+        new_potential, old_potential = H[hop_to, hop_to], H[self.state, self.state]
         delV = new_potential - old_potential
         rescale_vector = self.direction_of_rescale(self.state, hop_to)
         component_kinetic = self.mode_kinetic_energy(rescale_vector)

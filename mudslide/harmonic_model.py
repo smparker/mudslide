@@ -60,7 +60,7 @@ class HarmonicModel(ElectronicModel_):
         energy = self.E0 + 0.5 * np.dot(dx.T, grad)
 
         self.energies = np.array([energy])
-        self.hamiltonian = np.array([energy])
+        self._hamiltonian = np.array([energy])
         self.force = -grad.reshape([1, self.ndim_])
 
     @classmethod

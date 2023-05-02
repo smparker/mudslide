@@ -330,9 +330,8 @@ class TMModel(ElectronicModel_):
         self.update_coords(X)
         self.call_turbomole(outname = Path(self.control.workdir)/"turbo.out")
 
-        self.hamiltonian = np.zeros([self.nstates(), self.nstates()])
-        for i, e in enumerate(self.states):
-            self.hamiltonian[i][i] = self.energies[e]
+        self._hamiltonian = np.zeros([self.nstates(), self.nstates()])
+        self._hamiltonian = np.diag(self.energies)
 
     def clone(self):
         model_clone = cp.deepcopy(self)
