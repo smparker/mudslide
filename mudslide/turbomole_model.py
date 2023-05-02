@@ -242,8 +242,8 @@ class TMModel(ElectronicModel_):
 
     def setup_coords(self):
         """Setup the coordinates for the calculation"""
-        self.atom_order, self.X = self.control.read_coords()
-        self.ndim_ = len(self.X)
+        self.atom_order, self._position = self.control.read_coords()
+        self.ndim_ = len(self._position)
         self.mass = self.control.get_masses(self.atom_order)
 
     def update_coords(self, X):
@@ -326,18 +326,13 @@ class TMModel(ElectronicModel_):
         can get properly passed to Turbomole. (__init__() can get these
         file locations.)
         """
+        self._position = X
+        self.update_coords(X)
         self.call_turbomole(outname = Path(self.control.workdir)/"turbo.out")
 
         self.hamiltonian = np.zeros([self.nstates(), self.nstates()])
         for i, e in enumerate(self.states):
             self.hamiltonian[i][i] = self.energies[e]
-
-    def update(self, X: ArrayLike, electronics: Any=None, couplings: Any = None, gradients: Any = None):
-        out = cp.copy(self)
-        out.position = X
-        out.update_coords(X)
-        out.compute(X, couplings=couplings, gradients=gradients, reference=self.reference)
-        return out
 
     def clone(self):
         model_clone = cp.deepcopy(self)

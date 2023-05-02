@@ -60,7 +60,7 @@ class TestTMModel(unittest.TestCase):
                 2.145175145340160000,  0.594918215579156000,  1.075977514428970000,
                -2.269965412856570000,  0.495551832268249000,  1.487150300486560000]
         # yapf: enable
-        positions = tm_model.X
+        positions = tm_model._position
         mass = tm_model.mass
         q = queue.Queue()
         dt = 20

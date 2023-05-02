@@ -25,17 +25,19 @@ class ElectronicModel_(object):
 
     def __init__(self, representation: str = "adiabatic", reference: Any = None):
         self.representation = representation
-        self.position: ArrayLike
-        self.reference = reference
+        self._position: ArrayLike
+        self._reference = reference
 
         self.hamiltonian: ArrayLike
         self.force: ArrayLike
         self.derivative_coupling: ArrayLike
 
     def ndim(self) -> int:
+        """Number of classical degrees of freedom"""
         return self.ndim_
 
     def nstates(self) -> int:
+        """Number of electronic states"""
         return self.nstates_
 
     def compute(self, X: ArrayLike, couplings: Any = None, gradients: Any = None, reference: Any = None) -> None:
@@ -60,27 +62,43 @@ class ElectronicModel_(object):
         Convenience function that copies the present object, updates the position,
         calls compute, and then returns the new object
         """
-        out = cp.copy(self)
-        if electronics:
-            self.reference = electronics.reference
-        out.position = X
-        out.compute(X, couplings=couplings, gradients=gradients, reference=self.reference)
+        out = cp.deepcopy(self)
+
+        if electronics and electronics._reference is not None:
+            reference = electronics._reference
+        else:
+            reference = self._reference
+
+        out.compute(X, couplings=couplings, gradients=gradients, reference=reference)
         return out
 
     def clone(self):
-        return self # needed this here to make sure that ES clone function works for all the models.
+        """Create a copy of the electronics object that
+        owns its own resources, including disk
+
+        Major difference from deepcopy is that clone
+        should prepare any resources that are needed
+        for the object to be used, for example, disk
+        access, network access, and so on. deepcopy
+        should only copy the object in memory, not
+        acquire resources like disk space.
+
+        """
+        return cp.deepcopy(self)
 
     def as_dict(self):
+        """Return a dictionary representation of the model"""
         out = {
             "nstates": self.nstates(),
             "ndim": self.ndim(),
-            "position": self.position.tolist(),
+            "position": self._position.tolist(),
             "hamiltonian": self.hamiltonian.tolist(),
             "force": self.force.tolist()
         }
 
-        if hasattr(self, "derivative_coupling"):
-            out["derivative_coupling"] = self.derivative_coupling.tolist()
+        for key in [ "derivative_coupling", "force_matrix" ]:
+            if hasattr(self, key):
+                out[key] = getattr(self, key).tolist()
 
         return out
 
@@ -89,6 +107,13 @@ class DiabaticModel_(ElectronicModel_):
     '''
     Base class to handle model problems given in
     simple diabatic forms.
+
+    To derive from DiabaticModel_, the following functions
+    must be implemented:
+        - def V(self, X: ArrayLike) -> ArrayLike
+          V(x) should return an ndarray of shape (nstates, nstates)
+        - def dV(self, X: ArrayLike) -> ArrayLike
+          dV(x) shoudl return an ndarry of shape (nstates, nstates, ndim)
     '''
     nstates_: int
     ndim_: int
@@ -96,31 +121,17 @@ class DiabaticModel_(ElectronicModel_):
     def __init__(self, representation: str = "adiabatic", reference: Any = None):
         ElectronicModel_.__init__(self, representation=representation, reference=reference)
 
-    def nstates(self) -> int:
-        return self.nstates_
-
-    def ndim(self) -> int:
-        return self.ndim_
-
     def compute(self, X: ArrayLike, couplings: Any = None, gradients: Any = None, reference: Any = None) -> None:
-        self.position = X
+        self._position = X
 
-        self.reference, self.hamiltonian = self._compute_basis_states(self.V(X), reference=reference)
+        self._reference, self.hamiltonian = self._compute_basis_states(self.V(X), reference=reference)
         dV = self.dV(X)
 
-        self.derivative_coupling = self._compute_derivative_coupling(self.reference, dV, np.diag(self.hamiltonian))
+        self.derivative_coupling = self._compute_derivative_coupling(self._reference, dV, np.diag(self.hamiltonian))
 
-        self.force = self._compute_force(dV, self.reference)
+        self.force = self._compute_force(dV, self._reference)
 
-        self.force_matrix = self._compute_force_matrix(dV, self.reference)
-
-    def update(self, X: ArrayLike, electronics: Any = None, couplings: Any = None, gradients: Any = None) -> 'DiabaticModel_': 
-        out = cp.copy(self)
-        if electronics:
-            self.reference = electronics.reference
-        out.position = X
-        out.compute(X, couplings=couplings, gradients=gradients, reference=self.reference)
-        return out
+        self.force_matrix = self._compute_force_matrix(dV, self._reference)
 
     def _compute_basis_states(self, V: ArrayLike, reference: Any = None) -> Tuple[ArrayLike, ArrayLike]:
         """Computes coefficient matrix for basis states
@@ -207,23 +218,23 @@ class AdiabaticModel_(ElectronicModel_):
         return self.ndim_
 
     def compute(self, X: ArrayLike, couplings: Any = None, gradients: Any = None, reference: Any = None) -> None:
-        self.position = X
+        self._position = X
 
-        self.reference, self.hamiltonian = self._compute_basis_states(self.V(X), reference=reference)
+        self._reference, self.hamiltonian = self._compute_basis_states(self.V(X), reference=reference)
         dV = self.dV(X)
 
-        self.derivative_coupling = self._compute_derivative_coupling(self.reference, dV, np.diag(self.hamiltonian))
+        self.derivative_coupling = self._compute_derivative_coupling(self._reference, dV, np.diag(self.hamiltonian))
 
-        self.force = self._compute_force(dV, self.reference)
+        self.force = self._compute_force(dV, self._reference)
 
-        self.force_matrix = self._compute_force_matrix(dV, self.reference)
+        self.force_matrix = self._compute_force_matrix(dV, self._reference)
 
     def update(self, X: ArrayLike, electronics: Any = None, couplings: Any = None, gradients: Any = None) -> 'AdiabaticModel_':
-        out = cp.copy(self)
+        out = cp.deepcopy(self)
         if electronics:
-            self.reference = electronics.reference
-        out.position = X
-        out.compute(X, couplings=couplings, gradients=gradients, reference=self.reference)
+            self._reference = electronics._reference
+        out._position = X
+        out.compute(X, couplings=couplings, gradients=gradients, reference=self._reference)
         return out
 
     def _compute_basis_states(self, V: ArrayLike, reference: Any = None) -> Tuple[ArrayLike, ArrayLike]:

@@ -47,7 +47,7 @@ class TestTMModel(unittest.TestCase):
     def test_get_gs_ex_properties(self):
         """test for gs_ex_properties function"""
         model = TMModel(states=[0, 1, 2, 3],  expert=True)
-        positions = model.X
+        positions = model._position
 
         # yapf: disable
         mom = [ 5.583286976987380000, -2.713959745507320000,  0.392059702162967000,
