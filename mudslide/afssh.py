@@ -44,7 +44,7 @@ class AugmentedFSSH(TrajectorySH):
 
     def compute_delF(self, this_electronics):
         delF = np.copy(this_electronics.force_matrix)
-        F0 = self.force(this_electronics)
+        F0 = self._force(this_electronics)
         for i in range(self.model.nstates()):
             delF[i,i,:] -= F0
         return delF

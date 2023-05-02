@@ -36,4 +36,4 @@ def test_harmonic_energy_force():
         -1.08949197e-11, -0.00000000e+00, -1.05059156e-02, 5.34901953e-03, -0.00000000e+00, 5.25295782e-03,
         -5.34901952e-03, -0.00000000e+00, 5.25295781e-03
     ])
-    assert np.allclose(model.force, force_ref)
+    assert np.allclose(model.force(0), force_ref)

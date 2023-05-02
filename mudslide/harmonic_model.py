@@ -61,7 +61,8 @@ class HarmonicModel(ElectronicModel_):
 
         self.energies = np.array([energy])
         self._hamiltonian = np.array([energy])
-        self.force = -grad.reshape([1, self.ndim_])
+        self._force = -grad.reshape([1, self.ndim_])
+        self._forces_available = [True]
 
     @classmethod
     def from_dict(cls, model_dict: dict) -> "HarmonicModel":

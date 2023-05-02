@@ -20,17 +20,20 @@ class ElectronicModel_(object):
     """
     Base class for handling electronic structure part of dynamics
     """
-    ndim_: int
-    nstates_: int
+    def __init__(self, representation: str = "adiabatic", reference: Any = None,
+                 nstates: int = 0, ndim: int = 0):
+        self.ndim_ = ndim
+        self.nstates_ = nstates
 
-    def __init__(self, representation: str = "adiabatic", reference: Any = None):
         self._representation = representation
         self._position: ArrayLike
         self._reference = reference
 
         self._hamiltonian: ArrayLike
-        self.force: ArrayLike
+        self._force: ArrayLike
+        self._forces_available: List[bool] = [False] * self.nstates()
         self.derivative_coupling: ArrayLike
+        self._derivative_couplings_available: List[bool] = [False] * self.nstates() * self.nstates()
 
     def ndim(self) -> int:
         """Number of classical degrees of freedom"""
@@ -43,6 +46,12 @@ class ElectronicModel_(object):
     def hamiltonian(self) -> ArrayLike:
         """Return the electronic hamiltonian"""
         return self._hamiltonian
+
+    def force(self, state: int) -> ArrayLike:
+        """Return the force on a given state"""
+        if not self._forces_available[state]:
+            raise Exception("Force on state %d not available" % state)
+        return self._force[state,:]
 
     def compute(self, X: ArrayLike, couplings: Any = None, gradients: Any = None, reference: Any = None) -> None:
         """
@@ -97,7 +106,7 @@ class ElectronicModel_(object):
             "ndim": self.ndim(),
             "position": self._position.tolist(),
             "hamiltonian": self._hamiltonian.tolist(),
-            "force": self.force.tolist()
+            "force": self._force.tolist()
         }
 
         for key in [ "derivative_coupling", "force_matrix" ]:
@@ -119,11 +128,11 @@ class DiabaticModel_(ElectronicModel_):
         - def dV(self, X: ArrayLike) -> ArrayLike
           dV(x) shoudl return an ndarry of shape (nstates, nstates, ndim)
     '''
-    nstates_: int
-    ndim_: int
 
-    def __init__(self, representation: str = "adiabatic", reference: Any = None):
-        ElectronicModel_.__init__(self, representation=representation, reference=reference)
+    def __init__(self, representation: str = "adiabatic", reference: Any = None,
+                 nstates:int = 0, ndim: int = 0):
+        ElectronicModel_.__init__(self, representation=representation, reference=reference,
+                                  nstates=nstates, ndim=ndim)
 
     def compute(self, X: ArrayLike, couplings: Any = None, gradients: Any = None, reference: Any = None) -> None:
         self._position = X
@@ -133,7 +142,8 @@ class DiabaticModel_(ElectronicModel_):
 
         self.derivative_coupling = self._compute_derivative_coupling(self._reference, dV, np.diag(self._hamiltonian))
 
-        self.force = self._compute_force(dV, self._reference)
+        self._force = self._compute_force(dV, self._reference)
+        self._forces_available = [True] * self.nstates()
 
         self.force_matrix = self._compute_force_matrix(dV, self._reference)
 
@@ -207,13 +217,13 @@ class AdiabaticModel_(ElectronicModel_):
     Base class to handle model problems that have an auxiliary electronic problem admitting
     many electronic states that are truncated to just a few. Sort of a truncated DiabaticModel_.
     '''
-    nstates_: int
-    ndim_: int
 
-    def __init__(self, representation: str = "adiabatic", reference: Any = None):
+    def __init__(self, representation: str = "adiabatic", reference: Any = None,
+                 nstates:int = 0, ndim: int = 0):
         if representation == "diabatic":
             raise Exception('Adiabatic models can only be run in adiabatic mode')
-        ElectronicModel_.__init__(self, representation=representation, reference=reference)
+        ElectronicModel_.__init__(self, representation=representation, reference=reference,
+                                  nstates=nstates, ndim=ndim)
 
     def nstates(self) -> int:
         return self.nstates_
@@ -229,7 +239,8 @@ class AdiabaticModel_(ElectronicModel_):
 
         self.derivative_coupling = self._compute_derivative_coupling(self._reference, dV, np.diag(self._hamiltonian))
 
-        self.force = self._compute_force(dV, self._reference)
+        self._force = self._compute_force(dV, self._reference)
+        self._forces_available = [True] * self.nstates()
 
         self.force_matrix = self._compute_force_matrix(dV, self._reference)
 

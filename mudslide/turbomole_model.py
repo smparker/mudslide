@@ -213,12 +213,6 @@ class TMModel(ElectronicModel_):
         if not self.expert:
             self.apply_suggested_parameters()
 
-    def nstates(self):
-        return self.nstates_
-
-    def ndim(self):
-        return self.ndim_
-
     def apply_suggested_parameters(self):
         # weight derivatives are mandatory
         self.control.use_weight_derivatives(use=True)
@@ -276,6 +270,10 @@ class TMModel(ElectronicModel_):
         # Now add results to model
 
     def call_turbomole(self, outname="turbo.out") -> None:
+        """Call Turbomole to run the calculation"""
+        # which forces are actually found?
+        self._forces_available = [False] * self.nstates()
+
         with open(outname, "w") as f:
             for turbomole_module in self.turbomole_modules.values():
                 self.control.run_single(turbomole_module, stdout=f)
@@ -288,6 +286,8 @@ class TMModel(ElectronicModel_):
         energy = data_dict[self.turbomole_modules["gs_energy"]]["energy"]
         self.energies = [energy]
         parsed_gradients = [data_dict[self.turbomole_modules["gs_grads"]]["gradient"][0]["gradients"]]
+        self._forces_available[0] = True
+
 
         # Check for presence of egrad turbomole module
         if "egrad" in self.turbomole_modules.values():
@@ -311,12 +311,13 @@ class TMModel(ElectronicModel_):
             # egrad updates to gradients
             for i in range(len(data_dict["egrad"]["gradient"])):
                 parsed_gradients.extend([data_dict["egrad"]["gradient"][i]["gradients"]])
+                self._forces_available[len(parsed_gradients)-1] = True
 
         # Reshape gradients
 
         self.gradients = np.array(parsed_gradients)
 
-        self.force = -(self.gradients)
+        self._force = -(self.gradients)
 
     def compute(self, X, couplings, gradients, reference) -> None:
         """

@@ -24,14 +24,18 @@ class Ehrenfest(TrajectorySH):
             electronics = self.electronics
         return np.real(np.trace(np.dot(self.rho, electronics.hamiltonian())))
 
-    def force(self, electronics: ElectronicT = None) -> ArrayLike:
+    def _force(self, electronics: ElectronicT = None) -> ArrayLike:
         """Ehrenfest potential energy = tr(rho * H')
 
         :param electronics: ElectronicStates from current step
         """
         if electronics is None:
             electronics = self.electronics
-        return np.dot(np.real(np.diag(self.rho)), electronics.force)
+
+        out = np.zeros([electronics.ndim()])
+        for i in range(electronics.nstates()):
+            out += np.real(self.rho[i,i]) * electronics.force(i)
+        return out
 
     def surface_hopping(self, last_electronics: ElectronicT, this_electronics: ElectronicT):
         """Ehrenfest never hops"""

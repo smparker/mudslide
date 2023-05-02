@@ -274,7 +274,7 @@ class TrajectorySH(object):
         kinetic = self.kinetic_energy()
         return potential + kinetic
 
-    def force(self, electronics: ElectronicT = None) -> ArrayLike:
+    def _force(self, electronics: ElectronicT = None) -> ArrayLike:
         """
         Compute force on active state
 
@@ -284,7 +284,7 @@ class TrajectorySH(object):
         """
         if electronics is None:
             electronics = self.electronics
-        return electronics.force[self.state, :]
+        return electronics.force(self.state)
 
     def NAC_matrix(self, electronics: ElectronicT = None, velocity: ArrayLike = None) -> ArrayLike:
         """
@@ -471,7 +471,7 @@ class TrajectorySH(object):
         :param last_electronics: ElectronicStates from previous step
         :param this_electronics: ElectronicStates from current step
         """
-        acceleration = self.force(this_electronics) / self.mass
+        acceleration = self._force(this_electronics) / self.mass
         self.last_position = self.position
         self.position += self.velocity * self.dt + 0.5 * acceleration * self.dt * self.dt
 
@@ -482,8 +482,8 @@ class TrajectorySH(object):
         :param electronics: ElectronicStates from current step
         """
 
-        last_acceleration = self.force(last_electronics) / self.mass
-        this_acceleration = self.force(this_electronics) / self.mass
+        last_acceleration = self._force(last_electronics) / self.mass
+        this_acceleration = self._force(this_electronics) / self.mass
 
         self.last_velocity = self.velocity
         self.velocity += 0.5 * (last_acceleration + this_acceleration) * self.dt
