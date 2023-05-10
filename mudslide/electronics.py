@@ -31,9 +31,9 @@ class ElectronicModel_(object):
 
         self._hamiltonian: ArrayLike
         self._force: ArrayLike
-        self._forces_available: List[bool] = [False] * self.nstates()
-        self.derivative_coupling: ArrayLike
-        self._derivative_couplings_available: List[bool] = [False] * self.nstates() * self.nstates()
+        self._forces_available: ArrayLike = np.zeros(self.nstates(), dtype=bool)
+        self._derivative_coupling: ArrayLike
+        self._derivative_couplings_available: ArrayLike = np.zeros((self.nstates(), self.nstates()), dtype=bool)
 
     def ndim(self) -> int:
         """Number of classical degrees of freedom"""
@@ -53,13 +53,27 @@ class ElectronicModel_(object):
             raise Exception("Force on state %d not available" % state)
         return self._force[state,:]
 
+    def derivative_coupling(self, state1: int, state2: int) -> ArrayLike:
+        """Return the derivative coupling between two states"""
+        if not self._derivative_couplings_available[state1, state2]:
+            raise Exception("Derivative coupling between states %d and %d not available" % (state1, state2))
+        return self._derivative_coupling[state1, state2, :]
+
+    def NAC_matrix(self, velocity: ArrayLike) -> ArrayLike:
+        """Return the non-adiabatic coupling matrix
+        for a given velocity vector
+        """
+        if not np.all(self._derivative_couplings_available):
+            raise Exception("NAC_matrix needs all derivative couplings")
+        return np.einsum("ijk,k->ij", self._derivative_coupling, velocity)
+
     def compute(self, X: ArrayLike, couplings: Any = None, gradients: Any = None, reference: Any = None) -> None:
         """
         Central function for model objects. After the compute function exists, the following
         data must be provided:
           - self._hamiltonian -> n x n array containing electronic hamiltonian
           - self.force -> n x ndim array containing the force on each diagonal
-          - self.derivative_coupling -> n x n x ndim array containing derivative couplings
+          - self._derivative_coupling -> n x n x ndim array containing derivative couplings
 
         The couplings and gradients options are currently unimplemented, but are
         intended to allow specification of which couplings and gradients are needed
@@ -109,9 +123,9 @@ class ElectronicModel_(object):
             "force": self._force.tolist()
         }
 
-        for key in [ "derivative_coupling", "force_matrix" ]:
+        for key in [ "_derivative_coupling", "force_matrix" ]:
             if hasattr(self, key):
-                out[key] = getattr(self, key).tolist()
+                out[key.lstrip('_')] = getattr(self, key).tolist()
 
         return out
 
@@ -140,10 +154,11 @@ class DiabaticModel_(ElectronicModel_):
         self._reference, self._hamiltonian = self._compute_basis_states(self.V(X), reference=reference)
         dV = self.dV(X)
 
-        self.derivative_coupling = self._compute_derivative_coupling(self._reference, dV, np.diag(self._hamiltonian))
+        self._derivative_coupling = self._compute_derivative_coupling(self._reference, dV, np.diag(self._hamiltonian))
+        self._derivative_couplings_available[:,:] = True
 
         self._force = self._compute_force(dV, self._reference)
-        self._forces_available = [True] * self.nstates()
+        self._forces_available[:] = True
 
         self.force_matrix = self._compute_force_matrix(dV, self._reference)
 
@@ -237,10 +252,11 @@ class AdiabaticModel_(ElectronicModel_):
         self._reference, self._hamiltonian = self._compute_basis_states(self.V(X), reference=reference)
         dV = self.dV(X)
 
-        self.derivative_coupling = self._compute_derivative_coupling(self._reference, dV, np.diag(self._hamiltonian))
+        self._derivative_coupling = self._compute_derivative_coupling(self._reference, dV, np.diag(self._hamiltonian))
+        self._derivative_couplings_available[:,:] = True
 
         self._force = self._compute_force(dV, self._reference)
-        self._forces_available = [True] * self.nstates()
+        self._forces_available[:] = True
 
         self.force_matrix = self._compute_force_matrix(dV, self._reference)
 

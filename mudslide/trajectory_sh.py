@@ -298,7 +298,7 @@ class TrajectorySH(object):
         velo = velocity if velocity is not None else self.velocity
         if electronics is None:
             electronics = self.electronics
-        return np.einsum("ijx,x->ij", electronics.derivative_coupling, velo)
+        return electronics.NAC_matrix(velo)
 
     def mode_kinetic_energy(self, direction: ArrayLike) -> np.float64:
         """
@@ -355,7 +355,7 @@ class TrajectorySH(object):
         :return: unit vector pointing in direction of rescale
         """
         elec_states = self.electronics if electronics is None else electronics
-        out = elec_states.derivative_coupling[source, target, :]
+        out = elec_states.derivative_coupling(source, target)
         return np.copy(out)
 
     def rescale_component(self, direction: ArrayLike, reduction: DtypeLike) -> None:
@@ -392,7 +392,7 @@ class TrajectorySH(object):
         H = 0.5 * (this_electronics.hamiltonian() + last_electronics.hamiltonian())  # type: ignore
         TV = 0.5 * np.einsum(
             "ijx,x->ij",
-            this_electronics.derivative_coupling + last_electronics.derivative_coupling,  #type: ignore
+            this_electronics._derivative_coupling + last_electronics._derivative_coupling,  #type: ignore
             velo)
         return H - 1j * TV
 
@@ -418,8 +418,8 @@ class TrajectorySH(object):
             last_H = last_electronics.hamiltonian()
             this_H = this_electronics.hamiltonian()
 
-            last_tau = last_electronics.derivative_coupling
-            this_tau = this_electronics.derivative_coupling
+            last_tau = last_electronics._derivative_coupling
+            this_tau = this_electronics._derivative_coupling
 
             last_v = self.last_velocity
             this_v = self.velocity

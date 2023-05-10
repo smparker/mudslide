@@ -288,7 +288,6 @@ class TMModel(ElectronicModel_):
         parsed_gradients = [data_dict[self.turbomole_modules["gs_grads"]]["gradient"][0]["gradients"]]
         self._forces_available[0] = True
 
-
         # Check for presence of egrad turbomole module
         if "egrad" in self.turbomole_modules.values():
             # egrad updates to energy
@@ -300,13 +299,15 @@ class TMModel(ElectronicModel_):
 
             # egrad couplings
             parsed_nac_coupling = data_dict["egrad"]["coupling"]
-            self.derivative_coupling = np.zeros((self.nstates(), self.nstates(), self.ndim()))
+            self._derivative_coupling = np.zeros((self.nstates(), self.nstates(), self.ndim()))
+            self._derivative_couplings_available = np.zeros((self.nstates(), self.nstates()), dtype=bool)
             for dct in parsed_nac_coupling:
                 i = dct["bra_state"]
                 j = dct["ket_state"]
 
-                self.derivative_coupling[i][j] = np.array(dct["d/dR"]).reshape(self.ndim(), order="F")
-                self.derivative_coupling[j][i] = -(self.derivative_coupling[i][j])
+                self._derivative_coupling[i, j, :] = np.array(dct["d/dR"]).reshape(self.ndim(), order="F")
+                self._derivative_coupling[j, i, :] = -(self._derivative_coupling[i, j, :])
+                self._derivative_couplings_available[i, j] = self._derivative_couplings_available[j, i] = True
 
             # egrad updates to gradients
             for i in range(len(data_dict["egrad"]["gradient"])):
