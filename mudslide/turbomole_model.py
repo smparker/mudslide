@@ -213,12 +213,6 @@ class TMModel(ElectronicModel_):
         if not self.expert:
             self.apply_suggested_parameters()
 
-    def nstates(self):
-        return self.nstates_
-
-    def ndim(self):
-        return self.ndim_
-
     def apply_suggested_parameters(self):
         # weight derivatives are mandatory
         self.control.use_weight_derivatives(use=True)
@@ -242,8 +236,8 @@ class TMModel(ElectronicModel_):
 
     def setup_coords(self):
         """Setup the coordinates for the calculation"""
-        self.atom_order, self.X = self.control.read_coords()
-        self.ndim_ = len(self.X)
+        self.atom_order, self._position = self.control.read_coords()
+        self.ndim_ = len(self._position)
         self.mass = self.control.get_masses(self.atom_order)
 
     def update_coords(self, X):
@@ -276,6 +270,10 @@ class TMModel(ElectronicModel_):
         # Now add results to model
 
     def call_turbomole(self, outname="turbo.out") -> None:
+        """Call Turbomole to run the calculation"""
+        # which forces are actually found?
+        self._forces_available = [False] * self.nstates()
+
         with open(outname, "w") as f:
             for turbomole_module in self.turbomole_modules.values():
                 self.control.run_single(turbomole_module, stdout=f)
@@ -288,6 +286,7 @@ class TMModel(ElectronicModel_):
         energy = data_dict[self.turbomole_modules["gs_energy"]]["energy"]
         self.energies = [energy]
         parsed_gradients = [data_dict[self.turbomole_modules["gs_grads"]]["gradient"][0]["gradients"]]
+        self._forces_available[0] = True
 
         # Check for presence of egrad turbomole module
         if "egrad" in self.turbomole_modules.values():
@@ -300,23 +299,26 @@ class TMModel(ElectronicModel_):
 
             # egrad couplings
             parsed_nac_coupling = data_dict["egrad"]["coupling"]
-            self.derivative_coupling = np.zeros((self.nstates(), self.nstates(), self.ndim()))
+            self._derivative_coupling = np.zeros((self.nstates(), self.nstates(), self.ndim()))
+            self._derivative_couplings_available = np.zeros((self.nstates(), self.nstates()), dtype=bool)
             for dct in parsed_nac_coupling:
                 i = dct["bra_state"]
                 j = dct["ket_state"]
 
-                self.derivative_coupling[i][j] = np.array(dct["d/dR"]).reshape(self.ndim(), order="F")
-                self.derivative_coupling[j][i] = -(self.derivative_coupling[i][j])
+                self._derivative_coupling[i, j, :] = np.array(dct["d/dR"]).reshape(self.ndim(), order="F")
+                self._derivative_coupling[j, i, :] = -(self._derivative_coupling[i, j, :])
+                self._derivative_couplings_available[i, j] = self._derivative_couplings_available[j, i] = True
 
             # egrad updates to gradients
             for i in range(len(data_dict["egrad"]["gradient"])):
                 parsed_gradients.extend([data_dict["egrad"]["gradient"][i]["gradients"]])
+                self._forces_available[len(parsed_gradients)-1] = True
 
         # Reshape gradients
 
         self.gradients = np.array(parsed_gradients)
 
-        self.force = -(self.gradients)
+        self._force = -(self.gradients)
 
     def compute(self, X, couplings, gradients, reference) -> None:
         """
@@ -326,18 +328,12 @@ class TMModel(ElectronicModel_):
         can get properly passed to Turbomole. (__init__() can get these
         file locations.)
         """
+        self._position = X
+        self.update_coords(X)
         self.call_turbomole(outname = Path(self.control.workdir)/"turbo.out")
 
-        self.hamiltonian = np.zeros([self.nstates(), self.nstates()])
-        for i, e in enumerate(self.states):
-            self.hamiltonian[i][i] = self.energies[e]
-
-    def update(self, X: ArrayLike, electronics: Any=None, couplings: Any = None, gradients: Any = None):
-        out = cp.copy(self)
-        out.position = X
-        out.update_coords(X)
-        out.compute(X, couplings=couplings, gradients=gradients, reference=self.reference)
-        return out
+        self._hamiltonian = np.zeros([self.nstates(), self.nstates()])
+        self._hamiltonian = np.diag(self.energies)
 
     def clone(self):
         model_clone = cp.deepcopy(self)

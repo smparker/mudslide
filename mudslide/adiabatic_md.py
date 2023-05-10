@@ -244,7 +244,7 @@ class AdiabaticMD(object):
         """
         if electronics is None:
             electronics = self.electronics
-        return electronics.force[0, :]
+        return electronics.force(0)
 
     def mode_kinetic_energy(self, direction: ArrayLike) -> np.float64:
         """

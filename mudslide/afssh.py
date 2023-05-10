@@ -43,8 +43,8 @@ class AugmentedFSSH(TrajectorySH):
         self.advance_delP(last_electronics, this_electronics)
 
     def compute_delF(self, this_electronics):
-        delF = np.copy(this_electronics.force_matrix)
-        F0 = self.force(this_electronics)
+        delF = np.copy(this_electronics.force_matrix())
+        F0 = self._force(this_electronics)
         for i in range(self.model.nstates()):
             delF[i,i,:] -= F0
         return delF
@@ -158,7 +158,7 @@ class AugmentedFSSH(TrajectorySH):
         ddR = shifted_diagonal(self.delR, self.state)
         ddP = shifted_diagonal(self.delP, self.state)
         ddP = np.where(np.abs(ddP) == 0.0, 1e-10, ddP)
-        ddF = shifted_diagonal(np.einsum("pqx->xpq", electronics.force_matrix), self.state)
+        ddF = shifted_diagonal(np.einsum("pqx->xpq", electronics.force_matrix()), self.state)
         ddR = ddR * np.sign(ddR/ddP)
 
         for i in range(nst):

@@ -261,7 +261,7 @@ class TrajectorySH(object):
         """
         if electronics is None:
             electronics = self.electronics
-        return electronics.hamiltonian[self.state, self.state]
+        return electronics.hamiltonian()[self.state, self.state]
 
     def total_energy(self, electronics: ElectronicT = None) -> DtypeLike:
         """
@@ -274,7 +274,7 @@ class TrajectorySH(object):
         kinetic = self.kinetic_energy()
         return potential + kinetic
 
-    def force(self, electronics: ElectronicT = None) -> ArrayLike:
+    def _force(self, electronics: ElectronicT = None) -> ArrayLike:
         """
         Compute force on active state
 
@@ -284,7 +284,7 @@ class TrajectorySH(object):
         """
         if electronics is None:
             electronics = self.electronics
-        return electronics.force[self.state, :]
+        return electronics.force(self.state)
 
     def NAC_matrix(self, electronics: ElectronicT = None, velocity: ArrayLike = None) -> ArrayLike:
         """
@@ -298,7 +298,7 @@ class TrajectorySH(object):
         velo = velocity if velocity is not None else self.velocity
         if electronics is None:
             electronics = self.electronics
-        return np.einsum("ijx,x->ij", electronics.derivative_coupling, velo)
+        return electronics.NAC_matrix(velo)
 
     def mode_kinetic_energy(self, direction: ArrayLike) -> np.float64:
         """
@@ -355,7 +355,7 @@ class TrajectorySH(object):
         :return: unit vector pointing in direction of rescale
         """
         elec_states = self.electronics if electronics is None else electronics
-        out = elec_states.derivative_coupling[source, target, :]
+        out = elec_states.derivative_coupling(source, target)
         return np.copy(out)
 
     def rescale_component(self, direction: ArrayLike, reduction: DtypeLike) -> None:
@@ -389,10 +389,10 @@ class TrajectorySH(object):
         if last_electronics is None:
             last_electronics = this_electronics
 
-        H = 0.5 * (this_electronics.hamiltonian + last_electronics.hamiltonian)  # type: ignore
+        H = 0.5 * (this_electronics.hamiltonian() + last_electronics.hamiltonian())  # type: ignore
         TV = 0.5 * np.einsum(
             "ijx,x->ij",
-            this_electronics.derivative_coupling + last_electronics.derivative_coupling,  #type: ignore
+            this_electronics._derivative_coupling + last_electronics._derivative_coupling,  #type: ignore
             velo)
         return H - 1j * TV
 
@@ -415,11 +415,11 @@ class TrajectorySH(object):
             U = np.linalg.multi_dot([coeff, np.diag(np.exp(-1j * diags * dt)), coeff.T.conj()])
             np.dot(U, np.dot(self.rho, U.T.conj(), out=W), out=self.rho)
         elif self.electronic_integration == "linear-rk4":
-            last_H = last_electronics.hamiltonian
-            this_H = this_electronics.hamiltonian
+            last_H = last_electronics.hamiltonian()
+            this_H = this_electronics.hamiltonian()
 
-            last_tau = last_electronics.derivative_coupling
-            this_tau = this_electronics.derivative_coupling
+            last_tau = last_electronics._derivative_coupling
+            this_tau = this_electronics._derivative_coupling
 
             last_v = self.last_velocity
             this_v = self.velocity
@@ -471,7 +471,7 @@ class TrajectorySH(object):
         :param last_electronics: ElectronicStates from previous step
         :param this_electronics: ElectronicStates from current step
         """
-        acceleration = self.force(this_electronics) / self.mass
+        acceleration = self._force(this_electronics) / self.mass
         self.last_position = self.position
         self.position += self.velocity * self.dt + 0.5 * acceleration * self.dt * self.dt
 
@@ -482,8 +482,8 @@ class TrajectorySH(object):
         :param electronics: ElectronicStates from current step
         """
 
-        last_acceleration = self.force(last_electronics) / self.mass
-        this_acceleration = self.force(this_electronics) / self.mass
+        last_acceleration = self._force(last_electronics) / self.mass
+        this_acceleration = self._force(this_electronics) / self.mass
 
         self.last_velocity = self.velocity
         self.velocity += 0.5 * (last_acceleration + this_acceleration) * self.dt
@@ -554,8 +554,8 @@ class TrajectorySH(object):
         hop_dict = hop_targets[0]
         hop_to = int(hop_dict["target"])
         elec_states = electronics if electronics is not None else self.electronics
-        new_potential, old_potential = elec_states.hamiltonian[hop_to, hop_to], elec_states.hamiltonian[self.state,
-                                                                                                        self.state]
+        H = elec_states.hamiltonian()
+        new_potential, old_potential = H[hop_to, hop_to], H[self.state, self.state]
         delV = new_potential - old_potential
         rescale_vector = self.direction_of_rescale(self.state, hop_to)
         component_kinetic = self.mode_kinetic_energy(rescale_vector)

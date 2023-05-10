@@ -67,9 +67,6 @@ class TullySimpleAvoidedCrossing(DiabaticModel_):
        V_{12} &= V_{21} = C e^{-D x^2}
 
     """
-    ndim_: int = 1
-    nstates_: int = 2
-
     def __init__(self,
                  representation: str = "adiabatic",
                  reference: Any = None,
@@ -79,7 +76,8 @@ class TullySimpleAvoidedCrossing(DiabaticModel_):
                  d: float = 1.0,
                  mass: float = 2000.0):
         """Constructor that defaults to the values reported in Tully's 1990 JCP"""
-        DiabaticModel_.__init__(self, representation=representation, reference=reference)
+        DiabaticModel_.__init__(self, representation=representation, reference=reference,
+                                nstates=2, ndim=1)
 
         self.A = a
         self.B = b
@@ -113,9 +111,6 @@ class TullyDualAvoidedCrossing(DiabaticModel_):
         V_{22} &= -A e^{-Bx^2} + E_0 \\
         V_{12} &= V_{21} = C e^{-D x^2}
     """
-    ndim_: int = 1
-    nstates_: int = 2
-
     def __init__(self,
                  representation: str = "adiabatic",
                  reference: Any = None,
@@ -126,7 +121,8 @@ class TullyDualAvoidedCrossing(DiabaticModel_):
                  e: float = 0.05,
                  mass: float = 2000.0):
         """Constructor that defaults to the values reported in Tully's 1990 JCP"""
-        DiabaticModel_.__init__(self, representation=representation, reference=reference)
+        DiabaticModel_.__init__(self, representation=representation, reference=reference,
+                                nstates=2, ndim=1)
         self.A = a
         self.B = b
         self.C = c
@@ -165,9 +161,6 @@ class TullyExtendedCouplingReflection(DiabaticModel_):
                       \end{array} \right.
     """
 
-    ndim_: int = 1
-    nstates_: int = 2
-
     def __init__(self,
                  representation: str = "adiabatic",
                  reference: Any = None,
@@ -176,7 +169,8 @@ class TullyExtendedCouplingReflection(DiabaticModel_):
                  c: float = 0.90,
                  mass: float = 2000.0):
         """Constructor that defaults to the values reported in Tully's 1990 JCP"""
-        DiabaticModel_.__init__(self, representation=representation, reference=reference)
+        DiabaticModel_.__init__(self, representation=representation, reference=reference,
+                                ndim=1, nstates=2)
         self.A = a
         self.B = b
         self.C = c
@@ -205,9 +199,6 @@ class TullyExtendedCouplingReflection(DiabaticModel_):
 
 
 class SuperExchange(DiabaticModel_):
-    nstates_: int = 3
-    ndim_: int = 1
-
     def __init__(self,
                  representation: str = "adiabatic",
                  reference: Any = None,
@@ -218,7 +209,8 @@ class SuperExchange(DiabaticModel_):
                  v23: float = 0.01,
                  mass: float = 2000.0):
         """Constructor defaults to Prezhdo paper on GFSH"""
-        DiabaticModel_.__init__(self, representation=representation, reference=reference)
+        DiabaticModel_.__init__(self, representation=representation, reference=reference,
+                                ndim=1, nstates=3)
         self.v11 = v11
         self.v22 = v22
         self.v33 = v33
@@ -247,9 +239,6 @@ class SuperExchange(DiabaticModel_):
 
 
 class SubotnikModelX(DiabaticModel_):
-    nstates_: int = 3
-    ndim_: int = 1
-
     def __init__(self,
                  representation: str = "adiabatic",
                  reference: Any = None,
@@ -259,7 +248,8 @@ class SubotnikModelX(DiabaticModel_):
                  xp: float = 7.0,
                  mass: float = 2000.0):
         """Constructor defaults to Subotnik JPCA 2011 paper on decoherence"""
-        DiabaticModel_.__init__(self, representation=representation, reference=reference)
+        DiabaticModel_.__init__(self, representation=representation, reference=reference,
+                                nstates=3, ndim=1)
         self.a = float(a)
         self.b = float(b)
         self.c = float(c)
@@ -304,8 +294,6 @@ class SubotnikModelX(DiabaticModel_):
 
 
 class SubotnikModelS(DiabaticModel_):
-    nstates_: int = 3
-    ndim_: int = 1
 
     def __init__(self,
                  representation: str = "adiabatic",
@@ -317,7 +305,8 @@ class SubotnikModelS(DiabaticModel_):
                  xp: float = 7.0,
                  mass: float = 2000.0):
         """Constructor defaults to Subotnik JPCA 2011 paper on decoherence"""
-        DiabaticModel_.__init__(self, representation=representation, reference=reference)
+        DiabaticModel_.__init__(self, representation=representation, reference=reference,
+                                nstates=3, ndim=1)
         self.a = float(a)
         self.b = float(b)
         self.c = float(c)
@@ -363,8 +352,6 @@ class SubotnikModelS(DiabaticModel_):
 
 
 class Subotnik2D(DiabaticModel_):
-    nstates_: int = 2
-    ndim_: int = 2
 
     def __init__(self,
                  representation: str = "adiabatic",
@@ -378,7 +365,8 @@ class Subotnik2D(DiabaticModel_):
                  w: float = 2.0,
                  mass: float = 2000.0):
         """Constructor defaults to Subotnik JPCA 2011 paper on decoherence"""
-        DiabaticModel_.__init__(self, representation=representation, reference=reference)
+        DiabaticModel_.__init__(self, representation=representation, reference=reference,
+                                nstates=2, ndim=2)
         self.a = float(a)
         self.b = float(b)
         self.c = float(c)
@@ -423,8 +411,6 @@ class Subotnik2D(DiabaticModel_):
 
 
 class ShinMetiu(AdiabaticModel_):
-    ndim_: int = 1
-
     def __init__(self,
                  representation: str = "adiabatic",
                  reference: Any = None,
@@ -439,7 +425,7 @@ class ShinMetiu(AdiabaticModel_):
                  box: Any = None):
         """Constructor defaults to classic Shin-Metiu as described in
         Gossel, Liacombe, Maitra JCP 2019"""
-        AdiabaticModel_.__init__(self, representation=representation, reference=reference)
+        AdiabaticModel_.__init__(self, representation=representation, reference=reference, nstates=nstates, ndim=1)
 
         self.L = L
         self.ion_left = -self.L * 0.5
@@ -512,8 +498,6 @@ class ShinMetiu(AdiabaticModel_):
 
 
 class LinearVibronic(DiabaticModel_):
-    ndim_: int = 5
-    nstates_: int = 2
 
     def __init__(
             self,
@@ -529,7 +513,8 @@ class LinearVibronic(DiabaticModel_):
             k2: float = np.array([-0.0393, 0.0463, 0.2877, -0.1352]),
             An: float = np.array([1.4823, -0.2191, 0.0525, -0.0118]),
     ):
-        DiabaticModel_.__init__(self, representation=representation, reference=reference)
+        DiabaticModel_.__init__(self, representation=representation, reference=reference,
+                                nstates=2, ndim=5)
         self.mass = np.array(mass, dtype=np.float64).reshape(self.ndim())
         self.E1 = float(E1 / eVtoHartree)
         self.E2 = float(E2 / eVtoHartree)

@@ -28,6 +28,7 @@ class HarmonicModel(ElectronicModel_):
             H0: Hessian at equilibrium
             mass: Mass of the coordinates
         """
+        super().__init__(representation="adiabatic")
         self.x0 = np.array(x0)
         self.ndim_ = len(self.x0)
 
@@ -53,13 +54,15 @@ class HarmonicModel(ElectronicModel_):
         Returns:
             None
         """
-        dx = X - self.x0
+        self._position = np.array(X)
+        dx = self._position - self.x0
         grad = self.H0 @ dx
         energy = self.E0 + 0.5 * np.dot(dx.T, grad)
 
         self.energies = np.array([energy])
-        self.hamiltonian = np.array([energy])
-        self.force = -grad.reshape([1, self.ndim_])
+        self._hamiltonian = np.array([energy])
+        self._force = -grad.reshape([1, self.ndim_])
+        self._forces_available = [True]
 
     @classmethod
     def from_dict(cls, model_dict: dict) -> "HarmonicModel":
