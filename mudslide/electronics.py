@@ -67,6 +67,12 @@ class ElectronicModel_(object):
             raise Exception("NAC_matrix needs all derivative couplings")
         return np.einsum("ijk,k->ij", self._derivative_coupling, velocity)
 
+    def force_matrix(self) -> ArrayLike:
+        """Return the force matrix"""
+        if not np.all(self._forces_available):
+            raise Exception("Force matrix needs all forces")
+        return self._force_matrix
+
     def compute(self, X: ArrayLike, couplings: Any = None, gradients: Any = None, reference: Any = None) -> None:
         """
         Central function for model objects. After the compute function exists, the following
@@ -123,7 +129,7 @@ class ElectronicModel_(object):
             "force": self._force.tolist()
         }
 
-        for key in [ "_derivative_coupling", "force_matrix" ]:
+        for key in [ "_derivative_coupling", "_force_matrix" ]:
             if hasattr(self, key):
                 out[key.lstrip('_')] = getattr(self, key).tolist()
 
@@ -160,7 +166,7 @@ class DiabaticModel_(ElectronicModel_):
         self._force = self._compute_force(dV, self._reference)
         self._forces_available[:] = True
 
-        self.force_matrix = self._compute_force_matrix(dV, self._reference)
+        self._force_matrix = self._compute_force_matrix(dV, self._reference)
 
     def _compute_basis_states(self, V: ArrayLike, reference: Any = None) -> Tuple[ArrayLike, ArrayLike]:
         """Computes coefficient matrix for basis states
@@ -258,7 +264,7 @@ class AdiabaticModel_(ElectronicModel_):
         self._force = self._compute_force(dV, self._reference)
         self._forces_available[:] = True
 
-        self.force_matrix = self._compute_force_matrix(dV, self._reference)
+        self._force_matrix = self._compute_force_matrix(dV, self._reference)
 
     def update(self, X: ArrayLike, electronics: Any = None, couplings: Any = None, gradients: Any = None) -> 'AdiabaticModel_':
         out = cp.deepcopy(self)
