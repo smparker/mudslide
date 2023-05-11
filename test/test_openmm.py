@@ -6,6 +6,7 @@ import numpy as np
 import os
 import shutil
 import unittest
+import pytest
 
 import mudslide
 import yaml
@@ -21,6 +22,15 @@ def clean_directory(dirname):
     if os.path.isdir(dirname):
         shutil.rmtree(dirname)
 
+def h2o5_mm():
+    pdb = openmm.app.PDBFile("h2o5.pdb")
+    ff = openmm.app.ForceField('amber14-all.xml', 'amber14/tip3pfb.xml')
+    system = ff.createSystem(pdb.topology,
+                             nonbondedMethod=openmm.app.NoCutoff,
+                             constraints=None,
+                             rigidWater=False)
+    mm = mudslide.models.OpenMM(pdb, ff, system)
+    return mm
 
 @unittest.skipUnless(mudslide.openmm_model.openmm_is_installed(),
                      "OpenMM must be installed")
@@ -47,15 +57,7 @@ class TestOpenMM(unittest.TestCase):
 
     def test_energies_forces(self):
         """Test energies and forces for OpenMM model"""
-        pdb = openmm.app.PDBFile("h2o5.pdb")
-        forcefield = openmm.app.ForceField('amber14-all.xml',
-                                           'amber14/tip3pfb.xml')
-        system = forcefield.createSystem(pdb.topology,
-                                         nonbondedMethod=openmm.app.NoCutoff,
-                                         constraints=None,
-                                         rigidWater=False)
-        mm = mudslide.models.OpenMM(pdb, forcefield, system)
-
+        mm = h2o5_mm()
         mm.compute(mm._position)
 
         energy_ref = -0.03390827401818114
@@ -64,6 +66,15 @@ class TestOpenMM(unittest.TestCase):
         assert np.allclose(mm._energy, energy_ref)
         assert np.allclose(mm.force(), forces_ref)
 
+    def test_dynamics(self):
+        mm = h2o5_mm()
+
+        masses = mm.mass
+        velocities = mudslide.math.boltzmann_velocities(masses, 300.0, seed=1234)
+        p = velocities * masses
+        KE = 0.5 * np.sum(p**2 / masses)
+
+        assert np.isclose(KE, 0.021375978053325008)
 
     def tearDown(self):
         os.chdir(self.origin)

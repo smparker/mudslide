@@ -37,8 +37,11 @@ class OpenMM(mudslide.electronics.ElectronicModel_):
         # create simulation
         self._simulation = openmm.app.Simulation(self._pdb.topology, self._system, self._integrator)
 
-        xyz = np.array(self._convert_openmm_position_to_au(pdb.positions)).reshape(-1)
+        xyz = np.array(self._convert_openmm_position_to_au(pdb.getPositions(asNumpy=True))).reshape(-1)
         self._position = xyz
+        self._elements = [atom.element.symbol.lower() for atom in self._pdb.topology.atoms()]
+        self.mass = np.array([mudslide.periodic_table.masses[e] for e in self._elements for i in range(3)])
+        self.mass *= mudslide.constants.amu_to_au
 
     def _convert_au_position_to_openmm(self, xyz):
         """Convert position from bohr to nanometer using OpenMM units"""
