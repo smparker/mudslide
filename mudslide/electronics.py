@@ -47,7 +47,7 @@ class ElectronicModel_(object):
         """Return the electronic hamiltonian"""
         return self._hamiltonian
 
-    def force(self, state: int) -> ArrayLike:
+    def force(self, state: int=0) -> ArrayLike:
         """Return the force on a given state"""
         if not self._forces_available[state]:
             raise Exception("Force on state %d not available" % state)

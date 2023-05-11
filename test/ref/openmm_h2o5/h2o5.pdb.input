@@ -1,0 +1,19 @@
+REMARK   1 PDBFIXER FROM: water_five.pdb
+REMARK   1 CREATED WITH OPENMM 8.0, 2023-05-03
+HETATM    1  OW  HOH     11      4.047   3.818   8.260  1.00  0.00           O  
+HETATM    2  HW1 HOH     11      4.043   3.840   9.260  1.00  0.00           H  
+HETATM    3  HW2 HOH     11      3.575   2.995   7.945  1.00  0.00           H  
+HETATM    4  OW  HOH     22      4.039  -0.700   8.361  1.00  0.00           O  
+HETATM    5  HW1 HOH     22      4.035  -0.678   9.360  1.00  0.00           H  
+HETATM    6  HW2 HOH     22      3.569  -1.523   8.043  1.00  0.00           H  
+HETATM    7  OW  HOH     33      0.129   1.565   8.292  1.00  0.00           O  
+HETATM    8  HW1 HOH     33      0.125   1.587   9.292  1.00  0.00           H  
+HETATM    9  HW2 HOH     33     -0.341   0.741   7.976  1.00  0.00           H  
+HETATM   10  OW  HOH     44      2.743   1.541   7.382  1.00  0.00           O  
+HETATM   11  HW1 HOH     44      3.211   0.730   7.736  1.00  0.00           H  
+HETATM   12  HW2 HOH     44      1.799   1.549   7.711  1.00  0.00           H  
+HETATM   13  OW  HOH     55      2.756   1.480   4.616  1.00  0.00           O  
+HETATM   14  HW1 HOH     55      2.751   1.502   5.616  1.00  0.00           H  
+HETATM   15  HW2 HOH     55      3.229   2.287   4.267  1.00  0.00           H  
+TER      16      HOH     5
+END
