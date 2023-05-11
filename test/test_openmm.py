@@ -63,7 +63,7 @@ class TestOpenMM(unittest.TestCase):
         energy_ref = -0.03390827401818114
         forces_ref = np.loadtxt("f0.txt")
 
-        assert np.allclose(mm._energy, energy_ref)
+        assert np.allclose(mm.energies[0], energy_ref)
         assert np.allclose(mm.force(), forces_ref)
 
     def test_dynamics(self):
@@ -75,6 +75,16 @@ class TestOpenMM(unittest.TestCase):
         KE = 0.5 * np.sum(p**2 / masses)
 
         assert np.isclose(KE, 0.021375978053325008)
+
+        traj = mudslide.AdiabaticMD(mm, mm._position, p, dt=20, max_steps=10)
+        results = traj.simulate()
+
+        xref = np.loadtxt("x.txt")
+        pref = np.loadtxt("p.txt")
+
+        assert np.allclose(results[-1]["position"], xref)
+        assert np.allclose(results[-1]["momentum"], pref)
+
 
     def tearDown(self):
         os.chdir(self.origin)

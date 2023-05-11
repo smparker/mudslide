@@ -95,7 +95,7 @@ class ElectronicModel_(object):
         Convenience function that copies the present object, updates the position,
         calls compute, and then returns the new object
         """
-        out = cp.deepcopy(self)
+        out = cp.copy(self)
 
         if electronics and electronics._reference is not None:
             reference = electronics._reference
@@ -267,7 +267,7 @@ class AdiabaticModel_(ElectronicModel_):
         self._force_matrix = self._compute_force_matrix(dV, self._reference)
 
     def update(self, X: ArrayLike, electronics: Any = None, couplings: Any = None, gradients: Any = None) -> 'AdiabaticModel_':
-        out = cp.deepcopy(self)
+        out = cp.copy(self)
         if electronics:
             self._reference = electronics._reference
         out._position = X
