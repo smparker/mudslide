@@ -6,6 +6,7 @@ import numpy as np
 import os
 import shutil
 import unittest
+import pytest
 import sys
 from pathlib import Path
 import mudslide
@@ -43,8 +44,26 @@ class _TestTM(unittest.TestCase):
     def tearDown(self):
         os.chdir(self.origin)
 
-class TestTMProperties(_TestTM):
-    """Test properties for TMModel class"""
+class TestTMGround(_TestTM):
+    """Test ground state calculation"""
+    testname = "tm-c2h4-ground"
+
+    def test_ridft_rdgrad(self):
+        model = TMModel(states=[0])
+        xyz = model._position
+
+        model.compute(xyz)
+
+        #np.savetxt("force.ref.txt", model.force(0))
+
+        Eref = -78.40037210973
+        Fref = np.loadtxt("force.ref.txt")
+
+        assert np.isclose(model.hamiltonian()[0,0], Eref)
+        assert np.allclose(model.force(0), Fref)
+
+class TestTMExDynamics(_TestTM):
+    """Test short excited state dynamics"""
     testname = "tm-c2h4"
 
     def test_get_gs_ex_properties(self):

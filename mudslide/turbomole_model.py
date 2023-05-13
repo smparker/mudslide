@@ -18,7 +18,7 @@ from .electronics import ElectronicModel_
 
 from .util import find_unique_name
 
-from typing import Tuple, Any
+from typing import Tuple, Any, Dict
 
 from .typing import ArrayLike, DtypeLike
 from .constants import eVtoHartree, amu_to_au
@@ -183,8 +183,8 @@ class TMModel(ElectronicModel_):
         workdir_stem: str = "run_turbomole",
         representation: str = "adiabatic",
         reference: Any = None,
-        expert=False,  # when False, will update turbomole parameters for best NAMD performance
-        turbomole_modules={"gs_energy": "ridft", "gs_grads": "rdgrad", "es_grads": "egrad"},
+        expert: bool=False,  # when False, will update turbomole parameters for best NAMD performance
+        turbomole_modules: Dict=None
     ):
         ElectronicModel_.__init__(self, representation=representation, reference=reference)
 
@@ -204,7 +204,14 @@ class TMModel(ElectronicModel_):
         if not turbomole_is_installed():
             raise RuntimeError("Turbomole is not installed")
 
-        self.turbomole_modules = turbomole_modules
+        if turbomole_modules is None:
+            # always need energy and gradients
+            mod = { "gs_energy": "ridft", "gs_grads": "rdgrad" }
+            if any([s != 0 for s in self.states]):
+                mod["es_grads"] = "egrad"
+            self.turbomole_modules = mod
+        else:
+            self.turbomole_modules = turbomole_modules
         if not all([shutil.which(x) is not None for x in self.turbomole_modules.values()]):
             raise RuntimeError("Turbomole modules not found")
 
@@ -272,7 +279,7 @@ class TMModel(ElectronicModel_):
     def call_turbomole(self, outname="turbo.out") -> None:
         """Call Turbomole to run the calculation"""
         # which forces are actually found?
-        self._forces_available = [False] * self.nstates()
+        self._forces_available = np.zeros(self.nstates(), dtype=bool)
 
         with open(outname, "w") as f:
             for turbomole_module in self.turbomole_modules.values():
@@ -320,7 +327,7 @@ class TMModel(ElectronicModel_):
 
         self._force = -(self.gradients)
 
-    def compute(self, X, couplings, gradients, reference) -> None:
+    def compute(self, X, couplings: Any=None, gradients: Any=None, reference: Any=None) -> None:
         """
         Calls Turbomole/Turboparse to generate electronic properties including
         gradients, couplings, energies. For this to work, this class
