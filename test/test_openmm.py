@@ -11,8 +11,8 @@ import pytest
 import mudslide
 import yaml
 
-import openmm
-import openmm.app
+openmm = pytest.importorskip("openmm")
+openmm_app = pytest.importorskip("openmm.app")
 
 testdir = os.path.dirname(__file__)
 _refdir = os.path.join(testdir, "ref")
