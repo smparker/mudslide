@@ -7,3 +7,4 @@ from .electronics import *
 from .scattering_models import *
 from .turbomole_model import *
 from .harmonic_model import *
+from .openmm_model import *
