@@ -54,9 +54,28 @@ class TestTMGround(_TestTM):
 
         model.compute(xyz)
 
-        #np.savetxt("force.ref.txt", model.force(0))
-
         Eref = -78.40037210973
+        Fref = np.loadtxt("force.ref.txt")
+
+        assert np.isclose(model.hamiltonian()[0,0], Eref)
+        assert np.allclose(model.force(0), Fref)
+
+class TestTMGroundPC(_TestTM):
+    """Test ground state calculation with point charges"""
+    testname = "tm-c2h4-ground-pc"
+
+    def test_ridft_rdgrad_w_pc(self):
+        model = TMModel(states=[0])
+        xyzpc = np.array([[3.0, 3.0, 3.0],[-3.0, -3.0, -3.0]])
+        pcharges = np.array([2, -2])
+        model.control.add_point_charges(xyzpc, pcharges)
+
+        xyz = model._position
+        model.compute(xyz)
+
+        np.savetxt("force.ref.txt", model.force(0))
+
+        Eref = -78.63405047062
         Fref = np.loadtxt("force.ref.txt")
 
         assert np.isclose(model.hamiltonian()[0,0], Eref)

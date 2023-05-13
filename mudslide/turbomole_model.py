@@ -37,6 +37,10 @@ def turbomole_is_installed():
 
 class TurboControl(object):
     """A class to handle the control file for turbomole"""
+
+    # default filenames
+    pcgrad_file = "pcgrad"
+
     def __init__(self, control_file="control", workdir=None):
         # workdir is directory of control file
         if control_file is not None:
@@ -173,6 +177,31 @@ class TurboControl(object):
         H = np.array(hessian, dtype=np.float64).reshape(ndim, ndim)
         return H
 
+    def add_point_charges(self, coords: ArrayLike, charges: ArrayLike):
+        """Add point charges to the control file
+
+        point_charges data group has the structure:
+        $point_charges nocheck list pcgrad
+        <x> <y> <z> <q>
+        ...
+        """
+        nq = len(charges)
+        assert coords.shape == (nq, 3)
+
+        self.adg("point_charges", ["file=point_charges"])
+        with open(os.path.join(self.workdir, "point_charges"), "w") as f:
+            print("$point_charges nocheck list pcgrad", file=f)
+            for xyz, q in zip(coords, charges):
+                print(f"{xyz[0]:22.16g} {xyz[1]:22.16g} {xyz[2]:22.16g} {q:22.16f}", file=f)
+            print("$end", file=f)
+
+        # make sure point charge gradients are requested
+        drvopt = self.sdg("drvopt", show_body=True, show_keyword=False)
+        if "point charges" not in drvopt:
+            drvopt = drvopt.rstrip().split("\n")
+            drvopt += [" point charges"]
+            self.adg("drvopt", drvopt, newline=True)
+        self.adg("point_charge_gradients", [f"file={self.pcgrad_file}"])
 
 class TMModel(ElectronicModel_):
     """A class to handle the electronic model for excited state Turbomole calculations"""
