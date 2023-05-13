@@ -30,6 +30,9 @@ class OpenMM(mudslide.electronics.ElectronicModel_):
         self._ff = ff
         self._system = system
 
+        self._natoms = pdb.topology.getNumAtoms()
+
+        # check if there are constraints
         num_constraints = self._system.getNumConstraints()
         if num_constraints > 0:
             raise ValueError(
@@ -37,6 +40,10 @@ class OpenMM(mudslide.electronics.ElectronicModel_):
                 +
                 "Please remove constraints from the system and use the rigidWater=True option."
             )
+
+        # get charges
+        nonbonded = [ f for f in self._system.getForces() if isinstance(f, openmm.NonbondedForce) ][0]
+        self._charges = np.array([ nonbonded.getParticleParameters(i)[0].value_in_unit(openmm.unit.elementary_charge) for i in range(self._natoms)])
 
         # make dummy integrator
         self._integrator = openmm.VerletIntegrator(0.001 *
