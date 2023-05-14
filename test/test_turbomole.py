@@ -73,13 +73,19 @@ class TestTMGroundPC(_TestTM):
         xyz = model._position
         model.compute(xyz)
 
-        np.savetxt("force.ref.txt", model.force(0))
-
         Eref = -78.63405047062
         Fref = np.loadtxt("force.ref.txt")
 
         assert np.isclose(model.hamiltonian()[0,0], Eref)
         assert np.allclose(model.force(0), Fref)
+
+        xyzpc1, q1, dpc = model.control.read_point_charge_gradients()
+
+        forcepcref = np.loadtxt("forcepc.ref.txt")
+
+        assert np.allclose(xyzpc, xyzpc1)
+        assert np.allclose(pcharges, q1)
+        assert np.allclose(dpc, forcepcref)
 
 class TestTMExDynamics(_TestTM):
     """Test short excited state dynamics"""

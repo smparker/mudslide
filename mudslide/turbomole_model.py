@@ -203,6 +203,36 @@ class TurboControl(object):
             self.adg("drvopt", drvopt, newline=True)
         self.adg("point_charge_gradients", [f"file={self.pcgrad_file}"])
 
+    def read_point_charge_gradients(self):
+        """Read point charges and gradients from the control file
+
+        point charges in dg $point_charges
+        gradients in dg $point_charge_gradients
+
+        Returns: (coords, charges, gradients) where coords is a numpy array of shape (nq, 3) with coordinates in Bohr
+        """
+
+        # read point charges
+        pc = self.sdg("point_charges", show_body=True, show_keyword=False)
+        pc_list = pc.rstrip().split("\n")
+        nq = len(pc_list)
+        coords = np.zeros((nq, 3))
+        charges = np.zeros(nq)
+        for i, p in enumerate(pc_list):
+            p_list = p.split()
+            coords[i, :] = [float(val) for val in p_list[:3]]
+            charges[i] = float(p_list[3])
+
+        # read point charge gradients
+        pcgrad = self.sdg("point_charge_gradients", show_body=True, show_keyword=False)
+        pcgrad_list = pcgrad.rstrip().split("\n")
+        gradients = np.zeros((nq, 3))
+        for i, p in enumerate(pcgrad_list):
+            p_list = p.split()
+            gradients[i, :] = [float(val.replace('D','e')) for val in p_list[:3]]
+
+        return coords, charges, gradients
+
 class TMModel(ElectronicModel_):
     """A class to handle the electronic model for excited state Turbomole calculations"""
     def __init__(
