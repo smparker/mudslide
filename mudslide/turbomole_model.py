@@ -302,9 +302,9 @@ class TMModel(ElectronicModel_):
 
     def setup_coords(self):
         """Setup the coordinates for the calculation"""
-        self.atom_order, self._position = self.control.read_coords()
+        self._elements, self._position = self.control.read_coords()
         self.ndim_ = len(self._position)
-        self.mass = self.control.get_masses(self.atom_order)
+        self.mass = self.control.get_masses(self._elements)
 
     def update_coords(self, X):
         X = X.reshape((self.ndim() // 3, 3))
@@ -326,7 +326,7 @@ class TMModel(ElectronicModel_):
         coordline += 1
         for i, coord_list in enumerate(X):
             lines[coordline] = "{:26.16e} {:28.16e} {:28.16e} {:>7}\n".format(
-                coord_list[0], coord_list[1], coord_list[2], self.atom_order[i]
+                coord_list[0], coord_list[1], coord_list[2], self._elements[i]
             )
             coordline += 1
 
@@ -338,6 +338,7 @@ class TMModel(ElectronicModel_):
     def call_turbomole(self, outname="turbo.out") -> None:
         """Call Turbomole to run the calculation"""
         # which forces are actually found?
+        self._force = np.zeros((self.nstates(), self.ndim()))
         self._forces_available = np.zeros(self.nstates(), dtype=bool)
 
         with open(outname, "w") as f:
@@ -351,7 +352,8 @@ class TMModel(ElectronicModel_):
         # Now add results to model
         energy = data_dict[self.turbomole_modules["gs_energy"]]["energy"]
         self.energies = [energy]
-        parsed_gradients = [data_dict[self.turbomole_modules["gs_grads"]]["gradient"][0]["gradients"]]
+        dE0 = np.array(data_dict[self.turbomole_modules["gs_grads"]]["gradient"][0]["gradients"])
+        self._force[0,:] = -dE0.flatten()
         self._forces_available[0] = True
 
         # Check for presence of egrad turbomole module
@@ -376,15 +378,13 @@ class TMModel(ElectronicModel_):
                 self._derivative_couplings_available[i, j] = self._derivative_couplings_available[j, i] = True
 
             # egrad updates to gradients
+            # temporary:
+            print(data_dict["egrad"]["gradient"])
             for i in range(len(data_dict["egrad"]["gradient"])):
-                parsed_gradients.extend([data_dict["egrad"]["gradient"][i]["gradients"]])
-                self._forces_available[len(parsed_gradients)-1] = True
+                dE = np.array(data_dict["egrad"]["gradient"][i]["gradients"])
+                self._force[i+1,:] = -dE.flatten()
+                self._forces_available[i+1] = True
 
-        # Reshape gradients
-
-        self.gradients = np.array(parsed_gradients)
-
-        self._force = -(self.gradients)
 
     def compute(self, X, couplings: Any=None, gradients: Any=None, reference: Any=None) -> None:
         """

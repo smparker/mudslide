@@ -55,7 +55,7 @@ class OpenMM(mudslide.electronics.ElectronicModel_):
 
         xyz = np.array(
             self._convert_openmm_position_to_au(
-                pdb.getPositions(asNumpy=True))).reshape(-1)
+                pdb.getPositions())).reshape(-1)
         self._position = xyz
         self._elements = [
             atom.element.symbol.lower() for atom in self._pdb.topology.atoms()
@@ -105,7 +105,8 @@ class OpenMM(mudslide.electronics.ElectronicModel_):
                                                   getForces=True)
 
         self.energies = np.array([self._convert_energy_to_au(state.getPotentialEnergy())])
-        self._hamiltonian = self.energies
+        self._hamiltonian = np.zeros([1, 1])
+        self._hamiltonian[0,0] = self.energies[0]
 
         self._force = self._convert_openmm_force_to_au(
             state.getForces(asNumpy=True))
