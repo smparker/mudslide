@@ -40,6 +40,7 @@ class TurboControl(object):
 
     # default filenames
     pcgrad_file = "pcgrad"
+    control_file = "control"
 
     def __init__(self, control_file="control", workdir=None):
         # workdir is directory of control file
@@ -49,6 +50,11 @@ class TurboControl(object):
             self.workdir = os.path.abspath(workdir)
         else:
             raise Exception("Must provide either control_file or workdir")
+        self.control_file = control_file
+
+        # make sure control file exists
+        if not os.path.exists(os.path.join(self.workdir, self.control_file)):
+            raise RuntimeError(f"control file not found in working directory {self.workdir:s}")
 
         # list of data groups and which file they are in, used to avoid rerunning sdg too much
         self.dg_in_file = {}
@@ -251,11 +257,10 @@ class TMModel(ElectronicModel_):
         self.run_turbomole_dir = run_turbomole_dir
         unique_workdir = find_unique_name(self.workdir_stem, self.run_turbomole_dir, always_enumerate=True)
         work = os.path.join(os.path.abspath(self.run_turbomole_dir), unique_workdir)
-        self.control = TurboControl(workdir=work)
         self.expert = expert
 
-        os.makedirs(self.control.workdir, exist_ok = True)
-        subprocess.run(["cpc", self.control.workdir], cwd=self.run_turbomole_dir)
+        subprocess.run(["cpc", work], cwd=self.run_turbomole_dir)
+        self.control = TurboControl(workdir=work)
 
         self.states = states
         self.nstates_ = len(self.states)

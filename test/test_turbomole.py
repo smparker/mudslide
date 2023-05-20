@@ -19,7 +19,14 @@ testdir = os.path.dirname(__file__)
 _refdir = os.path.join(testdir, "ref")
 _checkdir = os.path.join(testdir, "checks")
 
-@unittest.skipUnless(mudslide.turbomole_model.turbomole_is_installed(), "Turbomole must be installed")
+pytestmark = pytest.mark.skipif(not mudslide.turbomole_model.turbomole_is_installed(),
+                                     reason="Turbomole must be installed")
+
+def test_raise_on_missing_control():
+    """Test if an exception is raised if no control file is found"""
+    with pytest.raises(RuntimeError):
+        model = TMModel(states=[0])
+
 class _TestTM(unittest.TestCase):
     """Base class for TMModel class"""
     testname = None
