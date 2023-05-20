@@ -1,0 +1,7 @@
+REMARK   1 PDBFIXER FROM: water_qm.pdb
+REMARK   1 CREATED WITH OPENMM 8.0, 2023-05-16
+HETATM    1  O   HOH     1       0.000   0.000   0.178  1.00  0.00           O  
+HETATM    2  H1  HOH     1       1.417   0.000   0.967  1.00  0.00           H  
+HETATM    3  H2  HOH     1      -1.417   0.000   0.967  1.00  0.00           H  
+TER       4      HOH     1
+END
