@@ -18,10 +18,7 @@ testdir = os.path.dirname(__file__)
 _refdir = os.path.join(testdir, "ref")
 _checkdir = os.path.join(testdir, "checks")
 
-def clean_directory(dirname):
-    if os.path.isdir(dirname):
-        shutil.rmtree(dirname)
-
+@pytest.fixture
 def h2o5_mm():
     pdb = openmm.app.PDBFile("h2o5.pdb")
     ff = openmm.app.ForceField('amber14-all.xml', 'amber14/tip3pfb.xml')
@@ -32,18 +29,18 @@ def h2o5_mm():
     mm = mudslide.models.OpenMM(pdb, ff, system)
     return mm
 
-@unittest.skipUnless(mudslide.openmm_model.openmm_is_installed(),
-                     "OpenMM must be installed")
-class TestOpenMM(unittest.TestCase):
+@pytest.mark.skipif(not mudslide.openmm_model.openmm_is_installed(), reason="OpenMM must be installed")
+class TestOpenMMP:
     """Test Suite for TMModel class"""
 
     testname = "openmm_h2o5"
 
-    def setUp(self):
+    def setup_class(self):
         self.refdir = os.path.join(_refdir, self.testname)
         self.rundir = os.path.join(_checkdir, self.testname)
 
-        clean_directory(self.rundir)
+        if os.path.isdir(self.rundir):
+            shutil.rmtree(self.rundir)
         os.makedirs(self.rundir, exist_ok=True)
 
         self.origin = os.getcwd()
@@ -55,9 +52,34 @@ class TestOpenMM(unittest.TestCase):
                     filename = fil.name[:-6]
                     shutil.copy(os.path.join(self.refdir, fil.name), filename)
 
-    def test_energies_forces(self):
+    def teardown_class(self):
+        os.chdir(self.origin)
+
+    def test_raise_on_nonrigid(self):
+        pdb = openmm.app.PDBFile("h2o5.pdb")
+        ff = openmm.app.ForceField('amber14-all.xml', 'amber14/tip3pfb.xml')
+        system = ff.createSystem(pdb.topology,
+                                 nonbondedMethod=openmm.app.NoCutoff,
+                                 constraints=None,
+                                 rigidWater=True)
+        with pytest.raises(ValueError):
+            mm = mudslide.models.OpenMM(pdb, ff, system)
+
+    def test_raise_on_virtual(self):
+        pdb = openmm.app.PDBFile("h2o5.pdb")
+        modeller = openmm.app.Modeller(pdb.topology, pdb.positions)
+        ff = openmm.app.ForceField('amber14-all.xml', 'amber14/tip4pew.xml')
+        modeller.addExtraParticles(ff)
+        system = ff.createSystem(modeller.topology,
+                                 nonbondedMethod=openmm.app.NoCutoff,
+                                 constraints=None,
+                                 rigidWater=False)
+        with pytest.raises(ValueError):
+            mm = mudslide.models.OpenMM(pdb, ff, system)
+
+    def test_energies_forces(self, h2o5_mm):
         """Test energies and forces for OpenMM model"""
-        mm = h2o5_mm()
+        mm = h2o5_mm
         mm.compute(mm._position)
 
         energy_ref = -0.03390827401818114
@@ -66,8 +88,8 @@ class TestOpenMM(unittest.TestCase):
         assert np.allclose(mm.energies[0], energy_ref)
         assert np.allclose(mm.force(), forces_ref)
 
-    def test_dynamics(self):
-        mm = h2o5_mm()
+    def test_dynamics(self, h2o5_mm):
+        mm = h2o5_mm
 
         masses = mm.mass
         velocities = mudslide.math.boltzmann_velocities(masses, 300.0, seed=1234)
@@ -84,8 +106,4 @@ class TestOpenMM(unittest.TestCase):
 
         assert np.allclose(results[-1]["position"], xref)
         assert np.allclose(results[-1]["momentum"], pref)
-
-
-    def tearDown(self):
-        os.chdir(self.origin)
 

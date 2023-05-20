@@ -41,6 +41,12 @@ class OpenMM(mudslide.electronics.ElectronicModel_):
                 "Please remove constraints from the system and use the rigidWater=True option."
             )
 
+        # check if there are virtual sites
+        if any([ self._system.isVirtualSite(i) for i in range(self._system.getNumParticles()) ]):
+            raise ValueError(
+                "OpenMM system has virtual sites, which are not supported by mudslide."
+            )
+
         # get charges
         nonbonded = [ f for f in self._system.getForces() if isinstance(f, openmm.NonbondedForce) ][0]
         self._charges = np.array([ nonbonded.getParticleParameters(i)[0].value_in_unit(openmm.unit.elementary_charge) for i in range(self._natoms)])
