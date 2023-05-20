@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """QM/MM model using turbomole and OpenMM"""
+
 import os
-import sys
 
 import numpy as np
 
@@ -94,21 +94,11 @@ class QMMM(ElectronicModel_):
                         force.setParticleParameters(n, chg*0, sig, eps)
 
                 # add exceptions for qm-qm nonbonded interactions
-                print("num exceptions", force.getNumExceptions())
-                print("what are the exceptions?")
                 for n in range(force.getNumExceptions()):
                     i, j, chgprod, sig, eps = force.getExceptionParameters(n)
-                    print(i, j, chgprod, sig, eps)
                 for i in qm_atoms:
                     for j in range(i):
-                        print(f"adding exception to {i:d} {j:d}")
                         force.addException(i, j, 0, 1, 0, replace=True)
-
-
-        outfile = sys.stdout
-        print(" Number of bonds removed:    ", num_bond_removed, file=outfile)
-        print(" Number of angles removed:   ", num_angl_removed, file=outfile)
-        print(" Number of torsions removed: ", num_tors_removed, file=outfile)
 
     def compute(self, X: ArrayLike, couplings: Any=None, gradients: Any=None, reference: Any=None) -> None:
         """Computes QM/MM energy by calling OpenMM and Turbomole and stitching together the results"""
