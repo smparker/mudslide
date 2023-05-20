@@ -30,7 +30,7 @@ def h2o5_mm():
     return mm
 
 @pytest.mark.skipif(not mudslide.openmm_model.openmm_is_installed(), reason="OpenMM must be installed")
-class TestOpenMMP:
+class TestOpenMM:
     """Test Suite for TMModel class"""
 
     testname = "openmm_h2o5"
