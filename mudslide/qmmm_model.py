@@ -99,6 +99,10 @@ class QMMM(ElectronicModel_):
                 for i in qm_atoms:
                     for j in range(i):
                         force.addException(i, j, 0, 1, 0, replace=True)
+            elif isinstance(force, openmm.CMMotionRemover):
+                raise ValueError(f"Cannot use CMMotionRemover in QM/MM model. Turn it off by setting removeCMMotion=False when preparing the System().")
+            else:
+                raise ValueError(f"Force {force.__class__.__name__} not supported in QM/MM model.")
 
     def compute(self, X: ArrayLike, couplings: Any=None, gradients: Any=None, reference: Any=None) -> None:
         """Computes QM/MM energy by calling OpenMM and Turbomole and stitching together the results"""

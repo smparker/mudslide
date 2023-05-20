@@ -48,8 +48,11 @@ class OpenMM(mudslide.electronics.ElectronicModel_):
             )
 
         # get charges
-        nonbonded = [ f for f in self._system.getForces() if isinstance(f, openmm.NonbondedForce) ][0]
-        self._charges = np.array([ nonbonded.getParticleParameters(i)[0].value_in_unit(openmm.unit.elementary_charge) for i in range(self._natoms)])
+        try:
+            nonbonded = [ f for f in self._system.getForces() if isinstance(f, openmm.NonbondedForce) ][0]
+            self._charges = np.array([ nonbonded.getParticleParameters(i)[0].value_in_unit(openmm.unit.elementary_charge) for i in range(self._natoms)])
+        except IndexError:
+            raise ValueError("Can't find charges from OpenMM, probably because mudslide only understands Amber-like forces")
 
         # make dummy integrator
         self._integrator = openmm.VerletIntegrator(0.001 *
