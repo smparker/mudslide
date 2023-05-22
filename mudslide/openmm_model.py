@@ -30,6 +30,9 @@ class OpenMM(mudslide.electronics.ElectronicModel_):
         self._ff = ff
         self._system = system
 
+        self._natoms = pdb.topology.getNumAtoms()
+
+        # check if there are constraints
         num_constraints = self._system.getNumConstraints()
         if num_constraints > 0:
             raise ValueError(
@@ -37,6 +40,19 @@ class OpenMM(mudslide.electronics.ElectronicModel_):
                 +
                 "Please remove constraints from the system and use the rigidWater=True option."
             )
+
+        # check if there are virtual sites
+        if any([ self._system.isVirtualSite(i) for i in range(self._system.getNumParticles()) ]):
+            raise ValueError(
+                "OpenMM system has virtual sites, which are not supported by mudslide."
+            )
+
+        # get charges
+        try:
+            nonbonded = [ f for f in self._system.getForces() if isinstance(f, openmm.NonbondedForce) ][0]
+            self._charges = np.array([ nonbonded.getParticleParameters(i)[0].value_in_unit(openmm.unit.elementary_charge) for i in range(self._natoms)])
+        except IndexError:
+            raise ValueError("Can't find charges from OpenMM, probably because mudslide only understands Amber-like forces")
 
         # make dummy integrator
         self._integrator = openmm.VerletIntegrator(0.001 *
@@ -48,7 +64,7 @@ class OpenMM(mudslide.electronics.ElectronicModel_):
 
         xyz = np.array(
             self._convert_openmm_position_to_au(
-                pdb.getPositions(asNumpy=True))).reshape(-1)
+                pdb.getPositions())).reshape(-1)
         self._position = xyz
         self._elements = [
             atom.element.symbol.lower() for atom in self._pdb.topology.atoms()
@@ -98,7 +114,8 @@ class OpenMM(mudslide.electronics.ElectronicModel_):
                                                   getForces=True)
 
         self.energies = np.array([self._convert_energy_to_au(state.getPotentialEnergy())])
-        self._hamiltonian = self.energies
+        self._hamiltonian = np.zeros([1, 1])
+        self._hamiltonian[0,0] = self.energies[0]
 
         self._force = self._convert_openmm_force_to_au(
             state.getForces(asNumpy=True))

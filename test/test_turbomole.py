@@ -6,6 +6,7 @@ import numpy as np
 import os
 import shutil
 import unittest
+import pytest
 import sys
 from pathlib import Path
 import mudslide
@@ -18,21 +19,24 @@ testdir = os.path.dirname(__file__)
 _refdir = os.path.join(testdir, "ref")
 _checkdir = os.path.join(testdir, "checks")
 
-def clean_directory(dirname):
-    if os.path.isdir(dirname):
-        shutil.rmtree(dirname)
+pytestmark = pytest.mark.skipif(not mudslide.turbomole_model.turbomole_is_installed(),
+                                     reason="Turbomole must be installed")
 
+def test_raise_on_missing_control():
+    """Test if an exception is raised if no control file is found"""
+    with pytest.raises(RuntimeError):
+        model = TMModel(states=[0])
 
-@unittest.skipUnless(mudslide.turbomole_model.turbomole_is_installed(), "Turbomole must be installed")
-class TestTMModel(unittest.TestCase):
-    """Test Suite for TMModel class"""
+class _TestTM(unittest.TestCase):
+    """Base class for TMModel class"""
+    testname = None
 
     def setUp(self):
-        self.refdir = os.path.join(_refdir, "tm-c2h4")
+        self.refdir = os.path.join(_refdir, self.testname)
+        self.rundir = os.path.join(_checkdir, self.testname)
 
-        self.rundir = os.path.join(_checkdir, "tm-c2h4")
-
-        clean_directory(self.rundir)
+        if os.path.isdir(self.rundir):
+            shutil.rmtree(self.rundir)
         os.makedirs(self.rundir, exist_ok=True)
 
         self.origin = os.getcwd()
@@ -43,6 +47,56 @@ class TestTMModel(unittest.TestCase):
                 if fil.name.endswith(".input") and fil.is_file():
                     filename = fil.name[:-6]
                     shutil.copy(os.path.join(self.refdir, fil.name), filename)
+
+    def tearDown(self):
+        os.chdir(self.origin)
+
+class TestTMGround(_TestTM):
+    """Test ground state calculation"""
+    testname = "tm-c2h4-ground"
+
+    def test_ridft_rdgrad(self):
+        model = TMModel(states=[0])
+        xyz = model._position
+
+        model.compute(xyz)
+
+        Eref = -78.40037210973
+        Fref = np.loadtxt("force.ref.txt")
+
+        assert np.isclose(model.hamiltonian()[0,0], Eref)
+        assert np.allclose(model.force(0), Fref)
+
+class TestTMGroundPC(_TestTM):
+    """Test ground state calculation with point charges"""
+    testname = "tm-c2h4-ground-pc"
+
+    def test_ridft_rdgrad_w_pc(self):
+        model = TMModel(states=[0])
+        xyzpc = np.array([[3.0, 3.0, 3.0],[-3.0, -3.0, -3.0]])
+        pcharges = np.array([2, -2])
+        model.control.add_point_charges(xyzpc, pcharges)
+
+        xyz = model._position
+        model.compute(xyz)
+
+        Eref = -78.63405047062
+        Fref = np.loadtxt("force.ref.txt")
+
+        assert np.isclose(model.hamiltonian()[0,0], Eref)
+        assert np.allclose(model.force(0), Fref)
+
+        xyzpc1, q1, dpc = model.control.read_point_charge_gradients()
+
+        forcepcref = np.loadtxt("forcepc.ref.txt")
+
+        assert np.allclose(xyzpc, xyzpc1)
+        assert np.allclose(pcharges, q1)
+        assert np.allclose(dpc, forcepcref)
+
+class TestTMExDynamics(_TestTM):
+    """Test short excited state dynamics"""
+    testname = "tm-c2h4"
 
     def test_get_gs_ex_properties(self):
         """test for gs_ex_properties function"""
@@ -74,9 +128,9 @@ class TestTMModel(unittest.TestCase):
 
         for t in ref_times:
             for s in states:
-                self.assertAlmostEqual(refs[t]["electronics"]["hamiltonian"][s][s],
+                np.testing.assert_almost_equal(refs[t]["electronics"]["hamiltonian"][s][s],
                                        results[t]["electronics"]["hamiltonian"][s][s],
-                                       places=8)
+                                       decimal=8)
                 np.testing.assert_almost_equal(refs[t]["electronics"]["force"][s],
                                                results[t]["electronics"]["force"][s],
                                                decimal=8)
@@ -93,9 +147,3 @@ class TestTMModel(unittest.TestCase):
                                                    results[t]["electronics"]["derivative_coupling"][s1][s2],
                                                    decimal=6)
 
-    def tearDown(self):
-        os.chdir(self.origin)
-
-
-if __name__ == '__main__':
-    unittest.main()

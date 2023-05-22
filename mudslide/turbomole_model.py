@@ -18,7 +18,7 @@ from .electronics import ElectronicModel_
 
 from .util import find_unique_name
 
-from typing import Tuple, Any
+from typing import Tuple, Any, Dict
 
 from .typing import ArrayLike, DtypeLike
 from .constants import eVtoHartree, amu_to_au
@@ -37,6 +37,11 @@ def turbomole_is_installed():
 
 class TurboControl(object):
     """A class to handle the control file for turbomole"""
+
+    # default filenames
+    pcgrad_file = "pcgrad"
+    control_file = "control"
+
     def __init__(self, control_file="control", workdir=None):
         # workdir is directory of control file
         if control_file is not None:
@@ -45,6 +50,11 @@ class TurboControl(object):
             self.workdir = os.path.abspath(workdir)
         else:
             raise Exception("Must provide either control_file or workdir")
+        self.control_file = control_file
+
+        # make sure control file exists
+        if not os.path.exists(os.path.join(self.workdir, self.control_file)):
+            raise RuntimeError(f"control file not found in working directory {self.workdir:s}")
 
         # list of data groups and which file they are in, used to avoid rerunning sdg too much
         self.dg_in_file = {}
@@ -173,6 +183,61 @@ class TurboControl(object):
         H = np.array(hessian, dtype=np.float64).reshape(ndim, ndim)
         return H
 
+    def add_point_charges(self, coords: ArrayLike, charges: ArrayLike):
+        """Add point charges to the control file
+
+        point_charges data group has the structure:
+        $point_charges nocheck list pcgrad
+        <x> <y> <z> <q>
+        ...
+        """
+        nq = len(charges)
+        assert coords.shape == (nq, 3)
+
+        self.adg("point_charges", ["file=point_charges"])
+        with open(os.path.join(self.workdir, "point_charges"), "w") as f:
+            print("$point_charges nocheck list pcgrad", file=f)
+            for xyz, q in zip(coords, charges):
+                print(f"{xyz[0]:22.16g} {xyz[1]:22.16g} {xyz[2]:22.16g} {q:22.16f}", file=f)
+            print("$end", file=f)
+
+        # make sure point charge gradients are requested
+        drvopt = self.sdg("drvopt", show_body=True, show_keyword=False)
+        if "point charges" not in drvopt:
+            drvopt = drvopt.rstrip().split("\n")
+            drvopt += [" point charges"]
+            self.adg("drvopt", drvopt, newline=True)
+        self.adg("point_charge_gradients", [f"file={self.pcgrad_file}"])
+
+    def read_point_charge_gradients(self):
+        """Read point charges and gradients from the control file
+
+        point charges in dg $point_charges
+        gradients in dg $point_charge_gradients
+
+        Returns: (coords, charges, gradients) where coords is a numpy array of shape (nq, 3) with coordinates in Bohr
+        """
+
+        # read point charges
+        pc = self.sdg("point_charges", show_body=True, show_keyword=False)
+        pc_list = pc.rstrip().split("\n")
+        nq = len(pc_list)
+        coords = np.zeros((nq, 3))
+        charges = np.zeros(nq)
+        for i, p in enumerate(pc_list):
+            p_list = p.split()
+            coords[i, :] = [float(val) for val in p_list[:3]]
+            charges[i] = float(p_list[3])
+
+        # read point charge gradients
+        pcgrad = self.sdg("point_charge_gradients", show_body=True, show_keyword=False)
+        pcgrad_list = pcgrad.rstrip().split("\n")
+        gradients = np.zeros((nq, 3))
+        for i, p in enumerate(pcgrad_list):
+            p_list = p.split()
+            gradients[i, :] = [float(val.replace('D','e')) for val in p_list[:3]]
+
+        return coords, charges, gradients
 
 class TMModel(ElectronicModel_):
     """A class to handle the electronic model for excited state Turbomole calculations"""
@@ -183,8 +248,8 @@ class TMModel(ElectronicModel_):
         workdir_stem: str = "run_turbomole",
         representation: str = "adiabatic",
         reference: Any = None,
-        expert=False,  # when False, will update turbomole parameters for best NAMD performance
-        turbomole_modules={"gs_energy": "ridft", "gs_grads": "rdgrad", "es_grads": "egrad"},
+        expert: bool=False,  # when False, will update turbomole parameters for best NAMD performance
+        turbomole_modules: Dict=None
     ):
         ElectronicModel_.__init__(self, representation=representation, reference=reference)
 
@@ -192,11 +257,10 @@ class TMModel(ElectronicModel_):
         self.run_turbomole_dir = run_turbomole_dir
         unique_workdir = find_unique_name(self.workdir_stem, self.run_turbomole_dir, always_enumerate=True)
         work = os.path.join(os.path.abspath(self.run_turbomole_dir), unique_workdir)
-        self.control = TurboControl(workdir=work)
         self.expert = expert
 
-        os.makedirs(self.control.workdir, exist_ok = True)
-        subprocess.run(["cpc", self.control.workdir], cwd=self.run_turbomole_dir)
+        subprocess.run(["cpc", work], cwd=self.run_turbomole_dir)
+        self.control = TurboControl(workdir=work)
 
         self.states = states
         self.nstates_ = len(self.states)
@@ -204,7 +268,14 @@ class TMModel(ElectronicModel_):
         if not turbomole_is_installed():
             raise RuntimeError("Turbomole is not installed")
 
-        self.turbomole_modules = turbomole_modules
+        if turbomole_modules is None:
+            # always need energy and gradients
+            mod = { "gs_energy": "ridft", "gs_grads": "rdgrad" }
+            if any([s != 0 for s in self.states]):
+                mod["es_grads"] = "egrad"
+            self.turbomole_modules = mod
+        else:
+            self.turbomole_modules = turbomole_modules
         if not all([shutil.which(x) is not None for x in self.turbomole_modules.values()]):
             raise RuntimeError("Turbomole modules not found")
 
@@ -236,9 +307,9 @@ class TMModel(ElectronicModel_):
 
     def setup_coords(self):
         """Setup the coordinates for the calculation"""
-        self.atom_order, self._position = self.control.read_coords()
+        self._elements, self._position = self.control.read_coords()
         self.ndim_ = len(self._position)
-        self.mass = self.control.get_masses(self.atom_order)
+        self.mass = self.control.get_masses(self._elements)
 
     def update_coords(self, X):
         X = X.reshape((self.ndim() // 3, 3))
@@ -260,7 +331,7 @@ class TMModel(ElectronicModel_):
         coordline += 1
         for i, coord_list in enumerate(X):
             lines[coordline] = "{:26.16e} {:28.16e} {:28.16e} {:>7}\n".format(
-                coord_list[0], coord_list[1], coord_list[2], self.atom_order[i]
+                coord_list[0], coord_list[1], coord_list[2], self._elements[i]
             )
             coordline += 1
 
@@ -272,7 +343,8 @@ class TMModel(ElectronicModel_):
     def call_turbomole(self, outname="turbo.out") -> None:
         """Call Turbomole to run the calculation"""
         # which forces are actually found?
-        self._forces_available = [False] * self.nstates()
+        self._force = np.zeros((self.nstates(), self.ndim()))
+        self._forces_available = np.zeros(self.nstates(), dtype=bool)
 
         with open(outname, "w") as f:
             for turbomole_module in self.turbomole_modules.values():
@@ -285,7 +357,8 @@ class TMModel(ElectronicModel_):
         # Now add results to model
         energy = data_dict[self.turbomole_modules["gs_energy"]]["energy"]
         self.energies = [energy]
-        parsed_gradients = [data_dict[self.turbomole_modules["gs_grads"]]["gradient"][0]["gradients"]]
+        dE0 = np.array(data_dict[self.turbomole_modules["gs_grads"]]["gradient"][0]["gradients"])
+        self._force[0,:] = -dE0.flatten()
         self._forces_available[0] = True
 
         # Check for presence of egrad turbomole module
@@ -310,17 +383,15 @@ class TMModel(ElectronicModel_):
                 self._derivative_couplings_available[i, j] = self._derivative_couplings_available[j, i] = True
 
             # egrad updates to gradients
+            # temporary:
+            print(data_dict["egrad"]["gradient"])
             for i in range(len(data_dict["egrad"]["gradient"])):
-                parsed_gradients.extend([data_dict["egrad"]["gradient"][i]["gradients"]])
-                self._forces_available[len(parsed_gradients)-1] = True
+                dE = np.array(data_dict["egrad"]["gradient"][i]["gradients"])
+                self._force[i+1,:] = -dE.flatten()
+                self._forces_available[i+1] = True
 
-        # Reshape gradients
 
-        self.gradients = np.array(parsed_gradients)
-
-        self._force = -(self.gradients)
-
-    def compute(self, X, couplings, gradients, reference) -> None:
+    def compute(self, X, couplings: Any=None, gradients: Any=None, reference: Any=None) -> None:
         """
         Calls Turbomole/Turboparse to generate electronic properties including
         gradients, couplings, energies. For this to work, this class
