@@ -30,7 +30,7 @@ and run the simulation. An example script is shown below:
 
     import mudslide
 
-    model = TMModel(states=[0, 1]) # run using ground and first excited states
+    model = mudslide.models.TMModel(states=[0, 1]) # run using ground and first excited states
     positions = model._position # read position from the coord file
     momenta = mudslide.math.boltzmann_velocities(model._mass, 300) * model._mass
 
@@ -53,11 +53,11 @@ Advice
 
    * For NAMD you will need to have
 
-     * `$soes` data group with information on the excitations.
-     * `$nacme` (for just states 0,1) or `$nacme pseudo` (for state-to-state)
+     * ``$soes`` data group with information on the excitations.
+     * ``$nacme`` (for just states 0,1) or ``$nacme pseudo`` (for state-to-state)
      * weight derivatives
 
    * And it is recommended to have
 
-     * `$phaser`
-     * `$do_etf`
+     * ``$phaser``
+     * ``$do_etf``

@@ -140,8 +140,11 @@ class TurboControl(object):
 
     def read_coords(self):
         """Read the coordinates from the control file
-        Returns: (symbols, coords) where symbols is a list of atomic symbols and
-            coords is a numpy array of shape (n_atoms * 3) with coordinates in angstroms
+
+        Returns:
+
+          (symbols, coords) where symbols is a list of atomic symbols and
+                            coords is a numpy array of shape (n_atoms * 3) with coordinates in angstroms
         """
         coords = []
         symbols = []

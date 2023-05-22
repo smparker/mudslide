@@ -2,7 +2,7 @@ Built-in Models
 ===============
 
 (TD)DFT with Turbomole
----------------------
+----------------------
 .. automodule:: mudslide.turbomole_model
    :members:
    :show-inheritance:

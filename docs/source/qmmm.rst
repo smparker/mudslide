@@ -13,7 +13,7 @@ python interface of OpenMM.
 
 Setup Turbomole
 ---------------
-Just like for a regular `TMModel` setup, start by preparing a
+Just like for a regular ``TMModel`` setup, start by preparing a
 Turbomole run in a directory and then
 
 .. code-block:: bash
@@ -32,8 +32,8 @@ needed to define nonbonded interaction parameters.
 Run Simulation
 ------------------
 Next, you will set up a python script that will create
-a `TMModel` object, an `OpenMM` object, and then combine
-them to make a `QMMM` object.
+a ``TMModel`` object, an ``OpenMM`` object, and then combine
+them to make a ``QMMM`` object.
 
 .. code-block:: python
 
@@ -41,7 +41,7 @@ them to make a `QMMM` object.
     import openmm
     import openmm.app
 
-    qm = TMModel(states=[0, 1]) # run using ground and first excited states
+    qm = mudslide.models.TMModel(states=[0, 1]) # run using ground and first excited states
     pdb_qm = openmm.app.PDBFile('qm.pdb') # read topology from qm.pdb
 
     pdb_mm = openmm.app.PDBFile('mm.pdb') # read topology from mm.pdb
