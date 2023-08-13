@@ -85,8 +85,9 @@ class TullySimpleAvoidedCrossing(DiabaticModel_):
         self.D = d
         self.mass = np.array(mass, dtype=np.float64).reshape(self.ndim())
 
-    def V(self, x: ArrayLike) -> ArrayLike:
+    def V(self, X: ArrayLike) -> ArrayLike:
         """:math:`V(x)`"""
+        x = X[0]
         v11 = float(np.copysign(self.A, x) * (1.0 - np.exp(-self.B * np.abs(x))))
         v22 = -v11
         v12 = float(self.C * np.exp(-self.D * x * x))
@@ -130,8 +131,9 @@ class TullyDualAvoidedCrossing(DiabaticModel_):
         self.E0 = e
         self.mass = np.array(mass, dtype=np.float64).reshape(self.ndim())
 
-    def V(self, x: ArrayLike) -> ArrayLike:
+    def V(self, X: ArrayLike) -> ArrayLike:
         """:math:`V(x)`"""
+        x = X[0]
         v11 = 0.0
         v22 = float(-self.A * np.exp(-self.B * x * x) + self.E0)
         v12 = float(self.C * np.exp(-self.D * x * x))
@@ -176,8 +178,9 @@ class TullyExtendedCouplingReflection(DiabaticModel_):
         self.C = c
         self.mass = np.array(mass, dtype=np.float64).reshape(self.ndim())
 
-    def V(self, x: ArrayLike) -> ArrayLike:
+    def V(self, X: ArrayLike) -> ArrayLike:
         """:math:`V(x)`"""
+        x = X[0]
         v11 = self.A
         v22 = -self.A
         v12 = float(np.exp(-np.abs(x) * self.C))
