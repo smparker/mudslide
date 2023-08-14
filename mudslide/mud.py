@@ -21,7 +21,8 @@ def mud_main(argv=None, file=sys.stdout) -> None:
     # subparser for the "collect" command
     mudslide.collect.add_collect_parser(subparsers)
 
-    # other parsers go here
+    # subparser for the "surface" command
+    mudslide.surface.add_surface_parser(subparsers)
 
     args = parser.parse_args(argv)
     args.func(args)

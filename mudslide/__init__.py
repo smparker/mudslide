@@ -19,4 +19,6 @@ from .tracer import *
 from . import models
 from . import math
 
+# modules for CLI
 from . import collect
+from . import surface

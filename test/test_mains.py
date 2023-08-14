@@ -241,9 +241,10 @@ class TestSurface(unittest.TestCase):
                     options = "-m {:s} -r -11 11 -n 200".format(m).split()
                 checkdir = os.path.join(testdir, "checks", "surface")
                 os.makedirs(checkdir, exist_ok=True)
-                outfile = os.path.join(checkdir, "{:s}.out".format(m))
+                outfile = f"{m:s}.out"
+                options.append(f"--output={outfile}")
                 with open(outfile, "w") as f:
-                    mudslide.surface.main(options, f)
+                    mudslide.surface.main(options)
 
                 form = "f" * (8 if m in ["simple", "extended", "dual"] else 13)
                 if m in ["vibronic"]:
