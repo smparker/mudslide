@@ -317,6 +317,15 @@ def load_log(main_log_name):
     return out
 
 
+def trace_factory(trace_type: str = "yaml"):
+    if trace_type == "yaml":
+        return YAMLTrace
+    elif trace_type == "in_memory":
+        return InMemoryTrace
+    else:
+        raise ValueError("Invalid trace type specified: {}".format(trace_type))
+
+
 DefaultTrace = InMemoryTrace
 
 
