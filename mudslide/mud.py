@@ -24,6 +24,9 @@ def mud_main(argv=None, file=sys.stdout) -> None:
     # subparser for the "surface" command
     mudslide.surface.add_surface_parser(subparsers)
 
+    # subparser for the "make-harmonic" command
+    mudslide.turbo_make_harmonic.add_make_harmonic_parser(subparsers)
+
     args = parser.parse_args(argv)
     args.func(args)
 

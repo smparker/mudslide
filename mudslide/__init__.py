@@ -22,3 +22,4 @@ from . import math
 # modules for CLI
 from . import collect
 from . import surface
+from . import turbo_make_harmonic
