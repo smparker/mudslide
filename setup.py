@@ -33,6 +33,7 @@ setup(
     entry_points={
         'console_scripts': [
             'mudslide = mudslide.__main__:main',
+            'mud = mudslide.mud:mud_main',
             'mudslide-surface = mudslide.surface:main',
             'mudslide-make-harmonic = mudslide.turbo_make_harmonic:main'
         ]
