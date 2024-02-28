@@ -1,6 +1,8 @@
 import numpy as np
+
 from typing import Any
-from .typing import ArrayLike, DtypeLike
+from mudslide.typing import ArrayLike, DtypeLike
+from mudslide.models import ElectronicModel_
 
 try:
     import openmm
@@ -9,15 +11,13 @@ try:
 except ImportError:
     OPENMM_INSTALLED = False
 
-import mudslide.electronics
-
 
 def openmm_is_installed():
     """Check if OpenMM is installed"""
     return OPENMM_INSTALLED
 
 
-class OpenMM(mudslide.electronics.ElectronicModel_):
+class OpenMM(ElectronicModel_):
     """OpenMM interface"""
 
     def __init__(self, pdb, ff, system):

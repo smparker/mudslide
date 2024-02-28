@@ -16,7 +16,7 @@ from mudslide.even_sampling import EvenSamplingTrajectory
 from mudslide.tracer import InMemoryTrace, YAMLTrace, TraceManager
 from mudslide.batch import TrajGenConst, TrajGenNormal, BatchedTraj
 
-from mudslide.models import TMModel
+from mudslide.models import TMModel, turbomole_is_installed
 from mudslide.tracer import YAMLTrace
 
 testdir = os.path.dirname(__file__)
@@ -27,7 +27,7 @@ def clean_directory(dirname):
     if os.path.isdir(dirname):
         shutil.rmtree(dirname)
 
-@unittest.skipUnless(mudslide.turbomole_model.turbomole_is_installed(), "Turbomole must be installed")
+@unittest.skipUnless(turbomole_is_installed(), "Turbomole must be installed")
 class TestTMModel(unittest.TestCase):
     """Test Suite for TMModel class"""
 

@@ -14,15 +14,15 @@ import os, sys, io, shutil
 
 from pathlib import Path
 
-from .electronics import ElectronicModel_
+from mudslide.models.electronics import ElectronicModel_
 
-from .util import find_unique_name
+from mudslide.util import find_unique_name
 
 from typing import Tuple, Any, Dict
 
-from .typing import ArrayLike, DtypeLike
-from .constants import eVtoHartree, amu_to_au
-from .periodic_table import masses
+from mudslide.typing import ArrayLike, DtypeLike
+from mudslide.constants import eVtoHartree, amu_to_au
+from mudslide.periodic_table import masses
 
 
 def turbomole_is_installed():

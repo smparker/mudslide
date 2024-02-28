@@ -5,11 +5,11 @@ import numpy as np
 import math
 from scipy.special import erf
 
-from .electronics import DiabaticModel_, AdiabaticModel_
+from mudslide.models.electronics import DiabaticModel_, AdiabaticModel_
 
 from typing import Any
-from .typing import ArrayLike, DtypeLike
-from .constants import eVtoHartree
+from mudslide.typing import ArrayLike, DtypeLike
+from mudslide.constants import eVtoHartree
 
 # Here are some helper functions that pad the model problems with fake electronic states.
 # Useful for debugging, so keeping it around

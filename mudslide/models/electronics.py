@@ -10,9 +10,9 @@ import numpy as np
 import math
 
 from typing import Tuple, Any
-from .typing import ArrayLike
 
-from .typing import ArrayLike, ElectronicT
+from mudslide.typing import ArrayLike
+from mudslide.typing import ElectronicT
 
 
 

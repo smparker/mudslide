@@ -5,10 +5,10 @@ import json
 import numpy as np
 import yaml
 
-from .models import ElectronicModel_
+from mudslide.models import ElectronicModel_
 
 from typing import Any
-from .typing import ArrayLike, DtypeLike
+from mudslide.typing import ArrayLike, DtypeLike
 
 
 class HarmonicModel(ElectronicModel_):
