@@ -12,14 +12,14 @@ from pathlib import Path
 import mudslide
 import yaml
 
-from mudslide.models import TMModel
+from mudslide.models import TMModel, turbomole_is_installed
 from mudslide.tracer import YAMLTrace
 
 testdir = os.path.dirname(__file__)
 _refdir = os.path.join(testdir, "ref")
 _checkdir = os.path.join(testdir, "checks")
 
-pytestmark = pytest.mark.skipif(not mudslide.turbomole_model.turbomole_is_installed(),
+pytestmark = pytest.mark.skipif(not turbomole_is_installed(),
                                      reason="Turbomole must be installed")
 
 def test_raise_on_missing_control():

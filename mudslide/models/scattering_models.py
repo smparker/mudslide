@@ -5,11 +5,11 @@ import numpy as np
 import math
 from scipy.special import erf
 
-from .electronics import DiabaticModel_, AdiabaticModel_
+from mudslide.models.electronics import DiabaticModel_, AdiabaticModel_
 
 from typing import Any
-from .typing import ArrayLike, DtypeLike
-from .constants import eVtoHartree
+from mudslide.typing import ArrayLike, DtypeLike
+from mudslide.constants import eVtoHartree
 
 # Here are some helper functions that pad the model problems with fake electronic states.
 # Useful for debugging, so keeping it around
@@ -584,6 +584,97 @@ class LinearVibronic(DiabaticModel_):
 
         return out.reshape([5, 2, 2])
 
+class SubotnikModelW(DiabaticModel_):
+    def __init__(
+            self,
+            representation: str = "adiabatic",
+            reference: Any = None,
+            mass: np.float64 = 2000.0,
+            nstates: int = 8,
+            eps: np.float64 = 0.1
+    ):
+        DiabaticModel_.__init__(self, representation=representation, reference=reference,
+                                nstates=nstates, ndim=1)
+        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndim())
+        self.eps = eps
+
+    def V(self, X: ArrayLike) -> ArrayLike:
+        N = self.nstates()
+        m = np.arange(0, N) + 1
+
+        v = 0.1 / np.sqrt(N)
+        diag = np.tan(0.5 * np.pi - (2 * m - 1) * np.pi / (2 * N)) * X[0] + \
+                (m - 1) * self.eps
+
+        out = np.zeros([N, N], dtype=np.float64)
+        out[:, :] = v
+        np.fill_diagonal(out, diag)
+        return out
+
+    def dV(self, X: ArrayLike) -> ArrayLike:
+        N = self.nstates()
+        m = np.arange(0, N) + 1
+
+        v = 0.1 / np.sqrt(N)
+        diag = np.tan(0.5 * np.pi - (2 * m - 1) * np.pi / (2 * N)) + \
+                (m - 1) * self.eps
+
+        out = np.zeros([1, N, N], dtype=np.float64)
+        out[0, :, :] = v
+        np.fill_diagonal(out[0], diag)
+        return out
+
+class SubotnikModelZ(DiabaticModel_):
+    def __init__(
+            self,
+            representation: str = "adiabatic",
+            reference: Any = None,
+            mass: np.float64 = 2000.0,
+            nstates: int = 8,
+            eps: np.float64 = 0.1
+    ):
+        DiabaticModel_.__init__(self, representation=representation, reference=reference,
+                                nstates=nstates, ndim=1)
+        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndim())
+        self.eps = eps
+
+    def V(self, X: ArrayLike) -> ArrayLike:
+        N = self.nstates()
+        m = np.arange(0, N)
+
+        v = 0.1 / np.sqrt(N)
+        m1 = np.arange(0, N//2) + 1
+        m2 = np.arange(N//2, N) + 1
+
+        diag = np.zeros(N, dtype=np.float64)
+        d1 = X[0] + (m1 - 1) * self.eps
+        d2 = -X[0] + (N - m2) * self.eps
+        diag[:len(m1)] = d1
+        diag[len(m1):] = d2
+
+        out = np.zeros([N, N], dtype=np.float64)
+        out[:, :] = v
+        np.fill_diagonal(out, diag)
+        return out
+
+    def dV(self, X: ArrayLike) -> ArrayLike:
+        N = self.nstates()
+
+        v = 0.1 / np.sqrt(N)
+        m1 = np.arange(0, N//2) + 1
+        m2 = np.arange(N//2, N) + 1
+
+        diag = np.zeros(N, dtype=np.float64)
+        d1 = X[0] + (m1 - 1) * self.eps
+        d2 = -X[0] + (N - m2) * self.eps
+        diag[:len(m1)] = d1
+        diag[len(m1):] = d2
+
+        out = np.zeros([1, N, N], dtype=np.float64)
+        out[0, :, :] = v
+        np.fill_diagonal(out[0], diag)
+        return out
+
 
 scattering_models = {
     "simple": TullySimpleAvoidedCrossing,
@@ -593,5 +684,7 @@ scattering_models = {
     "shin-metiu": ShinMetiu,
     "modelx": SubotnikModelX,
     "models": SubotnikModelS,
+    "modelw": SubotnikModelW,
+    "modelz": SubotnikModelZ,
     "vibronic": LinearVibronic
 }

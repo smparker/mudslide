@@ -8,8 +8,8 @@ import argparse
 
 import numpy as np
 
-from .turbomole_model import TurboControl, turbomole_is_installed
-from .harmonic_model import HarmonicModel
+from mudslide.models.turbomole_model import TurboControl, turbomole_is_installed
+from mudslide.models.harmonic_model import HarmonicModel
 
 from typing import Any
 
