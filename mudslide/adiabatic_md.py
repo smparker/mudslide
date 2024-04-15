@@ -11,6 +11,56 @@ from .tracer import Trace
 from typing import List, Dict, Union, Any
 from .typing import ElectronicT, ArrayLike, DtypeLike
 
+from .propagator import Propagator_
+
+class VVPropagator(Propagator_):
+    """Velocity Verlet propagator"""
+
+    def __call__(self, traj: 'AdiabaticMD', nsteps: int) -> None:
+        """Propagate trajectory using Velocity Verlet algorithm
+
+        :param traj: trajectory object to propagate
+        :param nsteps: number of steps to propagate
+        """
+        dt = traj.dt
+        # first update nuclear coordinates
+        for i in range(nsteps):
+            acceleration = traj.force(traj.electronics) / traj.mass
+            traj.last_position = traj.position
+            traj.position += traj.velocity * dt + 0.5 * acceleration * dt * dt
+
+            # calculate electronics at new position
+            traj.last_electronics = traj.electronics
+            traj.electronics = traj.model.update(traj.position, electronics=traj.electronics)
+
+            # update velocity
+            last_acceleration = acceleration
+            acceleration = traj.force(traj.electronics) / traj.mass
+
+            traj.last_velocity = traj.velocity
+            traj.velocity += 0.5 * (last_acceleration + acceleration) * dt
+
+            traj.time += dt
+            traj.nsteps += 1
+
+def AdiabaticPropagator(prop_options: Any = "VV") -> Propagator_:
+    """Factory function for creating propagator objects
+
+    :param prop_type: string or dict propagator type
+    """
+    if isinstance(prop_options, str):
+        if prop_options == "VV":
+            return VVPropagator()
+        else:
+            raise ValueError("Unknown propagator type: {}".format(prop_options))
+    elif isinstance(prop_options, dict):
+        prop_type = prop_options["type"]
+        if prop_type == "VV":
+            return VVPropagator(**prop_options)
+        else:
+            raise ValueError("Unknown propagator type: {}".format(prop_type))
+
+
 class AdiabaticMD(object):
     """Class to propagate a single adiabatic trajectory, like ground state MD"""
 
@@ -50,6 +100,8 @@ class AdiabaticMD(object):
         self.time = float(options.get("t0", 0.0))
         self.nsteps = int(options.get("previous_steps", 0))
         self.trace_every = int(options.get("trace_every", 1))
+
+        self.propagator = AdiabaticPropagator(options.get("propagator", "VV"))
 
         # read out of options
         self.dt = float(options["dt"])
@@ -259,30 +311,6 @@ class AdiabaticMD(object):
         component = np.dot(u, momentum) * u
         return 0.5 * np.einsum('m,m,m', 1.0 / self.mass, component, component)
 
-    def advance_position(self, last_electronics: Union[ElectronicT, None], this_electronics: ElectronicT) -> None:
-        """
-        Move classical position forward one step
-
-        :param last_electronics: ElectronicStates from previous step
-        :param this_electronics: ElectronicStates from current step
-        """
-        acceleration = self.force(this_electronics) / self.mass
-        self.last_position = self.position
-        self.position += self.velocity * self.dt + 0.5 * acceleration * self.dt * self.dt
-
-    def advance_velocity(self, last_electronics: ElectronicT, this_electronics: ElectronicT) -> None:
-        """
-        Move classical velocity forward one step
-
-        :param electronics: ElectronicStates from current step
-        """
-
-        last_acceleration = self.force(last_electronics) / self.mass
-        this_acceleration = self.force(this_electronics) / self.mass
-
-        self.last_velocity = self.velocity
-        self.velocity += 0.5 * (last_acceleration + this_acceleration) * self.dt
-
     def simulate(self) -> 'Trace':
         """
         Simulate
@@ -293,7 +321,7 @@ class AdiabaticMD(object):
         if not self.continue_simulating():
             return self.tracer
 
-        last_electronics = None
+        self.last_electronics = None
 
         if self.electronics is None:
             self.electronics = self.model.update(self.position)
@@ -303,17 +331,7 @@ class AdiabaticMD(object):
 
         # propagation
         while (True):
-            # first update nuclear coordinates
-            self.advance_position(last_electronics, self.electronics)
-
-            # calculate electronics at new position
-            last_electronics, self.electronics = self.electronics, self.model.update(self.position, electronics=self.electronics)
-
-            # update velocity
-            self.advance_velocity(last_electronics, self.electronics)
-
-            self.time += self.dt
-            self.nsteps += 1
+            self.propagator(self, 1)
 
             # ending condition
             if not self.continue_simulating():
