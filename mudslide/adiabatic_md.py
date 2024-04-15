@@ -97,14 +97,14 @@ class AdiabaticMD(object):
             self.duration_initialize(options)
 
         # fixed initial parameters
-        self.time = float(options.get("t0", 0.0))
+        self.time = np.longdouble(options.get("t0", 0.0))
         self.nsteps = int(options.get("previous_steps", 0))
         self.trace_every = int(options.get("trace_every", 1))
 
         self.propagator = AdiabaticPropagator(options.get("propagator", "VV"))
 
         # read out of options
-        self.dt = float(options["dt"])
+        self.dt = np.longdouble(options["dt"])
         self.outcome_type = options.get("outcome_type", "state")
 
         ss = options.get("seed_sequence", None)
@@ -113,7 +113,7 @@ class AdiabaticMD(object):
 
         self.electronics = options.get("electronics", None)
 
-        self.weight = float(options.get("weight", 1.0))
+        self.weight = np.float64(options.get("weight", 1.0))
 
         self.restarting = options.get("restarting", False)
         self.force_quit = False
@@ -147,7 +147,7 @@ class AdiabaticMD(object):
                    restarting=True,
                    **options)
 
-    def update_weight(self, weight: float) -> None:
+    def update_weight(self, weight: np.float64) -> None:
         """Update weight held by trajectory and by trace"""
         self.weight = weight
         self.tracer.weight = weight
