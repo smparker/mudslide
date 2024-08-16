@@ -1,20 +1,12 @@
 # -*- coding: utf-8 -*-
 """Handle storage and computation of electronic degrees of freedom"""
 
-from __future__ import division
-
 import copy as cp
+from typing import Tuple, Any
 
 import numpy as np
 
-import math
-
-from typing import Tuple, Any
-
 from mudslide.typing import ArrayLike
-from mudslide.typing import ElectronicT
-
-
 
 class ElectronicModel_(object):
     """
