@@ -3,14 +3,12 @@
 gradients, NAC coupling, etc to mudslide and mudslide performs molecular dynamics calculations """
 
 import numpy as np
-import math
-from scipy.special import erf
 import subprocess
 import turboparse
 import re
 import copy as cp
 
-import os, sys, io, shutil
+import os, sys, shutil
 
 from pathlib import Path
 
@@ -18,10 +16,10 @@ from mudslide.models.electronics import ElectronicModel_
 
 from mudslide.util import find_unique_name
 
-from typing import Tuple, Any, Dict
+from typing import Any, Dict
 
-from mudslide.typing import ArrayLike, DtypeLike
-from mudslide.constants import eVtoHartree, amu_to_au
+from mudslide.typing import ArrayLike
+from mudslide.constants import amu_to_au
 from mudslide.periodic_table import masses
 
 
@@ -110,6 +108,9 @@ class TurboControl(object):
             lines = "\\n" + lines
         adg_command = "adg {} {}".format(dg, lines)
         result = subprocess.run(adg_command.split(), capture_output=True, text=True, cwd=self.workdir)
+        # check that the command ran successfully
+        if "abnormal" in result.stderr:
+            raise Exception("Call to adg ended abnormally")
 
     def cpc(self, dest):
         """Copy the control file and other files to a new directory"""
