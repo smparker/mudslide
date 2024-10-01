@@ -30,7 +30,7 @@ def test_subotnik_model_w():
     X = np.zeros([1])
     X[:] = -0.5
 
-    model.compute(X)
+    model.compute(X, reference=np.eye(model.nstates()))
 
     H = model.hamiltonian()
     force = model.force()
@@ -51,7 +51,7 @@ def test_subotnik_model_z():
     X = np.zeros([1])
     X[:] = -0.5
 
-    model.compute(X)
+    model.compute(X, reference=np.eye(model.nstates()))
 
     H = model.hamiltonian()
     force = model.force()
