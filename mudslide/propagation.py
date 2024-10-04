@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
 """Propagators for ODEs from quantum dynamics"""
 
-from __future__ import division
+from typing import Callable
 
 import numpy as np
 
-from typing import Callable
 from .typing import ArrayLike, DtypeLike
-
 
 def rk4(y0: ArrayLike, ydot: Callable, t0: DtypeLike, tf: DtypeLike, nsteps: int) -> ArrayLike:
     """
