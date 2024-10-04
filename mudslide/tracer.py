@@ -1,25 +1,22 @@
 # -*- coding: utf-8 -*-
 """Collect results from single trajectories"""
 
-from __future__ import print_function, division
 
-from .version import __version__
+import sys
+import os
+import shutil
+import copy as cp
+from typing import List, Any, Dict, Iterator
 
 import numpy as np
-import sys, os
-import copy as cp
-import shutil
-
-from typing import List, Any, Dict, Iterator
-from .typing import ArrayLike
-
-from .util import find_unique_name
 
 import yaml
 
+from .typing import ArrayLike
+from .util import find_unique_name
+from .version import __version__
 
-class Trace_(object):
-
+class Trace_:
     def __init__(self, weight: float = 1.0):
         self.weight: float = weight
 
@@ -27,24 +24,22 @@ class Trace_(object):
         """add a single snapshot to the trace"""
         return
 
-    def record_event(self, event_dict: Dict) -> None:
+    def record_event(self, event_type: str, event_dict: Dict) -> None:
         """add a single event (e.g., hop or collapse) to the log"""
         return
 
     def __iter__(self) -> Iterator:
         """option to iterate through every snapshot"""
-        pass
 
     def __getitem__(self, i: int) -> Any:
         """option to get a particular snapshot"""
-        pass
 
     def __len__(self) -> int:
         return 0
 
     def frustrated_hop(self, time: float, hop_from: int, hop_to: int, zeta: float, prob: float) -> None:
         hop_data = {"event": "frustrated_hop", "time": time, "from": hop_from, "to": hop_to, "zeta": zeta, "prob": prob}
-        self.record_event(hop_data)
+        self.record_event("frustrated_hop", hop_data)
 
     def form_data(self, snap_dict: Dict) -> Dict:
         out = {}
@@ -105,7 +100,7 @@ class Trace_(object):
         """Writes trajectory to an xyz file"""
         ndim = self[-1]["position"].shape[0]
         natoms = ndim // 3
-        with open(filename, "w") as f: # TODO needs to be fixed for more general cases. How to get the element?
+        with open(filename, "w", encoding='utf-8') as f: # TODO needs to be fixed for more general cases. How to get the element?
             for i, snap in enumerate(self):
                 print(f"{natoms:d}", file=f)
                 print(f"energy: {snap['energy']:g}; time: {snap['time']:f}; step: {i:d}", file=f)
@@ -118,22 +113,22 @@ class InMemoryTrace(Trace_):
     """Collect results from a single trajectory"""
 
     def __init__(self, weight: float = 1.0):
+        super().__init__(weight=weight)
         self.data: List = []
         self.hops: List = []
         self.events: Dict = {}
-        self.weight: float = weight
 
-    def collect(self, trajectory_snapshot: Any) -> None:
+    def collect(self, snapshot: Any) -> None:
         """collect and optionally process data"""
-        self.data.append(trajectory_snapshot)
+        self.data.append(snapshot)
 
     def hop(self, time: float, hop_from: int, hop_to: int, zeta: float, prob: float) -> None:
         self.hops.append({"time": time, "from": hop_from, "to": hop_to, "zeta": zeta, "prob": prob})
 
-    def record_event(self, event_type: str, event: Dict):
+    def record_event(self, event_type: str, event_dict: Dict):
         if event_type not in self.events:
             self.events[event_type] = []
-        self.events[event_type].append(event)
+        self.events[event_type].append(event_dict)
 
     def __iter__(self) -> Iterator:
         for snap in self.data:
@@ -153,6 +148,7 @@ class YAMLTrace(Trace_):
     """Collect results from a single trajectory and write to yaml files"""
 
     def __init__(self, base_name: str = "traj", weight: float = 1.0, log_pitch=512, location="", load_main_log=None):
+        super().__init__(weight=weight)
 
         self.weight: float = weight
         self.log_pitch = log_pitch
@@ -182,13 +178,17 @@ class YAMLTrace(Trace_):
             self.logfiles = [self.active_logfile]
 
             # create empty files
-            open(os.path.join(self.location, self.main_log), "x").close()
-            open(os.path.join(self.location, self.active_logfile), "x").close()
-            open(os.path.join(self.location, self.event_log), "x").close()
+
+            with open(os.path.join(self.location, self.main_log), "x", encoding='utf-8') as f:
+                pass
+            with open(os.path.join(self.location, self.active_logfile), "x", encoding='utf-8') as f:
+                pass
+            with open(os.path.join(self.location, self.event_log), "x", encoding='utf-8') as f:
+                pass
 
             self.write_main_log()
         else:
-            with open(load_main_log, "r") as f:
+            with open(load_main_log, "r", encoding='utf-8') as f:
                 logdata = yaml.safe_load(f)
 
             self.location = os.path.dirname(load_main_log)
@@ -196,9 +196,9 @@ class YAMLTrace(Trace_):
             self.logfiles = logdata["logfiles"]
             self.main_log = self.unique_name + ".yaml"
             if self.main_log != os.path.basename(load_main_log):
-                raise Exception(
-                    "It looks like the log file {} was renamed. This is undefined behavior for now!".format(
-                        load_main_log))
+                raise RuntimeError(
+                    f"It looks like the log file {load_main_log} was renamed. "
+                    "This is undefined behavior for now!")
             self.active_logfile = self.logfiles[-1]
             self.nlogs = logdata["nlogs"]
             self.log_pitch = logdata["log_pitch"]
@@ -206,7 +206,7 @@ class YAMLTrace(Trace_):
             self.weight = logdata["weight"]
 
             # sizes assume log_pitch never changes. is that safe?
-            with open(os.path.join(self.location, self.active_logfile), "r") as f:
+            with open(os.path.join(self.location, self.active_logfile), "r", encoding='utf-8') as f:
                 activelog = yaml.safe_load(f)
                 self.active_logsize = len(activelog)
             self.logsize = self.log_pitch * (self.nlogs - 1) + self.active_logsize
@@ -215,8 +215,7 @@ class YAMLTrace(Trace_):
         rel_files = self.logfiles + [self.main_log, self.event_log]
         if absolute_path:
             return [os.path.join(self.location, x) for x in rel_files]
-        else:
-            return rel_files
+        return rel_files
 
     def write_main_log(self):
         """Writes main log file, which points to other files for logging information"""
@@ -229,10 +228,10 @@ class YAMLTrace(Trace_):
             "weight": self.weight
         }
 
-        with open(os.path.join(self.location, self.main_log), "w") as f:
+        with open(os.path.join(self.location, self.main_log), "w", encoding='utf-8') as f:
             yaml.safe_dump(out, f)
 
-    def collect(self, trajectory_snapshot: Any) -> None:
+    def collect(self, snapshot: Any) -> None:
         """collect and optionally process data"""
         target_log = self.logsize // self.log_pitch
 
@@ -242,17 +241,17 @@ class YAMLTrace(Trace_):
             self.nlogs += 1
             self.write_main_log()
 
-        with open(os.path.join(self.location, self.active_logfile), "a") as f:
-            yaml.safe_dump([trajectory_snapshot], f, explicit_start=False)
+        with open(os.path.join(self.location, self.active_logfile), "a", encoding='utf-8') as f:
+            yaml.safe_dump([snapshot], f, explicit_start=False)
 
         self.logsize += 1
 
     def hop(self, time: float, hop_from: int, hop_to: int, zeta: float, prob: float) -> None:
         hop_data = {"event": "hop", "time": time, "from": hop_from, "to": hop_to, "zeta": zeta, "prob": prob}
-        self.record_event(hop_data)
+        self.record_event("hop", hop_data)
 
-    def record_event(self, event_dict):
-        with open(os.path.join(self.location, self.event_log), "a") as f:
+    def record_event(self, event_type: str, event_dict: Dict):
+        with open(os.path.join(self.location, self.event_log), "a", encoding='utf-8') as f:
             yaml.safe_dump([event_dict], f, explicit_start=False)
 
     def clone(self):
@@ -278,7 +277,7 @@ class YAMLTrace(Trace_):
 
     def __iter__(self) -> Iterator:
         for log in (os.path.join(self.location, l) for l in self.logfiles):
-            with open(log, "r") as f:
+            with open(log, "r", encoding='utf-8') as f:
                 chunk = yaml.safe_load(f)
                 for i in chunk:
                     yield self.form_data(i)
@@ -293,7 +292,8 @@ class YAMLTrace(Trace_):
 
         target_log = i // self.log_pitch
         target_snap = i - target_log * self.log_pitch
-        with open(os.path.join(self.location, self.logfiles[target_log]), "r") as f:
+        with open(os.path.join(self.location, self.logfiles[target_log]), "r",
+                  encoding='utf-8') as f:
             chunk = yaml.safe_load(f)
             return self.form_data(chunk[target_snap])
 
@@ -301,10 +301,11 @@ class YAMLTrace(Trace_):
         return self.logsize
 
     def as_dict(self) -> Dict:
-        with open(os.path.join(self.location, self.main_log), "r") as f:
+        with open(os.path.join(self.location, self.main_log), "r",
+                  encoding='utf-8') as f:
             info = yaml.safe_load(f)
 
-            return {"hops": info["hops"], "data": [x for x in self], "weight": self.weight}
+            return {"hops": info["hops"], "data": list(self), "weight": self.weight}
 
 
 def load_log(main_log_name):
@@ -316,23 +317,22 @@ def load_log(main_log_name):
 def trace_factory(trace_type: str = "yaml"):
     if trace_type == "yaml":
         return YAMLTrace
-    elif trace_type == "in_memory":
+    if trace_type == "in_memory":
         return InMemoryTrace
-    else:
-        raise ValueError("Invalid trace type specified: {}".format(trace_type))
+    raise ValueError(f"Invalid trace type specified: {trace_type}")
 
 
 DefaultTrace = InMemoryTrace
 
 
-class TraceManager(object):
+class TraceManager:
     """Manage the collection of observables from a set of trajectories"""
 
-    def __init__(self, TraceType=InMemoryTrace, trace_args=[], trace_kwargs={}) -> None:
+    def __init__(self, TraceType=InMemoryTrace, trace_args=None, trace_kwargs=None) -> None:
         self.TraceType = TraceType
 
-        self.trace_args = trace_args
-        self.trace_kwargs = trace_kwargs
+        self.trace_args = trace_args if trace_args is not None else []
+        self.trace_kwargs = trace_kwargs if trace_kwargs is not None else {}
 
         self.traces: List = []
         self.outcomes: ArrayLike
