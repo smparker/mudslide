@@ -14,7 +14,7 @@ from typing import Optional, List, Any, Dict, Union
 from .typing import ArrayLike, ElectronicT
 from itertools import count
 
-class SpawnStack(object):
+class SpawnStack:
     """Data structure to inform how new traces are spawned and weighted"""
 
     def __init__(self, sample_stack: List, weight: float = 1.0):
@@ -38,9 +38,11 @@ class SpawnStack(object):
         self.zeta_: float = -1.0
 
     def zeta(self) -> float:
+        """Return the current zeta value"""
         return self.zeta_
 
-    def next_zeta(self, current_value: float, random_state: Any = np.random.RandomState()) -> float:
+    def next_zeta(self, current_value: float, random_state: Any = np.random.default_rng()) -> float:
+        """Return the next zeta value and update the stack"""
         if self.sample_stack:
             izeta = self.izeta
             while izeta < len(self.sample_stack) and self.sample_stack[izeta]["zeta"] < current_value:
@@ -66,6 +68,7 @@ class SpawnStack(object):
         return self.zeta_
 
     def weight(self) -> float:
+        """Get weight of the current trajectory"""
         return self.base_weight * self.marginal_weight
 
     def spawn(self, reweight: float = 1.0) -> "SpawnStack":
@@ -93,10 +96,7 @@ class SpawnStack(object):
             samp = self.last_stack
             if "spawn_size" in samp:
                 return samp["spawn_size"]
-            else:
-                return 1
-        else:
-            return 1
+        return 1
 
     def append_layer(self, zetas: list, dws: list, stack=None, node=None, nodes=None, adj_matrix=None):
         """
@@ -170,60 +170,60 @@ class SpawnStack(object):
 
 
     def unravel(self):
-            """
-            Calls unpack to recursively unpack a sample_stack and then
-            unravels the list of zetas and dws to create a list of tuples of
-            tuples of points and weights. This works for arbitary dimensions.
-    
-            self = SpawnStack.from_quadrature(nsamples = [2, 2])
-            pts_wts = self.unravel()
-    
-            where
-    
-            pts_wts = [((x1, y1), (wx1, wy1)), ((x1, y2), (wx1, wy2)), ((x2, y1), (wx2, wy1)), ((x2, y2), (wx2, wy2))]
-            """
-            zetas = []
-            dws = []
-            self.unpack(zeta_list=zetas, dw_list=dws)
-    
-            dim_list = []
-            for tpl in zetas:
-                dim_list.append(tpl[0])
-            dim = max(dim_list) + 1
-            main_list = []
-            coords = []
-            weights = []
-            last_depth = 0
-            for i, tpl in enumerate(zetas):
-                # When we recurse back up in depth, we need to remove num_to_pop items from coords/weights.
-                if tpl[0] < last_depth:
-                    num_to_pop = last_depth - tpl[0] + 1
-                    for j in range(num_to_pop):
-                        coords.pop()
-                        weights.pop()
-                # Take care of the fact that the above doesn't work for 1D.
-                if (dim == 1) and (len(coords) != 0):
+        """
+        Calls unpack to recursively unpack a sample_stack and then
+        unravels the list of zetas and dws to create a list of tuples of
+        tuples of points and weights. This works for arbitary dimensions.
+
+        self = SpawnStack.from_quadrature(nsamples = [2, 2])
+        pts_wts = self.unravel()
+
+        where
+
+        pts_wts = [((x1, y1), (wx1, wy1)), ((x1, y2), (wx1, wy2)), ((x2, y1), (wx2, wy1)), ((x2, y2), (wx2, wy2))]
+        """
+        zetas = []
+        dws = []
+        self.unpack(zeta_list=zetas, dw_list=dws)
+
+        dim_list = []
+        for tpl in zetas:
+            dim_list.append(tpl[0])
+        dim = max(dim_list) + 1
+        main_list = []
+        coords = []
+        weights = []
+        last_depth = 0
+        for i, tpl in enumerate(zetas):
+            # When we recurse back up in depth, we need to remove num_to_pop items from coords/weights.
+            if tpl[0] < last_depth:
+                num_to_pop = last_depth - tpl[0] + 1
+                for j in range(num_to_pop):
                     coords.pop()
                     weights.pop()
-                if tpl[0] == 0:
-                    last_depth = tpl[0]
+            # Take care of the fact that the above doesn't work for 1D.
+            if (dim == 1) and (len(coords) != 0):
+                coords.pop()
+                weights.pop()
+            if tpl[0] == 0:
+                last_depth = tpl[0]
+                coords.append(tpl[1])
+                weights.append(dws[i][1])
+            else:
+                last_depth = tpl[0]
+                if len(coords) > tpl[0]:
+                    coords[tpl[0]] = tpl[1]
+                    weights[tpl[0]] = dws[i][1]
+                else:
                     coords.append(tpl[1])
                     weights.append(dws[i][1])
-                else:
-                    last_depth = tpl[0]
-                    if len(coords) > tpl[0]:
-                        coords[tpl[0]] = tpl[1]
-                        weights[tpl[0]] = dws[i][1]
-                    else:
-                        coords.append(tpl[1])
-                        weights.append(dws[i][1])
-                if len(coords) == dim:
-                    main_list.append((tuple(coords), tuple(weights)))
-    
-            # Return product of weights
-            points_weights = [(points, np.prod(weights)) for (points, weights) in main_list]
+            if len(coords) == dim:
+                main_list.append((tuple(coords), tuple(weights)))
 
-            return points_weights
+        # Return product of weights
+        points_weights = [(points, np.prod(weights)) for (points, weights) in main_list]
+
+        return points_weights
 
     @classmethod
     def from_quadrature(
@@ -292,8 +292,8 @@ class EvenSamplingTrajectory(TrajectoryCum):
             queue=self.queue,
             last_velocity=self.last_velocity,
             state0=self.state,
-            t0=self.time, 
-            previous_steps=self.nsteps, 
+            t0=self.time,
+            previous_steps=self.nsteps,
             trace_every=self.trace_every,
             dt=self.dt,
             outcome_type=self.outcome_type,
@@ -373,7 +373,7 @@ class EvenSamplingTrajectory(TrajectoryCum):
                 stack = hop["stack"]
                 spawn = self.clone(stack)
                 TrajectoryCum.hop_to_it(spawn, [hop], electronics=spawn.electronics)
-                spawn.time+= spawn.dt 
+                spawn.time+= spawn.dt
                 spawn.nsteps += 1
 
                 # trigger hop

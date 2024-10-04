@@ -130,9 +130,6 @@ class InMemoryTrace(Trace_):
     def hop(self, time: float, hop_from: int, hop_to: int, zeta: float, prob: float) -> None:
         self.hops.append({"time": time, "from": hop_from, "to": hop_to, "zeta": zeta, "prob": prob})
 
-    def record_event(self, event_dict):
-        self.hops.append(event_dict)
-
     def record_event(self, event_type: str, event: Dict):
         if event_type not in self.events:
             self.events[event_type] = []
@@ -238,7 +235,6 @@ class YAMLTrace(Trace_):
     def collect(self, trajectory_snapshot: Any) -> None:
         """collect and optionally process data"""
         target_log = self.logsize // self.log_pitch
-        isnap = self.logsize + 1
 
         if target_log != (self.nlogs - 1):  # for zero based index, target_log == nlogs means we're out of logs
             self.active_logfile = "{}-log_{:d}.yaml".format(self.unique_name, self.nlogs)

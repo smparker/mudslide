@@ -18,7 +18,7 @@ from .typing import ModelT, TrajGenT, ArrayLike
 logger = logging.getLogger("mudslide")
 
 
-class TrajGenConst(object):
+class TrajGenConst:
     """Canned class whose call function acts as a generator for static initial conditions
 
     :param position: initial position
@@ -43,7 +43,7 @@ class TrajGenConst(object):
             yield (self.position, self.momentum, self.initial_state, {"seed_sequence": seedseqs[i]})
 
 
-class TrajGenNormal(object):
+class TrajGenNormal:
     """Canned class whose call function acts as a generator for normally distributed initial conditions"""
 
     def __init__(self,
@@ -85,12 +85,12 @@ class TrajGenNormal(object):
             x = self.random_state.normal(self.position, self.position_deviation)
             k = self.random_state.normal(self.momentum, self.momentum_deviation)
 
-            if (self.kskip(k)):
+            if self.kskip(k):
                 continue
             yield (x, k, self.initial_state, {"seed_sequence": seedseqs[i]})
 
 
-class TrajGenBoltzmann(object):
+class TrajGenBoltzmann:
     """Generate momenta randomly according to the Boltzmann distribution"""
 
     def __init__(self,
@@ -137,7 +137,7 @@ class TrajGenBoltzmann(object):
             yield (x, p, self.initial_state, {"seed_sequence": seedseqs[i]})
 
 
-class BatchedTraj(object):
+class BatchedTraj:
     """Class to manage many TrajectorySH trajectories
 
     Requires a model object which is a class that has functions V(x), dV(x), nstates(), and ndim()

@@ -10,8 +10,11 @@ import argparse
 import mudslide
 
 def mud_main(argv=None, file=sys.stdout) -> None:
+    """Mudslide CLI
+    """
     parser = argparse.ArgumentParser(prog="mudslide", description="Mudslide CLI")
-    parser.add_argument('-v', '--version', action='version', version=f"%(prog)s {mudslide.__version__}")
+    parser.add_argument('-v', '--version', action='version',
+                        version=f"%(prog)s {mudslide.__version__}")
     parser.add_argument('-d', '--debug', action='store_true', help="enable debug mode")
 
     subparsers = parser.add_subparsers(title="commands",
@@ -29,4 +32,3 @@ def mud_main(argv=None, file=sys.stdout) -> None:
 
     args = parser.parse_args(argv)
     args.func(args)
-
