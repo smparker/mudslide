@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """Math helper functions"""
 
-from __future__ import division
+import warnings
 
 import numpy as np
+
 from .typing import ArrayLike
 from .constants import boltzmann
-import warnings
 
 
 def poisson_prob_scale(x: ArrayLike):
@@ -20,6 +20,14 @@ def poisson_prob_scale(x: ArrayLike):
 
 
 def boltzmann_velocities(mass, temperature, scale=True, seed=None):
+    """Generates random velocities from a Boltzmann distribution.
+
+    :param mass: array of masses
+    :param temperature: temperature
+    :param scale: scale velocities to exactly match the requested temperature
+    :param seed: random seed
+    :return: array of velocities
+    """
     rng = np.random.default_rng(seed)
     kt = boltzmann * temperature
     sigma = np.sqrt(kt * mass)
