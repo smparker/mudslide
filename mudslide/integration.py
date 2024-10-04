@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 """Quadrature implementations"""
 
-from __future__ import division
+from typing import Tuple
 
 import numpy as np
 
-from typing import Tuple
 from .typing import ArrayLike
 
 
@@ -102,7 +101,8 @@ def simpson(n: int, a: float = -1.0, b: float = 1.0) -> Tuple[ArrayLike, ArrayLi
     assert b > a and n > 1
 
     if n % 2 != 1:
-        raise Exception("Simpson's rule must be defined with an odd number of points (even number of intervals)")
+        raise RuntimeError("Simpson's rule must be defined with an odd "
+        "number of points (even number of intervals)")
 
     ninterval = n - 1
 
@@ -118,22 +118,23 @@ def simpson(n: int, a: float = -1.0, b: float = 1.0) -> Tuple[ArrayLike, ArrayLi
     return points, weights
 
 
-def quadrature(n: int, a: float = -1.0, b: float = 1.0, method: str = "gl") -> Tuple[ArrayLike, ArrayLike]:
+def quadrature(n: int, a: float = -1.0, b: float = 1.0,
+               method: str = "gl") -> Tuple[ArrayLike, ArrayLike]:
     """
     Returns a quadrature rule for the specified method and bounds
     """
-    if method.lower() == "cc" or method.lower() == "clenshaw-curtis":
+    method = method.lower()
+    if method in ["cc", "clenshaw-curtis"]:
         return clenshaw_curtis(n, a, b)
-    elif method.lower() == "gl" or method.lower() == "gauss-legendre":
+    if method in ["gl", "gauss-legendre"]:
         points, weights = np.polynomial.legendre.leggauss(n)
         points = points * 0.5 * (b - a) + 0.5 * (a + b)
         weights *= 0.5
         return points, weights
-    elif method.lower() == "midpoint" or method.lower() == "mp":
+    if method in ["midpoint", "mp"]:
         return midpoint(n, a, b)
-    elif method.lower() == "trapezoid":
+    if method in ["trapezoid"]:
         return trapezoid(n, a, b)
-    elif method.lower() == "simpson":
+    if method in ["simpson"]:
         return simpson(n, a, b)
-    else:
-        raise Exception("Unrecognized quadrature choice")
+    raise RuntimeError("Unrecognized quadrature choice")
