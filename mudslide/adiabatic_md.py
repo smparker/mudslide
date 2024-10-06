@@ -1,17 +1,15 @@
 # -*- coding: utf-8 -*-
 """Propagate Adiabatic MD trajectory"""
 
-from __future__ import division
-
 import copy as cp
+from typing import Dict, Union, Any
+
 import numpy as np
 
 from .tracer import DefaultTrace
-
-from typing import List, Dict, Union, Any
 from .typing import ElectronicT, ArrayLike, DtypeLike
 
-class AdiabaticMD(object):
+class AdiabaticMD:
     """Class to propagate a single adiabatic trajectory, like ground state MD"""
 
     def __init__(self,
@@ -35,6 +33,7 @@ class AdiabaticMD(object):
         self.mass = model.mass
         self.position = np.array(x0, dtype=np.float64).reshape(model.ndim())
         self.velocity = np.array(p0, dtype=np.float64).reshape(model.ndim()) / self.mass
+        self.last_position = np.zeros_like(self.position, dtype=np.float64)
         self.last_velocity = np.zeros_like(self.velocity, dtype=np.float64)
         if "last_velocity" in options:
             self.last_velocity[:] = options["last_velocity"]
@@ -202,7 +201,7 @@ class AdiabaticMD(object):
 
     def trouble_shooter(self):
         log = self.snapshot()
-        with open("snapout.dat", "a") as file:
+        with open("snapout.dat", "a", encoding='utf-8') as file:
             file.write("{}\t{}\t{}\t{}\t{}\n".format(log["time"], log["potential"], log["kinetic"], log["energy"],
                                                      log["active"]))
 
@@ -302,7 +301,7 @@ class AdiabaticMD(object):
             self.trace()
 
         # propagation
-        while (True):
+        while True:
             # first update nuclear coordinates
             self.advance_position(last_electronics, self.electronics)
 

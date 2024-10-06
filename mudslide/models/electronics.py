@@ -51,6 +51,20 @@ class ElectronicModel_(object):
             raise Exception("Derivative coupling between states %d and %d not available" % (state1, state2))
         return self._derivative_coupling[state1, state2, :]
 
+    def derivative_coupling_tensor(self) -> ArrayLike:
+        """Returns the entire derivative coupling tensor
+
+        The derivative coupling tensor is a rank 3 tensor
+        with shape (nstates, nstates, ndim) where the
+        derivative_coupling_tensor[i,j,:] is the derivative
+        coupling between states i and j
+
+        If the derivative coupling tensor between two states
+        is not available, the corresponding element will be
+        zero.
+        """
+        return self._derivative_coupling
+
     def NAC_matrix(self, velocity: ArrayLike) -> ArrayLike:
         """Return the non-adiabatic coupling matrix
         for a given velocity vector
