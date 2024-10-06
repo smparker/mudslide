@@ -1,8 +1,9 @@
 import numpy as np
 
 from typing import Any
-from mudslide.typing import ArrayLike, DtypeLike
+from mudslide.typing import ArrayLike
 from mudslide.models import ElectronicModel_
+from .. import periodic_table
 
 try:
     import openmm
@@ -70,7 +71,7 @@ class OpenMM(ElectronicModel_):
             atom.element.symbol.lower() for atom in self._pdb.topology.atoms()
         ]
         self.mass = np.array([
-            mudslide.periodic_table.masses[e]
+            periodic_table.masses[e]
             for e in self._elements
             for i in range(3)
         ])

@@ -1,11 +1,7 @@
-#!/usr/bin/env python
-
-from __future__ import print_function
-
-import sys
-
-import math as m
-import numpy as np
+# -*- coding: utf-8 -*-
+"""
+Periodic Table of Elements
+"""
 
 DEBUG = False
 

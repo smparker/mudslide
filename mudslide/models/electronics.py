@@ -1,20 +1,12 @@
 # -*- coding: utf-8 -*-
 """Handle storage and computation of electronic degrees of freedom"""
 
-from __future__ import division
-
 import copy as cp
+from typing import Tuple, Any
 
 import numpy as np
 
-import math
-
-from typing import Tuple, Any
-
 from mudslide.typing import ArrayLike
-from mudslide.typing import ElectronicT
-
-
 
 class ElectronicModel_(object):
     """
@@ -58,6 +50,20 @@ class ElectronicModel_(object):
         if not self._derivative_couplings_available[state1, state2]:
             raise Exception("Derivative coupling between states %d and %d not available" % (state1, state2))
         return self._derivative_coupling[state1, state2, :]
+
+    def derivative_coupling_tensor(self) -> ArrayLike:
+        """Returns the entire derivative coupling tensor
+
+        The derivative coupling tensor is a rank 3 tensor
+        with shape (nstates, nstates, ndim) where the
+        derivative_coupling_tensor[i,j,:] is the derivative
+        coupling between states i and j
+
+        If the derivative coupling tensor between two states
+        is not available, the corresponding element will be
+        zero.
+        """
+        return self._derivative_coupling
 
     def NAC_matrix(self, velocity: ArrayLike) -> ArrayLike:
         """Return the non-adiabatic coupling matrix

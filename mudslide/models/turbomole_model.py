@@ -1,29 +1,25 @@
 # -*- coding: utf-8 -*-
-"""Implementations of the interface between turbomole and mudslide. Turbomole provides electronic parameters such as energies, 
+"""Implementations of the interface between turbomole and mudslide. Turbomole provides electronic parameters such as energies,
 gradients, NAC coupling, etc to mudslide and mudslide performs molecular dynamics calculations """
 
-import numpy as np
-import math
-from scipy.special import erf
 import subprocess
-import turboparse
 import re
 import copy as cp
-
-import os, sys, io, shutil
-
+import os
+import sys
+import shutil
 from pathlib import Path
+from typing import Any, Dict
+
+import numpy as np
+
+import turboparse
 
 from mudslide.models.electronics import ElectronicModel_
-
 from mudslide.util import find_unique_name
-
-from typing import Tuple, Any, Dict
-
-from mudslide.typing import ArrayLike, DtypeLike
-from mudslide.constants import eVtoHartree, amu_to_au
+from mudslide.typing import ArrayLike
+from mudslide.constants import amu_to_au
 from mudslide.periodic_table import masses
-
 
 def turbomole_is_installed():
     # needs to have turbodir set
@@ -35,7 +31,7 @@ def turbomole_is_installed():
 
     return has_turbodir and has_scripts and has_bin
 
-class TurboControl(object):
+class TurboControl:
     """A class to handle the control file for turbomole"""
 
     # default filenames
@@ -58,6 +54,8 @@ class TurboControl(object):
 
         # list of data groups and which file they are in, used to avoid rerunning sdg too much
         self.dg_in_file = {}
+        self.mass = None
+        self.energies = None
 
     def check_turbomole_is_installed(self):
         """Check that turbomole is installed, raise exception if not"""
@@ -110,6 +108,9 @@ class TurboControl(object):
             lines = "\\n" + lines
         adg_command = "adg {} {}".format(dg, lines)
         result = subprocess.run(adg_command.split(), capture_output=True, text=True, cwd=self.workdir)
+        # check that the command ran successfully
+        if "abnormal" in result.stderr:
+            raise Exception("Call to adg ended abnormally")
 
     def cpc(self, dest):
         """Copy the control file and other files to a new directory"""
@@ -274,18 +275,21 @@ class TMModel(ElectronicModel_):
         if turbomole_modules is None:
             # always need energy and gradients
             mod = { "gs_energy": "ridft", "gs_grads": "rdgrad" }
-            if any([s != 0 for s in self.states]):
+            if any((s != 0 for s in self.states)):
                 mod["es_grads"] = "egrad"
             self.turbomole_modules = mod
         else:
             self.turbomole_modules = turbomole_modules
-        if not all([shutil.which(x) is not None for x in self.turbomole_modules.values()]):
+        if not all((shutil.which(x) is not None for x in self.turbomole_modules.values())):
             raise RuntimeError("Turbomole modules not found")
 
         self.turbomole_init()
 
         if not self.expert:
             self.apply_suggested_parameters()
+
+        self.mass = None
+        self.energies = None
 
     def apply_suggested_parameters(self):
         # weight derivatives are mandatory
@@ -323,10 +327,12 @@ class TMModel(ElectronicModel_):
 
         regex = re.compile(r"\s*\$coord")
         coordline = 0
+        line = ""
         for i, line in enumerate(lines):
             if regex.match(line) is not None:
                 coordline = i
                 break
+
         # Reached end of file without finding $coord.
         if line == "":
             raise ValueError(f"$coord entry not found in file: {coord_path}!")

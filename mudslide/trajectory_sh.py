@@ -1,20 +1,18 @@
 # -*- coding: utf-8 -*-
 """Propagate FSSH trajectory"""
 
-from __future__ import division
-
 import copy as cp
+from typing import List, Dict, Union, Any
+
 import numpy as np
 
 from .propagation import rk4
 from .tracer import DefaultTrace
 from .math import poisson_prob_scale
-
-from typing import List, Dict, Union, Any
 from .typing import ElectronicT, ArrayLike, DtypeLike
 
 
-class TrajectorySH(object):
+class TrajectorySH:
     """Class to propagate a single FSSH trajectory"""
 
     def __init__(self,
@@ -40,6 +38,7 @@ class TrajectorySH(object):
         self.mass = model.mass
         self.position = np.array(x0, dtype=np.float64).reshape(model.ndim())
         self.velocity = np.array(p0, dtype=np.float64).reshape(model.ndim()) / self.mass
+        self.last_position = np.zeros_like(self.position, dtype=np.float64)
         self.last_velocity = np.zeros_like(self.velocity, dtype=np.float64)
         if "last_velocity" in options:
             self.last_velocity[:] = options["last_velocity"]
@@ -50,13 +49,13 @@ class TrajectorySH(object):
                 self.rho[state, state] = 1.0
                 self.state = state
             except:
-                raise Exception("Unrecognized initial state option")
+                raise RuntimeError("Unrecognized initial state option")
         else:
             try:
                 self.rho = np.copy(rho0)
                 self.state = int(options["state0"])
             except:
-                raise Exception("Unrecognized initial state option")
+                raise RuntimeError("Unrecognized initial state option")
 
         # function duration_initialize should get us ready to for future continue_simulating calls
         # that decide whether the simulation has finished
@@ -243,8 +242,14 @@ class TrajectorySH(object):
     def trouble_shooter(self):
         log = self.snapshot()
         with open("snapout.dat", "a") as file:
-            file.write("{}\t{}\t{}\t{}\t{}\n".format(log["time"], log["potential"], log["kinetic"], log["energy"],
-                                                     log["active"]))
+            t = log["time"]
+            x = log["position"]
+            p = log["momentum"]
+            pot = log["potential"]
+            kin = log["kinetic"]
+            ene = log["energy"]
+            k = log["active"]
+            file.write(f"{t:12.6f} {pot:12.6f} {pot:12.6f} {kin:12.6f} {ene:12.6f}\n")
 
     def kinetic_energy(self) -> np.float64:
         """Kinetic energy
@@ -300,19 +305,6 @@ class TrajectorySH(object):
             electronics = self.electronics
         return electronics.NAC_matrix(velo)
 
-    def mode_kinetic_energy(self, direction: ArrayLike) -> np.float64:
-        """
-        Kinetic energy along given momentum mode
-
-        :param direction: [ndim] numpy array defining direction
-
-        :return: kinetic energy along specified direction
-        """
-        u = direction / np.linalg.norm(direction)
-        momentum = self.velocity * self.mass
-        component = np.dot(u, momentum) * u
-        return 0.5 * np.einsum('m,m,m', 1.0 / self.mass, component, component)
-
     def draw_new_zeta(self) -> float:
         """
         Returns a new zeta value for hopping. First it checks the input list of
@@ -323,8 +315,7 @@ class TrajectorySH(object):
         """
         if self.zeta_list:
             return self.zeta_list.pop(0)
-        else:
-            return self.random()
+        return self.random()
 
     def hop_allowed(self, direction: ArrayLike, dE: float):
         """
@@ -342,7 +333,7 @@ class TrajectorySH(object):
         a = np.einsum('m,m,m', np.reciprocal(self.mass), u, u)
         b = 2.0 * np.dot(self.velocity, u)
         c = -2.0 * dE
-        return (b * b > 4.0 * a * c)
+        return b * b > 4.0 * a * c
 
     def direction_of_rescale(self, source: int, target: int, electronics: ElectronicT = None) -> np.ndarray:
         """
@@ -392,7 +383,7 @@ class TrajectorySH(object):
         H = 0.5 * (this_electronics.hamiltonian() + last_electronics.hamiltonian())  # type: ignore
         TV = 0.5 * np.einsum(
             "ijx,x->ij",
-            this_electronics._derivative_coupling + last_electronics._derivative_coupling,  #type: ignore
+            this_electronics.derivative_coupling_tensor() + last_electronics.derivative_coupling_tensor(),  #type: ignore
             velo)
         return H - 1j * TV
 
@@ -418,8 +409,8 @@ class TrajectorySH(object):
             last_H = last_electronics.hamiltonian()
             this_H = this_electronics.hamiltonian()
 
-            last_tau = last_electronics._derivative_coupling
-            this_tau = this_electronics._derivative_coupling
+            last_tau = last_electronics.derivative_coupling_tensor()
+            this_tau = this_electronics.derivative_coupling_tensor()
 
             last_v = self.last_velocity
             this_v = self.velocity
@@ -453,7 +444,7 @@ class TrajectorySH(object):
                 return out
 
             nsteps = self.starting_electronic_intervals
-            while (dt / nsteps > self.max_electronic_dt):
+            while dt / nsteps > self.max_electronic_dt:
                 nsteps *= 2
 
             rho0 = np.linalg.multi_dot([vecs.T, self.rho, vecs])
@@ -522,7 +513,7 @@ class TrajectorySH(object):
         elif self.hopping_probability == "poisson":
             probs = gkndt * poisson_prob_scale(np.sum(gkndt))
         else:
-            raise Exception("Unrecognized option for hopping_probability")
+            raise RuntimeError("Unrecognized option for hopping_probability")
         self.hopping = np.sum(probs).item()  # store total hopping probability
 
         self.zeta = self.draw_new_zeta()
@@ -536,8 +527,7 @@ class TrajectorySH(object):
                     break
 
             return [{"target": hop_to, "weight": 1.0, "zeta": self.zeta, "prob": acc_prob[hop_to]}]
-        else:
-            return []
+        return []
 
     def hop_update(self, hop_from, hop_to):
         """Handle any extra operations that need to occur after a hop"""
@@ -558,7 +548,6 @@ class TrajectorySH(object):
         new_potential, old_potential = H[hop_to, hop_to], H[self.state, self.state]
         delV = new_potential - old_potential
         rescale_vector = self.direction_of_rescale(self.state, hop_to)
-        component_kinetic = self.mode_kinetic_energy(rescale_vector)
         hop_from = self.state
 
         if self.hop_allowed(rescale_vector, -delV):
