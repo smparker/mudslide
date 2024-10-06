@@ -38,10 +38,24 @@ class Trace_:
         return 0
 
     def frustrated_hop(self, time: float, hop_from: int, hop_to: int, zeta: float, prob: float) -> None:
+        """record a frustrated hop event
+
+        :param time: time of the event
+        :param hop_from: state from which the hop was attempted
+        :param hop_to: state to which the hop was attempted
+        :param zeta: zeta that triggered the hop
+        :param prob: probability of the hop
+        """
         hop_data = {"event": "frustrated_hop", "time": time, "from": hop_from, "to": hop_to, "zeta": zeta, "prob": prob}
         self.record_event("frustrated_hop", hop_data)
 
     def form_data(self, snap_dict: Dict) -> Dict:
+        """converts a snapshot dictionary to a more useful form
+        by converting lists to numpy arrays and complex numbers to complex128
+
+        :param snap_dict: dictionary containing the snapshot data
+        :return: dictionary with the same data but with numpy arrays and complex128
+        """
         out = {}
         for k, v in snap_dict.items():
             if isinstance(v, list):
@@ -56,9 +70,15 @@ class Trace_:
         return out
 
     def clone(self) -> 'Trace_':
+        """return a deep copy of the trace"""
         return cp.deepcopy(self)
 
     def print(self, file: Any = sys.stdout) -> None:
+        """print basic information about a trace
+        Really only useful for 1D systems
+
+        :param file: file to print to
+        """
         has_electronic_wfn = "density_matrix" in self[0]
         nst = len(self[0]["density_matrix"]) if has_electronic_wfn else 1
         headerlist = ["%12s" % x for x in ["time", "x", "p", "V", "T", "E"]]
@@ -123,9 +143,11 @@ class InMemoryTrace(Trace_):
         self.data.append(snapshot)
 
     def hop(self, time: float, hop_from: int, hop_to: int, zeta: float, prob: float) -> None:
+        """record a hop event"""
         self.hops.append({"time": time, "from": hop_from, "to": hop_to, "zeta": zeta, "prob": prob})
 
     def record_event(self, event_type: str, event_dict: Dict):
+        """abstracted method to record events"""
         if event_type not in self.events:
             self.events[event_type] = []
         self.events[event_type].append(event_dict)
@@ -212,6 +234,12 @@ class YAMLTrace(Trace_):
             self.logsize = self.log_pitch * (self.nlogs - 1) + self.active_logsize
 
     def files(self, absolute_path=True):
+        """returns a list of all files associated with this trace
+
+        :param absolute_path: if True, returns the absolute path to the files,
+            otherwise returns the relative path
+        :return: list of files
+        """
         rel_files = self.logfiles + [self.main_log, self.event_log]
         if absolute_path:
             return [os.path.join(self.location, x) for x in rel_files]
@@ -301,6 +329,7 @@ class YAMLTrace(Trace_):
         return self.logsize
 
     def as_dict(self) -> Dict:
+        """return the object as a dictionary"""
         with open(os.path.join(self.location, self.main_log), "r",
                   encoding='utf-8') as f:
             info = yaml.safe_load(f)
@@ -309,12 +338,14 @@ class YAMLTrace(Trace_):
 
 
 def load_log(main_log_name):
+    """prepare a trace object from a main log file"""
     # assuming online yaml logs for now
     out = YAMLTrace(load_main_log=main_log_name)
     return out
 
 
 def trace_factory(trace_type: str = "yaml"):
+    """returns the appropriate trace class based on the type specified"""
     if trace_type == "yaml":
         return YAMLTrace
     if trace_type == "in_memory":
@@ -356,15 +387,18 @@ class TraceManager:
         return self.traces[i]
 
     def outcome(self) -> ArrayLike:
+        """summarize outcomes from entire set of traces"""
         weight_norm = sum((t.weight for t in self.traces))
         outcome = sum((t.weight * t.outcome() for t in self.traces)) / weight_norm
         return outcome
 
     def counts(self) -> ArrayLike:
+        """summarize outcomes from entire set of traces"""
         out = np.sum((t.outcome() for t in self.traces))
         return out
 
     def event_list(self) -> List:
+        """return a list of all events logged"""
         events = set()
         for t in self.traces:
             for e in t.events:
@@ -372,16 +406,17 @@ class TraceManager:
         return list(events)
 
     def summarize(self, verbose: bool = False, file: Any = sys.stdout) -> None:
+        """print a summary of the traces"""
         norm = sum((t.weight for t in self.traces))
-        print("Using mudslide (v{})".format(__version__), file=file)
+        print(f"Using mudslide (v{__version__})", file=file)
         print("------------------------------------", file=file)
-        print("# of trajectories: {}".format(len(self.traces)), file=file)
+        print(f"# of trajectories: {len(self.traces)}", file=file)
 
         nhops = np.array([len(t.hops) for t in self.traces])
         hop_stats = [np.sum((t.weight for t in self.traces if len(t.hops) == i)) / norm for i in range(max(nhops) + 1)]
         print("{:5s} {:16s}".format("nhops", "percentage"), file=file)
         for i, w in enumerate(hop_stats):
-            print("{:5d} {:16.12f}".format(i, w), file=file)
+            print(f"{i:5d} {w:16.12f}", file=file)
 
         if verbose:
             print(file=file)
@@ -397,7 +432,7 @@ class TraceManager:
         for e in event_list:
             print(file=file)
 
-            print("Statistics for {} event".format(e), file=file)
+            print(f"Statistics for {e} event", file=file)
             nevents = np.array([ len(t.events[e]) if e in t.events else 0 for t in self.traces ])
             if verbose:
                 print("{:>6s} {:>16s} {:>6s} {:>12s}".format("trace", "runtime", e, "weight"), file=file)
@@ -411,6 +446,7 @@ class TraceManager:
             print("  {} median:    {:8.2f}".format(e, np.median(nevents)), file=file)
 
     def as_dict(self) -> Dict:
+        """return the object as a dictionary"""
         out = {"hops": [], "data": [], "weight": []}
         for x in self.traces:
             out["hops"].append(x.as_dict()["hops"])
