@@ -18,6 +18,7 @@ from .tracer import *
 
 from . import models
 from . import math
+from . import io
 
 # modules for CLI
 from . import collect

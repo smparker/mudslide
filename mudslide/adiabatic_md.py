@@ -83,9 +83,9 @@ class NoseHooverChainPropagator(Propagator_):
             tmp = 1 / (4 - 4**(1./3))
             self.wdti = np.array([tmp, tmp, 1 - 4*tmp, tmp, tmp]) * dt / nc
 
-        self.Vlogs = np.zeros(M)
-        self.Xlogs = np.zeros(M)
-        self.Glogs = np.zeros(M)
+        self.Vlogs = np.zeros(nchains)
+        self.Xlogs = np.zeros(nchains)
+        self.Glogs = np.zeros(nchains)
 
 
     def xstep(self, velocity, mass):
@@ -165,23 +165,24 @@ class NoseHooverChainPropagator(Propagator_):
             traj.time += dt
             traj.nsteps += 1
 
-def AdiabaticPropagator(prop_options: Any = "VV") -> Propagator_:
+def AdiabaticPropagator(prop_options: Any = "vv") -> Propagator_:
     """Factory function for creating propagator objects
 
     :param prop_type: string or dict propagator type
     """
     if isinstance(prop_options, str):
-        if prop_options == "VV":
-            return VVPropagator()
-        else:
-            raise ValueError("Unknown propagator type: {}".format(prop_options))
-    elif isinstance(prop_options, dict):
-        prop_type = prop_options["type"]
-        if prop_type == "VV":
+        prop_options = { "type": prop_options.lower() }
+
+    if isinstance(prop_options, dict):
+        prop_type = prop_options.pop("type", "vv")
+        if prop_type in ["vv", "velocity verlet"]:
             return VVPropagator(**prop_options)
+        if prop_type in ["nh", "nhc", "nose-hoover"]:
+            return NoseHooverChainPropagator(**prop_options)
         else:
             raise ValueError("Unknown propagator type: {}".format(prop_type))
 
+    raise ValueError("Unknown propagator options: {}".format(prop_options))
 
 class AdiabaticMD(object):
     """Class to propagate a single adiabatic trajectory, like ground state MD"""

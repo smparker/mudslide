@@ -9,7 +9,7 @@ import numpy as np
 
 import math
 
-from typing import Tuple, Any
+from typing import Tuple, Any, List
 
 from mudslide.typing import ArrayLike
 from mudslide.typing import ElectronicT
@@ -21,7 +21,8 @@ class ElectronicModel_(object):
     Base class for handling electronic structure part of dynamics
     """
     def __init__(self, representation: str = "adiabatic", reference: Any = None,
-                 nstates: int = 0, ndim: int = 0):
+                 nstates: int = 0, ndim: int = 0,
+                 atom_types: List[str] = None):
         self.ndim_ = ndim
         self.nstates_ = nstates
 
@@ -34,6 +35,8 @@ class ElectronicModel_(object):
         self._forces_available: ArrayLike = np.zeros(self.nstates(), dtype=bool)
         self._derivative_coupling: ArrayLike
         self._derivative_couplings_available: ArrayLike = np.zeros((self.nstates(), self.nstates()), dtype=bool)
+
+        self.atom_types: List[str] = atom_types
 
     def ndim(self) -> int:
         """Number of classical degrees of freedom"""
