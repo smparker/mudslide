@@ -33,7 +33,8 @@ def test_1000K_from_equilibrium():
     x = np.array(water_model.x0)
 
     masses = water_model.mass
-    velocities = mudslide.math.boltzmann_velocities(masses, temperature=1000.0, seed=1234)
+    velocities = mudslide.math.boltzmann_velocities(masses, temperature=1000.0,
+                                                    remove_translation=False, seed=1234)
     p = velocities * masses
 
     KE = 0.5 * np.sum(p**2 / masses)
