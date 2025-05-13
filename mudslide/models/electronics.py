@@ -79,10 +79,12 @@ class ElectronicModel_(object):
         """Number of classical degrees of freedom"""
         return self.ndim_
 
+    @property
     def nparticles(self) -> int:
         """Number of particles"""
         return self._nparticles
 
+    @property
     def ndims(self) -> int:
         """Number of dimensions for each particle"""
         return self._ndims
