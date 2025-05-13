@@ -19,11 +19,48 @@ from mudslide.typing import ElectronicT
 class ElectronicModel_(object):
     """
     Base class for handling electronic structure part of dynamics
+    
+    The electronic model is a base class for handling the electronic
+    structure part of the dynamics.
+
+    Attributes
+    ----------
+    _representation : str
+        The representation of the electronic model. Can be "adiabatic" or "diabatic".
+    _reference : Any
+        The reference electronic state. Can be None.
+    nstates_ : int
+        The number of electronic states.
+    ndim_ : int
+        The number of classical degrees of freedom.
+    _ndims : int
+        The number of dimensions for each particle in the system.
+    _nparticles : int
+        The number of particles in the system.
+    atom_types : List[str]
+        The types of atoms in the system.
+    _position : ArrayLike
+        The position of the system.
+    _hamiltonian : ArrayLike
+        The electronic Hamiltonian.
+    _force : ArrayLike
+        The force on the system.
+    _forces_available : ArrayLike
+        A boolean array indicating which forces are available.
+    _derivative_coupling : ArrayLike
+
     """
     def __init__(self, representation: str = "adiabatic", reference: Any = None,
-                 nstates: int = 0, ndim: int = 0,
+                 nstates: int = 0, ndims: int = 1, nparticles: int = 1, ndim: int = None,
                  atom_types: List[str] = None):
-        self.ndim_ = ndim
+        self._ndims = ndims
+        self._nparticles = nparticles
+        if ndim is None: # if ndim is not given, it is set to ndims * nparticles
+            self.ndim_ = ndims * nparticles
+        else: # if ndim is given, it overrides the default
+            self.ndim_ = ndim
+            self._ndims = ndim
+            self._nparticles = 1
         self.nstates_ = nstates
 
         self._representation = representation
@@ -41,6 +78,19 @@ class ElectronicModel_(object):
     def ndim(self) -> int:
         """Number of classical degrees of freedom"""
         return self.ndim_
+
+    def nparticles(self) -> int:
+        """Number of particles"""
+        return self._nparticles
+
+    def ndims(self) -> int:
+        """Number of dimensions for each particle"""
+        return self._ndims
+
+    @property
+    def dimensionality(self) -> Tuple[int, int]:
+        """Number of particles and number of dimensions"""
+        return self._nparticles, self._ndims
 
     def nstates(self) -> int:
         """Number of electronic states"""

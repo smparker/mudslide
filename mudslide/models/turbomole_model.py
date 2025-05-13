@@ -157,7 +157,7 @@ class TurboControl(object):
             symbols.append(c_list[3])
             coords.append([float(val) for val in c_list[:3]])
 
-        X = np.array(coords, dtype=np.float64).reshape(len(coords) * 3)
+        X = np.array(coords, dtype=np.float64)
         return symbols, X
 
     def get_masses(self, symbols):
@@ -254,7 +254,13 @@ class TMModel(ElectronicModel_):
         expert: bool=False,  # when False, will update turbomole parameters for best NAMD performance
         turbomole_modules: Dict=None
     ):
-        ElectronicModel_.__init__(self, representation=representation, reference=reference)
+        # read coordinates and elements from the control file
+        elements, X = self.control.read_coords()
+        nparts, ndims = X.shape
+        self._elements = elements
+        ElectronicModel_.__init__(self, ndims=ndims, nparticles=nparts,
+                                representation=representation, reference=reference)
+        self.mass = self.control.get_masses(self._elements) 
 
         self.workdir_stem = workdir_stem
         self.run_turbomole_dir = run_turbomole_dir
@@ -282,7 +288,7 @@ class TMModel(ElectronicModel_):
         if not all([shutil.which(x) is not None for x in self.turbomole_modules.values()]):
             raise RuntimeError("Turbomole modules not found")
 
-        self.turbomole_init()
+        # self.turbomole_init()
 
         if not self.expert:
             self.apply_suggested_parameters()
@@ -305,14 +311,8 @@ class TMModel(ElectronicModel_):
 
         # probably force phaser on as well
 
-    def turbomole_init(self):
-        self.setup_coords()
-
-    def setup_coords(self):
-        """Setup the coordinates for the calculation"""
-        self._elements, self._position = self.control.read_coords()
-        self.ndim_ = len(self._position)
-        self.mass = self.control.get_masses(self._elements)
+    #def turbomole_init(self):
+    #    self.setup_coords()
 
     def update_coords(self, X):
         X = X.reshape((self.ndim() // 3, 3))
@@ -416,5 +416,6 @@ class TMModel(ElectronicModel_):
         os.makedirs(model_clone.control.workdir, exist_ok = True)
         self.control.cpc(model_clone.control.workdir)
 
-        model_clone.turbomole_init()
+        # necessary?
+        # model_clone.turbomole_init()
         return model_clone

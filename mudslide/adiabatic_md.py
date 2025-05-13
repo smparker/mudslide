@@ -15,6 +15,8 @@ from .typing import ElectronicT, ArrayLike, DtypeLike
 
 from .propagator import Propagator_
 
+from .util import remove_center_of_mass_motion, remove_angular_momentum
+
 class VVPropagator(Propagator_):
     """Velocity Verlet propagator"""
 
@@ -41,6 +43,22 @@ class VVPropagator(Propagator_):
 
             traj.last_velocity = traj.velocity
             traj.velocity += 0.5 * (last_acceleration + acceleration) * dt
+
+            # optionally remove COM motion and total angular momentum
+            if traj.remove_com_every > 0 and (traj.nsteps % traj.remove_com_every) == 0:
+                d = traj.model.dimensionality
+                v = traj.velocity.reshape(d)
+                m = traj.mass.reshape(d)[:,0]
+                vnew = remove_center_of_mass_motion(v, m)
+                traj.velocity = vnew.reshape(traj.velocity.shape)
+
+            if traj.remove_angular_momentum_every > 0 and (traj.nsteps % traj.remove_angular_momentum_every) == 0:
+                d = traj.model.dimensionality
+                v = traj.velocity.reshape(d)
+                m = traj.mass.reshape(d)[:,0]
+                x = traj.position.reshape(d)
+                vnew = remove_angular_momentum(v, m, x)
+                traj.velocity = vnew.reshape(traj.velocity.shape)
 
             traj.time += dt
             traj.nsteps += 1
@@ -162,6 +180,22 @@ class NoseHooverChainPropagator(Propagator_):
             traj.last_velocity = traj.velocity
             traj.velocity = v2p * vscale
 
+            # optionally remove COM motion and total angular momentum
+            if traj.remove_com_every > 0 and (traj.nsteps % traj.remove_com_every) == 0:
+                d = traj.model.dimensionality
+                v = traj.velocity.reshape(d)
+                m = traj.mass.reshape(d)[:,0]
+                vnew = remove_center_of_mass_motion(v, m)
+                traj.velocity = vnew.reshape(traj.velocity.shape)
+
+            if traj.remove_angular_momentum_every > 0 and (traj.nsteps % traj.remove_angular_momentum_every) == 0:
+                d = traj.model.dimensionality
+                v = traj.velocity.reshape(d)
+                m = traj.mass.reshape(d)[:,0]
+                x = traj.position.reshape(d)
+                vnew = remove_angular_momentum(v, m, x)
+                traj.velocity = vnew.reshape(traj.velocity.shape)
+
             traj.time += dt
             traj.nsteps += 1
 
@@ -225,6 +259,9 @@ class AdiabaticMD(object):
         self.trace_every = int(options.get("trace_every", 1))
 
         self.propagator = AdiabaticPropagator(options.get("propagator", "VV"))
+
+        self.remove_com_every = int(options.get("remove_com_every", 0))
+        self.remove_angular_momentum_every = int(options.get("remove_angular_momentum_every", 0))
 
         # read out of options
         self.dt = np.longdouble(options["dt"])

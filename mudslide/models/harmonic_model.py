@@ -20,18 +20,21 @@ class HarmonicModel(ElectronicModel_):
     reference: Any = None
 
     def __init__(self, x0: ArrayLike, E0: float, H0: ArrayLike, mass: ArrayLike,
-                 atom_types: List[str] = None):
+                 atom_types: List[str] = None, ndims: int = 1, nparticles: int = 1):
         """Constructor
 
         Args:
-            x0: Equilibrium position
+            x0: Equilibrium position (ndims * nparticles)
             E0: Ground state energy
-            H0: Hessian at equilibrium
-            mass: Mass of the coordinates
+            H0: Hessian at equilibrium (ndims * nparticles x ndims * nparticles)
+            mass: Mass of the coordinates (ndims * nparticles)
+            natom_types: Atom types (list of strings)
+            ndims: Number of dimensions (e.g. 3 for 3D)
+            nparticles: Number of particles (e.g. 1 for a single particle)
         """
-        super().__init__(atom_types=atom_types, representation="adiabatic")
+        super().__init__(ndims=ndims, nparticles=nparticles,
+                         atom_types=atom_types, representation="adiabatic")
         self.x0 = np.array(x0)
-        self.ndim_ = len(self.x0)
 
         self.E0 = E0
         self.H0 = np.array(H0)
@@ -78,8 +81,11 @@ class HarmonicModel(ElectronicModel_):
         H0 = np.array(model_dict["H0"])
         mass = np.array(model_dict["mass"])
         atom_types = model_dict.get("atom_types", None)
+        nparticles = len(atom_types) if atom_types is not None else 1
+        ndims = len(x0) // nparticles
 
-        return cls(x0, E0, H0, mass, atom_types=atom_types)
+        return cls(x0, E0, H0, mass, atom_types=atom_types,
+                   ndims=ndims, nparticles=nparticles)
 
     @classmethod
     def from_file(cls, filename: str) -> "HarmonicModel":
