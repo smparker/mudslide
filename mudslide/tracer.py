@@ -66,7 +66,8 @@ class Trace_(object):
     def print(self, file: Any = sys.stdout) -> None:
         has_electronic_wfn = "density_matrix" in self[0]
         nst = len(self[0]["density_matrix"]) if has_electronic_wfn else 1
-        headerlist = ["%12s" % x for x in ["time", "x", "p", "V", "T", "E"]]
+        #headerlist = ["%12s" % x for x in ["time", "x", "p", "V", "KE", "T", "E"]]
+        headerlist = ["%12s" % x for x in ["time", "x", "p", "V", "KE", "E"]]
         if has_electronic_wfn:
             headerlist += ["%12s" % x for x in ["rho_{%d,%d}" % (i, i) for i in range(nst)]]
             headerlist += ["%12s" % x for x in ["H_{%d,%d}" % (i, i) for i in range(nst)]]
@@ -74,6 +75,7 @@ class Trace_(object):
             headerlist += ["%12s" % "hopping"]
         print("#" + " ".join(headerlist), file=file)
         for i in self:
+            #line = " {time:12.6f} {position[0]:12.6f} {momentum[0]:12.6f} {potential:12.6f} {kinetic:12.6f} {temperature:12.6f} {energy:12.6f} ".format(**i)
             line = " {time:12.6f} {position[0]:12.6f} {momentum[0]:12.6f} {potential:12.6f} {kinetic:12.6f} {energy:12.6f} ".format(
                 **i)
             if has_electronic_wfn:

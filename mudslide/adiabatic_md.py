@@ -6,7 +6,7 @@ from __future__ import division
 import copy as cp
 import numpy as np
 
-from .constants import fs_to_au
+from .constants import fs_to_au, boltzmann
 
 from .tracer import Trace
 
@@ -19,6 +19,13 @@ from .util import remove_center_of_mass_motion, remove_angular_momentum
 
 class VVPropagator(Propagator_):
     """Velocity Verlet propagator"""
+
+    def __init__(self, **options: Any) -> None:
+        """Constructor
+
+        :param options: option dictionary
+        """
+        super().__init__()
 
     def __call__(self, traj: 'AdiabaticMD', nsteps: int) -> None:
         """Propagate trajectory using Velocity Verlet algorithm
@@ -70,8 +77,8 @@ class NoseHooverChainPropagator(Propagator_):
     Molecular Physics, 87, 1117-1157 (1996)
     """
 
-    def __init__(self, temperature: np.float64, timescale: np.float64 = 1e5 * fs_to_au,
-                 nchains:int = 2, nys: int = 3, nc: int = 1):
+    def __init__(self, temperature: np.float64, timescale: np.float64 = 1e3 * fs_to_au,
+                 ndof: int = 3, nchains: int = 3, nys: int = 3, nc: int = 1):
         """Constructor
 
         :param temperature: thermostat temperature
@@ -80,6 +87,7 @@ class NoseHooverChainPropagator(Propagator_):
         """
         self.temperature = temperature
         self.timescale = timescale
+        self.ndof = ndof
         self.nchains = nchains
         self.nys = nys
         self.nc = nc
@@ -91,60 +99,65 @@ class NoseHooverChainPropagator(Propagator_):
         assert self.nc >= 1
 
         self.nh_position = np.zeros(nchains, dtype=np.float64)
-        self.nh_momentum = np.zeros(nchains, dtype=np.float64)
-        self.nh_mass = np.ones(nchains, dtype=np.float64) / self.timescale
+        self.nh_velocity = np.zeros(nchains, dtype=np.float64)
+        Q = 2.0 * timescale**2 * boltzmann * temperature
+        self.nh_mass = np.ones(nchains, dtype=np.float64) * Q
+        self.nh_mass[0] *= ndof
 
         if nys == 3:
             tmp = 1 / (2 - 2**(1./3))
-            self.wdti = np.array([tmp, 1 - 2*tmp, tmp]) * dt / nc
+            self.w = np.array([tmp, 1 - 2*tmp, tmp]) / nc
         else:
             tmp = 1 / (4 - 4**(1./3))
-            self.wdti = np.array([tmp, tmp, 1 - 4*tmp, tmp, tmp]) * dt / nc
+            self.w = np.array([tmp, tmp, 1 - 4*tmp, tmp, tmp]) / nc
 
-        self.Vlogs = np.zeros(nchains)
-        self.Xlogs = np.zeros(nchains)
-        self.Glogs = np.zeros(nchains)
+        self.G = np.zeros(nchains)
 
 
-    def xstep(self, velocity, mass):
+    def nhc_step(self, velocity, mass, dt: float):
         """
         Move forward one step in the extended system variables
         """
-        scale = 1.0
-        K2 = np.sum(velocity * velocity * mass)
-        Glogs[0] = (K2 - self.temperature) / self.nhc_mass[0]
-
+        # convenience definitions
+        G = self.G
+        V = self.nh_velocity
+        X = self.nh_position
         M = self.nchains
 
-        Glogs = self.Glogs
-        Vlogs = self.Vlogs
-        Xlogs = self.Xlogs
+        scale = 1.0
+        K2 = np.sum(velocity * velocity * mass)
+        kt = self.temperature * boltzmann
+        nkt = self.temperature * boltzmann * self.ndof
 
-        for inc in range(nc):
-            for iys in range(nys):
-                wdt = self.wdti[iys]
-                # update the thermostat velocities
-                Vlogs[self.nchains - 1] += 0.25 * Glogs[M - 1] * wdt
+        G[0] = (K2 - nkt) / self.nh_mass[0]
 
-                for kk in range(M - 1):
-                    AA = np.exp(-0.125 * wdt * Vlogs[M - 1 - kk])
-                    Vlogs[M - 2 - kk] = Vlogs[M - 2 - kk] * AA * AA \
-                                  + 0.25 * wdt * Glogs[M - 2 - kk] * AA
+        for inc in range(self.nc):
+            for iys in range(self.nys):
+                wdt = self.w[iys] * dt
+                V[M-1] += G[M-1] * wdt / 4.0
+
+                for kk in range(0, M-1):
+                    AA = np.exp(-wdt * V[M - 1 - kk] / 8.0)
+                    V[M - 2 - kk] = V[M - 2 - kk] * AA * AA \
+                                  + wdt * G[M - 2 - kk] * AA / 4.0
 
                 # update the particle velocities
-                AA = np.exp(-0.5 * wdt * Vlogs[0])
+                AA = np.exp(-0.5 * wdt * V[0])
                 scale *= AA
+
                 # update the forces
-                Glogs[0] = (scale * scale * K2 - T) / self.nh_mass[0]
+                G[0] = (scale * scale * K2 - nkt) / self.nh_mass[0]
+
                 # update the thermostat positions
-                Xlogs += 0.5 * Vlogs * wdt
+                X += 0.5 * V * wdt
+
                 # update the thermostat velocities
                 for kk in range(M - 1):
-                    AA = np.exp(-0.125 * wdt * Vlogs[kk + 1])
-                    Vlogs[kk] = Vlogs[kk] * AA * AA \
-                              + 0.25 * wdt * Glogs[kk] * AA
-                    Glogs[kk+1] = (self.nh_mass[kk] * Vlogs[kk]**2 - T) / self.nh_mass[kk + 1]
-                Vlogs[M - 1] += 0.25 * Glogs[M - 1] * wdt
+                    AA = np.exp(-0.125 * wdt * V[kk + 1])
+                    V[kk] = V[kk] * AA * AA \
+                              + 0.25 * wdt * G[kk] * AA
+                    G[kk+1] = (self.nh_mass[kk] * V[kk]**2 - kt) / self.nh_mass[kk + 1]
+                V[M - 1] += 0.25 * G[M - 1] * wdt
 
         return scale
 
@@ -158,14 +171,14 @@ class NoseHooverChainPropagator(Propagator_):
 
         # 0, 1, 2 represents t, t + 0.5*dt, and t + dt, respectively
         for i in range(nsteps):
-            vscale = self.xstep(traj.velocity, traj.mass)
+            vscale = self.nhc_step(traj.velocity, traj.mass, dt)
             acceleration = traj.force(traj.electronics) / traj.mass
 
-            v1 = traj.velocity * vscale + 0.5 * traj.dt * acceleration
+            x0 = traj.position
+            v1 = traj.velocity * vscale + 0.5 * dt * acceleration
 
-            traj.last_position = traj.position
-            traj.position += v1 * traj.dt
-            x2   = x0 + v1 * dt
+            traj.last_position = x0
+            traj.position += v1 * dt
 
             # calculate electronics at new position
             traj.last_electronics = traj.electronics
@@ -176,7 +189,7 @@ class NoseHooverChainPropagator(Propagator_):
 
             v2p  = v1 + 0.5 * dt * acceleration
 
-            vscale = self.xstep(v2p, traj.mass)
+            vscale = self.nhc_step(v2p, traj.mass, dt)
             traj.last_velocity = traj.velocity
             traj.velocity = v2p * vscale
 
@@ -199,13 +212,18 @@ class NoseHooverChainPropagator(Propagator_):
             traj.time += dt
             traj.nsteps += 1
 
-def AdiabaticPropagator(prop_options: Any = "vv") -> Propagator_:
+def AdiabaticPropagator(model, prop_options: Any = "vv") -> Propagator_:
     """Factory function for creating propagator objects
 
     :param prop_type: string or dict propagator type
+    :param model: model object (may be necessary to set some defaults)
+
+    :return: propagator object
     """
     if isinstance(prop_options, str):
         prop_options = { "type": prop_options.lower() }
+
+    prop_options["ndof"] = model.ndim()
 
     if isinstance(prop_options, dict):
         prop_type = prop_options.pop("type", "vv")
@@ -258,7 +276,7 @@ class AdiabaticMD(object):
         self.nsteps = int(options.get("previous_steps", 0))
         self.trace_every = int(options.get("trace_every", 1))
 
-        self.propagator = AdiabaticPropagator(options.get("propagator", "VV"))
+        self.propagator = AdiabaticPropagator(self.model, options.get("propagator", "VV"))
 
         self.remove_com_every = int(options.get("remove_com_every", 0))
         self.remove_angular_momentum_every = int(options.get("remove_angular_momentum_every", 0))
@@ -408,6 +426,7 @@ class AdiabaticMD(object):
             "potential": self.potential_energy().item(),
             "kinetic": self.kinetic_energy().item(),
             "energy": self.total_energy().item(),
+            "temperature": 2 * self.kinetic_energy() / ( boltzmann * self.model.ndim()),
             "electronics": self.electronics.as_dict()
         }
         return out

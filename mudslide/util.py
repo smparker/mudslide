@@ -61,13 +61,13 @@ def remove_angular_momentum(velocities: np.ndarray, masses: np.ndarray, coordina
     com = np.sum(velocities * masses[:, np.newaxis], axis=0) / np.sum(masses)
     com_coord = coordinates - com
 
-    momentum = np.einsum('ai,a->ai', velocities, masses)
+    momentum = np.einsum('ai,a->ai', velocities, masses, dtype=np.float64)
 
     # angular momentum
-    angular_momentum = np.cross(com_coord, momentum).sum(axis=0)
+    angular_momentum = np.cross(com_coord, momentum).sum(axis=0, dtype=np.float64)
 
     # inertial tensor
-    inertia = np.zeros((3, 3))
+    inertia = np.zeros((3, 3), dtype=np.float64)
     for i in range(natom):
         x, y, z = com_coord[i]
         inertia += masses[i] * (np.eye(3) * (x**2 + y**2 + z**2) -

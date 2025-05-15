@@ -6,6 +6,7 @@ from __future__ import division
 import copy as cp
 import numpy as np
 
+from .constants import boltzmann
 from .propagation import propagate_exponential, propagate_interpolated_rk4
 from .tracer import Trace
 from .math import poisson_prob_scale
@@ -266,6 +267,7 @@ class TrajectorySH(object):
             "momentum": (self.mass * self.velocity).tolist(),
             "potential": self.potential_energy().item(),
             "kinetic": self.kinetic_energy().item(),
+            "temperature": 2 * self.kinetic_energy().item() / ( boltzmann * self.model.ndim()),
             "energy": self.total_energy().item(),
             "density_matrix": self.rho.view(dtype=np.float64).tolist(),
             "active": self.state,
