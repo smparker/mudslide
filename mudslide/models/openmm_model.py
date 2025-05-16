@@ -72,12 +72,12 @@ class OpenMM(ElectronicModel_):
             self._convert_openmm_position_to_au(
                 pdb.getPositions())).reshape(-1)
         self._position = xyz
-        self._elements = [
+        self.atom_types = [
             atom.element.symbol.lower() for atom in self._pdb.topology.atoms()
         ]
         self.mass = np.array([
             masses[e]
-            for e in self._elements
+            for e in self.atom_types
             for i in range(3)
         ])
         self.mass *= amu_to_au

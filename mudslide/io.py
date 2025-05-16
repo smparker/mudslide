@@ -13,6 +13,7 @@ def write_xyz(coords, atom_types, file, comment=""):
     # convert coords to Angstrom
     acoords = coords * bohr_to_angstrom
     for atom, coord in zip(atom_types, acoords):
+        atom = atom.capitalize()
         file.write(f"{atom} {coord[0]:.12f} {coord[1]:.12f} {coord[2]:.12f}\n")
 
 def write_trajectory_xyz(model, trace, filename):
