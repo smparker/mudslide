@@ -29,7 +29,7 @@ def h2o5_mm():
     mm = mudslide.models.OpenMM(pdb, ff, system)
     return mm
 
-@pytest.mark.skipif(not mudslide.openmm_model.openmm_is_installed(), reason="OpenMM must be installed")
+@pytest.mark.skipif(not mudslide.models.openmm_model.openmm_is_installed(), reason="OpenMM must be installed")
 class TestOpenMM:
     """Test Suite for TMModel class"""
 
@@ -86,13 +86,13 @@ class TestOpenMM:
         forces_ref = np.loadtxt("f0.txt")
 
         assert np.allclose(mm.energies[0], energy_ref)
-        assert np.allclose(mm.force(), forces_ref)
+        assert np.allclose(mm.force(), forces_ref, rtol=1e-7)
 
     def test_dynamics(self, h2o5_mm):
         mm = h2o5_mm
 
         masses = mm.mass
-        velocities = mudslide.math.boltzmann_velocities(masses, 300.0, seed=1234)
+        velocities = mudslide.math.boltzmann_velocities(masses, 300.0, remove_translation=False, seed=1234)
         p = velocities * masses
         KE = 0.5 * np.sum(p**2 / masses)
 
@@ -105,5 +105,5 @@ class TestOpenMM:
         pref = np.loadtxt("p.txt")
 
         assert np.allclose(results[-1]["position"], xref)
-        assert np.allclose(results[-1]["momentum"], pref)
+        assert np.allclose(results[-1]["momentum"], pref, rtol=1e-7)
 

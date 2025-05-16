@@ -3,6 +3,8 @@ import numpy as np
 from typing import Any
 from mudslide.typing import ArrayLike, DtypeLike
 from mudslide.models import ElectronicModel_
+from mudslide.constants import bohr_to_angstrom, amu_to_au, Hartree_to_kJmol
+from mudslide.periodic_table import masses
 
 try:
     import openmm
@@ -20,7 +22,8 @@ def openmm_is_installed():
 class OpenMM(ElectronicModel_):
     """OpenMM interface"""
 
-    def __init__(self, pdb, ff, system):
+    def __init__(self, pdb, ff, system, platform_name: str = "Reference",
+                 properties: dict = None):
         """Initialize OpenMM interface"""
         super().__init__(representation="adiabatic",
                          nstates=1,
@@ -59,8 +62,11 @@ class OpenMM(ElectronicModel_):
                                                    openmm.unit.picoseconds)
 
         # create simulation
+        platform = openmm.Platform.getPlatformByName(platform_name)
+        properties = properties if properties is not None else { }
         self._simulation = openmm.app.Simulation(self._pdb.topology,
-                                                 self._system, self._integrator)
+                                                 self._system, self._integrator,
+                                                 platform, properties)
 
         xyz = np.array(
             self._convert_openmm_position_to_au(
@@ -70,34 +76,34 @@ class OpenMM(ElectronicModel_):
             atom.element.symbol.lower() for atom in self._pdb.topology.atoms()
         ]
         self.mass = np.array([
-            mudslide.periodic_table.masses[e]
+            masses[e]
             for e in self._elements
             for i in range(3)
         ])
-        self.mass *= mudslide.constants.amu_to_au
+        self.mass *= amu_to_au
 
     def _convert_au_position_to_openmm(self, xyz):
         """Convert position from bohr to nanometer using OpenMM units"""
         nm = openmm.unit.nanometer
-        return (xyz.reshape(-1, 3) * mudslide.constants.bohr_to_angstrom *
+        return (xyz.reshape(-1, 3) * bohr_to_angstrom *
                 0.1) * nm
 
     def _convert_openmm_position_to_au(self, xyz):
         """Convert position from nanometer to bohr using OpenMM units"""
         nm = openmm.unit.nanometer
         return np.array(
-            xyz / nm).reshape(-1) * (10.0 / mudslide.constants.bohr_to_angstrom)
+            xyz / nm).reshape(-1) * (10.0 / bohr_to_angstrom)
 
     def _convert_openmm_force_to_au(self, force):
         kjmol = openmm.unit.kilojoules_per_mole
         nm = openmm.unit.nanometer
         return np.array(force * nm / kjmol).reshape(
             1, -1
-        ) / mudslide.constants.Hartree_to_kJmol * 0.1 * mudslide.constants.bohr_to_angstrom
+        ) / Hartree_to_kJmol * 0.1 * bohr_to_angstrom
 
     def _convert_energy_to_au(self, energy):
         kjmol = openmm.unit.kilojoules_per_mole
-        return energy / kjmol / mudslide.constants.Hartree_to_kJmol
+        return energy / kjmol / Hartree_to_kJmol
 
     def compute(self,
                 position: ArrayLike,
