@@ -37,6 +37,19 @@ def boltzmann_velocities(mass, temperature, remove_translation=True,
     sigma = np.sqrt(kt * mass)
     p = rng.normal(0.0, sigma)
 
+    if remove_translation:
+        v = p / mass
+        v3 = v.reshape((-1, 3))
+        M = mass.reshape((-1, 3))[:,0]
+
+        v = remove_center_of_mass_motion(v3, M).flatten()
+        p = v * mass
+
+    #if remove_rotation:
+    #    v3 = v.reshape((-1, 3))
+    #    M = mass.reshape((-1, 3))[:,0]
+    #    v = remove_angular_momentum(v3, M, np.zeros_like(v3)).flatten()
+
     if scale:
         avg_KE = 0.5 * np.dot(p**2, np.reciprocal(mass)) / mass.size
         kbT2 = 0.5 * kt
@@ -44,16 +57,5 @@ def boltzmann_velocities(mass, temperature, remove_translation=True,
         p *= scal
 
     v = p / mass
-
-    if remove_translation:
-        v3 = v.reshape((-1, 3))
-        M = mass.reshape((-1, 3))[:,0]
-
-        v = remove_center_of_mass_motion(v3, M).flatten()
-
-    #if remove_rotation:
-    #    v3 = v.reshape((-1, 3))
-    #    M = mass.reshape((-1, 3))[:,0]
-    #    v = remove_angular_momentum(v3, M, np.zeros_like(v3)).flatten()
 
     return v

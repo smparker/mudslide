@@ -77,7 +77,7 @@ class NoseHooverChainPropagator(Propagator_):
     Molecular Physics, 87, 1117-1157 (1996)
     """
 
-    def __init__(self, temperature: np.float64, timescale: np.float64 = 1e3 * fs_to_au,
+    def __init__(self, temperature: np.float64, timescale: np.float64 = 1e2 * fs_to_au,
                  ndof: int = 3, nchains: int = 3, nys: int = 3, nc: int = 1):
         """Constructor
 
@@ -100,19 +100,26 @@ class NoseHooverChainPropagator(Propagator_):
 
         self.nh_position = np.zeros(nchains, dtype=np.float64)
         self.nh_velocity = np.zeros(nchains, dtype=np.float64)
-        Q = 2.0 * timescale**2 * boltzmann * temperature
+        Q = timescale**2 * boltzmann * temperature
         self.nh_mass = np.ones(nchains, dtype=np.float64) * Q
         self.nh_mass[0] *= ndof
 
         if nys == 3:
             tmp = 1 / (2 - 2**(1./3))
             self.w = np.array([tmp, 1 - 2*tmp, tmp]) / nc
-        else:
+        elif nys == 5:
             tmp = 1 / (4 - 4**(1./3))
             self.w = np.array([tmp, tmp, 1 - 4*tmp, tmp, tmp]) / nc
+        else:
+            raise ValueError("nys must be either 3 or 5")
 
         self.G = np.zeros(nchains)
 
+        print("Nose-Hoover chain thermostat initialized with:")
+        print("  Temperature: {:.2f} K".format(temperature))
+        print("  Number of chains: {}".format(nchains))
+        print("  Timescale: {:.2f} fs".format(timescale / fs_to_au))
+        print("  Thermostat mass: {}".format(self.nh_mass))
 
     def nhc_step(self, velocity, mass, dt: float):
         """
@@ -138,8 +145,8 @@ class NoseHooverChainPropagator(Propagator_):
 
                 for kk in range(0, M-1):
                     AA = np.exp(-wdt * V[M - 1 - kk] / 8.0)
-                    V[M - 2 - kk] = V[M - 2 - kk] * AA * AA \
-                                  + wdt * G[M - 2 - kk] * AA / 4.0
+                    V[M - 2 - kk] *= AA * AA
+                    V[M - 2 - kk] += 0.25 * wdt * G[M - 2 - kk] * AA
 
                 # update the particle velocities
                 AA = np.exp(-0.5 * wdt * V[0])
@@ -175,16 +182,18 @@ class NoseHooverChainPropagator(Propagator_):
             acceleration = traj.force(traj.electronics) / traj.mass
 
             x0 = traj.position
-            v1 = traj.velocity * vscale + 0.5 * dt * acceleration
+            v1 = traj.velocity * vscale
+            v1 += 0.5 * dt * acceleration
 
+            x1 = x0 + v1 * dt
+
+            traj.position = x1
             traj.last_position = x0
-            traj.position += v1 * dt
 
             # calculate electronics at new position
             traj.last_electronics = traj.electronics
             traj.electronics = traj.model.update(traj.position, electronics=traj.electronics)
 
-            last_acceleration = acceleration
             acceleration = traj.force(traj.electronics) / traj.mass
 
             v2p  = v1 + 0.5 * dt * acceleration
