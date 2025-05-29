@@ -30,10 +30,11 @@ if __name__ == "__main__":
     print("Initial kinetic energy:", KE)
     print("Initial temperature: ", KE / (0.5 * mm.ndim() * mudslide.constants.boltzmann))
 
-    traj = mudslide.AdiabaticMD(mm, mm._position, p, propagator={ "type": "nhc", "temperature": 300, "timescale": 10*38 }, dt=40, max_steps=10000, remove_com_every=0)
+    fs = mudslide.constants.fs_to_au
+    traj = mudslide.AdiabaticMD(mm, mm._position, p, propagator={ "type": "nhc", "temperature": 300, "timescale": 10*fs }, dt=1.0*fs, max_steps=10000, remove_com_every=0)
     results = traj.simulate()
 
     mudslide.io.write_trajectory_xyz(mm, results, 'ala3.xyz', every=10)
 
     with open('ala3_nvt.txt', 'w') as f:
-        results.print(file=f)
+        results.print_egylog(file=f, T_window=1000)

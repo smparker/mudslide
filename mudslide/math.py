@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Math helper functions"""
 
+from collections import deque
 import warnings
 import numpy as np
 
@@ -59,3 +60,48 @@ def boltzmann_velocities(mass, temperature, remove_translation=True,
     v = p / mass
 
     return v
+
+
+class RollingAverage:
+    def __init__(self, window_size=50):
+        """
+        Initialize the RollingAverage calculator.
+
+        Args:
+            window_size (int): The number of values to include in the rolling average.
+                              Defaults to 50.
+        """
+        self.window_size = window_size
+        self.values = deque(maxlen=window_size)
+        self.sum = 0.0
+
+    def insert(self, value):
+        """
+        Add a new value to the rolling average.
+        If the window is full, the oldest value is automatically removed.
+
+        Args:
+            value (float): The new value to add to the rolling average.
+        """
+        # If window is full, subtract the oldest value from sum
+        if len(self.values) == self.window_size:
+            self.sum -= self.values[0]
+
+        # Add new value
+        self.values.append(value)
+        self.sum += value
+
+    def get_average(self):
+        """
+        Calculate and return the current rolling average.
+
+        Returns:
+            float: The current rolling average, or 0.0 if no values have been added.
+        """
+        if not self.values:
+            return 0.0
+        return self.sum / len(self.values)
+
+    def __len__(self):
+        """Return the current number of values in the window."""
+        return len(self.values)
