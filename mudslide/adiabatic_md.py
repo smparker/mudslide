@@ -1,20 +1,15 @@
 # -*- coding: utf-8 -*-
 """Propagate Adiabatic MD trajectory"""
 
-from __future__ import division
-
+from typing import Dict, Any
 import copy as cp
+
 import numpy as np
 
 from .constants import fs_to_au, boltzmann
-
 from .tracer import Trace
-
-from typing import List, Dict, Union, Any
 from .typing import ElectronicT, ArrayLike, DtypeLike
-
 from .propagator import Propagator_
-
 from .util import remove_center_of_mass_motion, remove_angular_momentum
 
 class VVPropagator(Propagator_):
@@ -35,7 +30,7 @@ class VVPropagator(Propagator_):
         """
         dt = traj.dt
         # first update nuclear coordinates
-        for i in range(nsteps):
+        for _ in range(nsteps):
             acceleration = traj.force(traj.electronics) / traj.mass
             traj.last_position = traj.position
             traj.position += traj.velocity * dt + 0.5 * acceleration * dt * dt
@@ -59,7 +54,8 @@ class VVPropagator(Propagator_):
                 vnew = remove_center_of_mass_motion(v, m)
                 traj.velocity = vnew.reshape(traj.velocity.shape)
 
-            if traj.remove_angular_momentum_every > 0 and (traj.nsteps % traj.remove_angular_momentum_every) == 0:
+            if traj.remove_angular_momentum_every > 0 and \
+                   (traj.nsteps % traj.remove_angular_momentum_every) == 0:
                 d = traj.model.dimensionality
                 v = traj.velocity.reshape(d)
                 m = traj.mass.reshape(d)[:,0]
@@ -95,7 +91,7 @@ class NoseHooverChainPropagator(Propagator_):
         assert self.temperature > 0.0
         assert self.timescale > 0.0
         assert self.nchains >= 1
-        assert self.nys == 3 or self.nys == 5
+        assert self.nys in (3,5)
         assert self.nc >= 1
 
         self.nh_position = np.zeros(nchains, dtype=np.float64)
@@ -138,7 +134,7 @@ class NoseHooverChainPropagator(Propagator_):
 
         G[0] = (K2 - nkt) / self.nh_mass[0]
 
-        for inc in range(self.nc):
+        for _ in range(self.nc):
             for iys in range(self.nys):
                 wdt = self.w[iys] * dt
                 V[M-1] += G[M-1] * wdt / 4.0
@@ -177,7 +173,7 @@ class NoseHooverChainPropagator(Propagator_):
         dt = traj.dt
 
         # 0, 1, 2 represents t, t + 0.5*dt, and t + dt, respectively
-        for i in range(nsteps):
+        for _ in range(nsteps):
             vscale = self.nhc_step(traj.velocity, traj.mass, dt)
             acceleration = traj.force(traj.electronics) / traj.mass
 
@@ -185,9 +181,7 @@ class NoseHooverChainPropagator(Propagator_):
             v1 = traj.velocity * vscale
             v1 += 0.5 * dt * acceleration
 
-            x1 = x0 + v1 * dt
-
-            traj.position = x1
+            traj.position = x0 + v1 * dt
             traj.last_position = x0
 
             # calculate electronics at new position
@@ -210,7 +204,8 @@ class NoseHooverChainPropagator(Propagator_):
                 vnew = remove_center_of_mass_motion(v, m)
                 traj.velocity = vnew.reshape(traj.velocity.shape)
 
-            if traj.remove_angular_momentum_every > 0 and (traj.nsteps % traj.remove_angular_momentum_every) == 0:
+            if traj.remove_angular_momentum_every > 0 and \
+                    (traj.nsteps % traj.remove_angular_momentum_every) == 0:
                 d = traj.model.dimensionality
                 v = traj.velocity.reshape(d)
                 m = traj.mass.reshape(d)[:,0]
@@ -221,31 +216,33 @@ class NoseHooverChainPropagator(Propagator_):
             traj.time += dt
             traj.nsteps += 1
 
-def AdiabaticPropagator(model, prop_options: Any = "vv") -> Propagator_:
-    """Factory function for creating propagator objects
+class AdiabaticPropagator:
+    """Factory class for creating propagator objects"""
+    def __new__(cls, model: Any, prop_options: Any = "vv") -> Propagator_:
+        """Factory function for creating propagator objects
 
-    :param prop_type: string or dict propagator type
-    :param model: model object (may be necessary to set some defaults)
+        :param prop_type: string or dict propagator type
+        :param model: model object (may be necessary to set some defaults)
 
-    :return: propagator object
-    """
-    if isinstance(prop_options, str):
-        prop_options = { "type": prop_options.lower() }
+        :return: propagator object
+        """
+        if isinstance(prop_options, str):
+            prop_options = { "type": prop_options.lower() }
 
-    prop_options["ndof"] = model.ndim()
+        prop_options["ndof"] = model.ndim()
 
-    if isinstance(prop_options, dict):
-        prop_type = prop_options.pop("type", "vv")
-        if prop_type in ["vv", "velocity verlet"]:
-            return VVPropagator(**prop_options)
-        if prop_type in ["nh", "nhc", "nose-hoover"]:
-            return NoseHooverChainPropagator(**prop_options)
-        else:
-            raise ValueError("Unknown propagator type: {}".format(prop_type))
+        if isinstance(prop_options, dict):
+            prop_type = prop_options.pop("type", "vv")
+            if prop_type in ["vv", "velocity verlet"]:
+                return VVPropagator(**prop_options)
+            if prop_type in ["nh", "nhc", "nose-hoover"]:
+                return NoseHooverChainPropagator(**prop_options)
+            else:
+                raise ValueError(f"Unknown propagator type: {prop_type}")
 
-    raise ValueError("Unknown propagator options: {}".format(prop_options))
+        raise ValueError(f"Unknown propagator options: {prop_options}")
 
-class AdiabaticMD(object):
+class AdiabaticMD:
     """Class to propagate a single adiabatic trajectory, like ground state MD"""
 
     def __init__(self,
@@ -295,10 +292,12 @@ class AdiabaticMD(object):
         self.outcome_type = options.get("outcome_type", "state")
 
         ss = options.get("seed_sequence", None)
-        self.seed_sequence = ss if isinstance(ss, np.random.SeedSequence) else np.random.SeedSequence(ss)
+        self.seed_sequence = ss if isinstance(ss, np.random.SeedSequence) \
+                else np.random.SeedSequence(ss)
         self.random_state = np.random.default_rng(self.seed_sequence)
 
         self.electronics = options.get("electronics", None)
+        self.last_electronics = None
 
         self.weight = np.float64(options.get("weight", 1.0))
 
@@ -307,6 +306,13 @@ class AdiabaticMD(object):
 
     @classmethod
     def restart(cls, model, log, **options) -> 'AdiabaticMD':
+        """ Restart trajectory from log
+
+        :param model: Model object defining problem
+        :param log: Trace object with previous trajectory
+        :param options: option dictionary
+        :return: AdiabaticMD object
+        """
         last_snap = log[-1]
         penultimate_snap = log[-2]
 
@@ -387,11 +393,13 @@ class AdiabaticMD(object):
 
         bounds = options.get('bounds', None)
         if bounds:
-            duration["box_bounds"] = (np.array(bounds[0], dtype=np.float64), np.array(bounds[1], dtype=np.float64))
+            b0 = np.array(bounds[0], dtype=np.float64)
+            b1 = np.array(bounds[1], dtype=np.float64)
+            duration["box_bounds"] = (b0, b1)
         else:
             duration["box_bounds"] = None
-        duration["max_steps"] = options.get('max_steps', 100000)  # < 0 interpreted as no limit
-        duration["max_time"] = options.get('max_time', 1e25)  # set to an outrageous number by default
+        duration["max_steps"] = options.get('max_steps', 100000)
+        duration["max_time"] = options.get('max_time', 1e25)
 
         self.duration = duration
 
@@ -439,12 +447,6 @@ class AdiabaticMD(object):
             "electronics": self.electronics.as_dict()
         }
         return out
-
-    def trouble_shooter(self):
-        log = self.snapshot()
-        with open("snapout.dat", "a") as file:
-            file.write("{}\t{}\t{}\t{}\t{}\n".format(log["time"], log["potential"], log["kinetic"], log["energy"],
-                                                     log["active"]))
 
     def kinetic_energy(self) -> np.float64:
         """Kinetic energy
@@ -509,8 +511,6 @@ class AdiabaticMD(object):
         if not self.continue_simulating():
             return self.tracer
 
-        self.last_electronics = None
-
         if self.electronics is None:
             self.electronics = self.model.update(self.position)
 
@@ -518,7 +518,7 @@ class AdiabaticMD(object):
             self.trace()
 
         # propagation
-        while (True):
+        while True:
             self.propagator(self, 1)
 
             # ending condition
