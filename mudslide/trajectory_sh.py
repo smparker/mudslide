@@ -1,20 +1,18 @@
 # -*- coding: utf-8 -*-
 """Propagate FSSH trajectory"""
 
-from __future__ import division
-
+from typing import List, Dict, Union, Any
 import copy as cp
+
 import numpy as np
 
+from .typing import ElectronicT, ArrayLike, DtypeLike
+
+from .util import check_options, is_string
 from .constants import boltzmann
 from .propagation import propagate_exponential, propagate_interpolated_rk4
 from .tracer import Trace
 from .math import poisson_prob_scale
-
-from typing import List, Dict, Union, Any
-from .typing import ElectronicT, ArrayLike, DtypeLike
-
-from .util import is_string
 
 class TrajectorySH(object):
     """Class to propagate a single FSSH trajectory"""
@@ -47,7 +45,7 @@ class TrajectorySH(object):
         :param queue: Trajectory queue
         :param options: option dictionary
         """
-        self.check_options(options, strict=strict_option_check)
+        check_options(options, self.recognized_options, strict=strict_option_check)
 
         self.model = model
         self.tracer = Trace(tracer)
@@ -161,28 +159,6 @@ class TrajectorySH(object):
         for k, v in self.__dict__.items():
             setattr(result, k, cp.deepcopy(v, memo) if v not in shallow_only else cp.copy(v))
         return result
-
-    def check_options(self, options: Dict, strict: bool = False) -> None:
-        """
-        Checks that the provided options are recognized by the trajectory type.
-        Optionally raises an exception if they are not recognized.
-
-        :param: options Dictionary of options/kwargs
-        :param: strict If True, unrecognized options trigger Exceptions.
-        """
-        problems = []
-
-        for x in options:
-            if x not in self.recognized_options:
-                problems.append("Unrecognized option: {:s}".format(x))
-
-        if problems:
-            if not strict:
-                print("WARNING! Unrecognized options found.")
-            for x in problems:
-                print(x)
-            if strict:
-                raise Exception("Unrecognized options provided to TrajectorySH")
 
     def clone(self) -> 'TrajectorySH':
         """Clone existing trajectory for spawning

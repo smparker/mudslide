@@ -6,6 +6,7 @@ import copy as cp
 
 import numpy as np
 
+from .util import check_options
 from .constants import boltzmann
 from .tracer import Trace
 from .typing import ElectronicT, ArrayLike, DtypeLike
@@ -13,6 +14,11 @@ from .adiabatic_propagator import AdiabaticPropagator
 
 class AdiabaticMD:
     """Class to propagate a single adiabatic trajectory, like ground state MD"""
+    recognized_options = [
+        "dt", "t0", "trace_every", "remove_com_every", "remove_angular_momentum_every",
+        "max_steps", "max_time", "bounds", "propagator", "seed_sequence", "electronics",
+        "outcome_type", "weight"
+    ]
 
     def __init__(self,
                  model: Any,
@@ -20,6 +26,7 @@ class AdiabaticMD:
                  p0: ArrayLike,
                  tracer: Any = None,
                  queue: Any = None,
+                 strict_option_check: bool = True,
                  **options: Any):
         """Constructor
         :param model: Model object defining problem
@@ -29,6 +36,8 @@ class AdiabaticMD:
         :param queue: Trajectory queue
         :param options: option dictionary
         """
+        check_options(options, self.recognized_options, strict=strict_option_check)
+
         self.model = model
         self.tracer = Trace(tracer)
         self.queue: Any = queue

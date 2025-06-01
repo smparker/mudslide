@@ -81,3 +81,19 @@ def remove_angular_momentum(velocities: np.ndarray, masses: np.ndarray, coordina
         corrected_velocities[i] -= np.cross(angular_velocity, com_coord[i])
 
     return corrected_velocities
+
+def check_options(options: dict, recognized: list, strict: bool = True) -> None:
+    """
+    Check whether the options dictionary contains only recognized options.
+
+    :param options: dictionary of options
+    :param recognized: list of recognized options
+    :param strict: whether to raise an error if an unrecognized option is found
+    """
+    problems = [ x for x in options if x not in recognized ]
+
+    if problems:
+        if strict:
+            raise ValueError(f"Unrecognized options found: {problems}.")
+        else:
+            print(f"WARNING: Ignoring unrecognized options: {problems}.")
