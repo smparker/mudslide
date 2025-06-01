@@ -2,30 +2,33 @@
 """Implementations of the interface between turbomole and mudslide. Turbomole provides electronic parameters such as energies, 
 gradients, NAC coupling, etc to mudslide and mudslide performs molecular dynamics calculations """
 
-import numpy as np
-import math
-from scipy.special import erf
-import subprocess
-import turboparse
+import os
+import sys
+import shutil
 import re
 import copy as cp
-
-import os, sys, io, shutil
+import subprocess
 
 from pathlib import Path
+from typing import Any, Dict
 
-from mudslide.models.electronics import ElectronicModel_
+import numpy as np
 
+import turboparse
+
+from mudslide.typing import ArrayLike
 from mudslide.util import find_unique_name
-
-from typing import Tuple, Any, Dict
-
-from mudslide.typing import ArrayLike, DtypeLike
-from mudslide.constants import eVtoHartree, amu_to_au
+from mudslide.constants import amu_to_au
 from mudslide.periodic_table import masses
+from mudslide.models.electronics import ElectronicModel_
 
 
 def turbomole_is_installed():
+    """ Check if turbomole is installed by checking for environment variable TURBODIR and
+    checking that the scripts and bin directories are available.
+
+    :return: True if turbomole is installed, False otherwise
+    """
     # needs to have turbodir set
     has_turbodir = "TURBODIR" in os.environ
     # check that the scripts directory is available by testing for `sysname`
@@ -35,7 +38,7 @@ def turbomole_is_installed():
 
     return has_turbodir and has_scripts and has_bin
 
-class TurboControl(object):
+class TurboControl:
     """A class to handle the control file for turbomole"""
 
     # default filenames
@@ -49,7 +52,7 @@ class TurboControl(object):
         elif workdir is not None:
             self.workdir = os.path.abspath(workdir)
         else:
-            raise Exception("Must provide either control_file or workdir")
+            raise ValueError("Must provide either control_file or workdir")
         self.control_file = control_file
 
         # make sure control file exists
@@ -62,7 +65,7 @@ class TurboControl(object):
     def check_turbomole_is_installed(self):
         """Check that turbomole is installed, raise exception if not"""
         if not turbomole_is_installed():
-            raise Exception("Turbomole is not installed")
+            raise RuntimeError("Turbomole is not installed")
 
     def where_is_dg(self, dg, absolute_path=False):
         """Find which file a data group is in"""
@@ -98,7 +101,8 @@ class TurboControl(object):
 
         sdg_command += " {}".format(dg)
 
-        result = subprocess.run(sdg_command.split(), capture_output=True, text=True, cwd=self.workdir)
+        result = subprocess.run(sdg_command.split(), capture_output=True, text=True,
+                                cwd=self.workdir, check=False)
         return result.stdout.rstrip()
 
     def adg(self, dg, data, newline=False):
@@ -109,11 +113,11 @@ class TurboControl(object):
         if newline:
             lines = "\\n" + lines
         adg_command = "adg {} {}".format(dg, lines)
-        result = subprocess.run(adg_command.split(), capture_output=True, text=True, cwd=self.workdir)
+        _ = subprocess.run(adg_command.split(), capture_output=True, text=True, cwd=self.workdir, check=False)
 
     def cpc(self, dest):
         """Copy the control file and other files to a new directory"""
-        subprocess.run(["cpc", dest], cwd=self.workdir)
+        subprocess.run(["cpc", dest], cwd=self.workdir, check=False)
         file_list = ['ciss_a','exspectrum', 'statistics', 'dipl_a', 'excitationlog.1', 'moments', 'vecsao', 'control', 'gradient', 'energy', 'moments' ]
         for f in file_list:
             if os.path.exists(os.path.join(os.path.abspath(self.workdir), f)) and not os.path.exists(os.path.join(dest,f)):
@@ -133,10 +137,10 @@ class TurboControl(object):
 
     def run_single(self, module, stdout=sys.stdout):
         """Run a single turbomole module"""
-        output = subprocess.run(module, capture_output=True, text=True, cwd=self.workdir)
+        output = subprocess.run(module, capture_output=True, text=True, cwd=self.workdir, check=False)
         print(output.stdout, file=stdout)
         if "abnormal" in output.stderr:
-            raise Exception("Call to {} ended abnormally".format(module))
+            raise RuntimeError("Call to {} ended abnormally".format(module))
 
     def read_coords(self):
         """Read the coordinates from the control file
@@ -148,7 +152,6 @@ class TurboControl(object):
         """
         coords = []
         symbols = []
-        self.mass = []
         coord = self.sdg("coord")
         coord_list = coord.rstrip().split("\n")
 
@@ -198,7 +201,7 @@ class TurboControl(object):
         assert coords.shape == (nq, 3)
 
         self.adg("point_charges", ["file=point_charges"])
-        with open(os.path.join(self.workdir, "point_charges"), "w") as f:
+        with open(os.path.join(self.workdir, "point_charges"), "w", encoding='utf-8') as f:
             print("$point_charges nocheck list pcgrad", file=f)
             for xyz, q in zip(coords, charges):
                 print(f"{xyz[0]:22.16g} {xyz[1]:22.16g} {xyz[2]:22.16g} {q:22.16f}", file=f)
@@ -258,7 +261,7 @@ class TMModel(ElectronicModel_):
         self.run_turbomole_dir = run_turbomole_dir
         unique_workdir = find_unique_name(self.workdir_stem, self.run_turbomole_dir, always_enumerate=True)
         work = os.path.join(os.path.abspath(self.run_turbomole_dir), unique_workdir)
-        subprocess.run(["cpc", work], cwd=self.run_turbomole_dir)
+        subprocess.run(["cpc", work], cwd=self.run_turbomole_dir, check=False)
         self.control = TurboControl(workdir=work)
 
         # read coordinates and elements from the control file
@@ -274,6 +277,7 @@ class TMModel(ElectronicModel_):
 
         self.states = states
         self.nstates_ = len(self.states)
+        self.energies = np.zeros(self.nstates_, dtype=np.float64)
 
         if not turbomole_is_installed():
             raise RuntimeError("Turbomole is not installed")
@@ -281,12 +285,12 @@ class TMModel(ElectronicModel_):
         if turbomole_modules is None:
             # always need energy and gradients
             mod = { "gs_energy": "ridft", "gs_grads": "rdgrad" }
-            if any([s != 0 for s in self.states]):
+            if any(s != 0 for s in self.states):
                 mod["es_grads"] = "egrad"
             self.turbomole_modules = mod
         else:
             self.turbomole_modules = turbomole_modules
-        if not all([shutil.which(x) is not None for x in self.turbomole_modules.values()]):
+        if not all(shutil.which(x) is not None for x in self.turbomole_modules.values()):
             raise RuntimeError("Turbomole modules not found")
 
         # self.turbomole_init()
@@ -295,6 +299,15 @@ class TMModel(ElectronicModel_):
             self.apply_suggested_parameters()
 
     def apply_suggested_parameters(self):
+        """ Apply suggested parameters for Turbomole to work well with NAMD
+
+        This function will update the control file to ensure that Turbomole
+        is set up to work well with NAMD, including:
+        - using pseudowavefunction couplings with ETFs
+        - using weight derivatives
+        - using phaser to adjust phases
+        """
+
         # weight derivatives are mandatory
         self.control.use_weight_derivatives(use=True)
 
@@ -312,18 +325,20 @@ class TMModel(ElectronicModel_):
 
         # probably force phaser on as well
 
-    #def turbomole_init(self):
-    #    self.setup_coords()
-
     def update_coords(self, X):
+        """ Update the coordinates in the control file
+
+        :param X: numpy array of shape (n_atoms * 3) with coordinates in Bohr
+        """
         X = X.reshape((self.ndim() // 3, 3))
         coord_path = self.control.where_is_dg("coord", absolute_path=True)
 
-        with open(coord_path, "r") as f:
+        with open(coord_path, "r", encoding='utf-8') as f:
             lines = f.readlines()
 
         regex = re.compile(r"\s*\$coord")
         coordline = 0
+        line = ""
         for i, line in enumerate(lines):
             if regex.match(line) is not None:
                 coordline = i
@@ -339,7 +354,7 @@ class TMModel(ElectronicModel_):
             )
             coordline += 1
 
-        with open(coord_path, "w") as coord_file:
+        with open(coord_path, "w", encoding='utf-8') as coord_file:
             coord_file.write("".join(lines))
 
         # Now add results to model
@@ -350,17 +365,18 @@ class TMModel(ElectronicModel_):
         self._force = np.zeros((self.nstates(), self.ndim()))
         self._forces_available = np.zeros(self.nstates(), dtype=bool)
 
-        with open(outname, "w") as f:
+        with open(outname, "w", encoding='utf-8') as f:
             for turbomole_module in self.turbomole_modules.values():
                 self.control.run_single(turbomole_module, stdout=f)
 
         # Parse results with Turboparse
-        with open(outname, "r") as f:
+        with open(outname, "r", encoding='utf-8') as f:
             data_dict = turboparse.parse_turbo(f)
 
         # Now add results to model
         energy = data_dict[self.turbomole_modules["gs_energy"]]["energy"]
-        self.energies = [energy]
+        self.energies[:] = 0.0
+        self.energies[0] = energy
         dE0 = np.array(data_dict[self.turbomole_modules["gs_grads"]]["gradient"][0]["gradients"])
         self._force[0,:] = -dE0.flatten()
         self._forces_available[0] = True
@@ -372,7 +388,8 @@ class TMModel(ElectronicModel_):
                 data_dict["egrad"]["excited_state"][i]["energy"] + energy
                 for i in range(len(data_dict["egrad"]["excited_state"]))
             ]
-            self.energies.extend(excited_energies)
+            for i, e in enumerate(excited_energies):
+                self.energies[i+1] = e
 
             # egrad couplings
             parsed_nac_coupling = data_dict["egrad"]["coupling"]
