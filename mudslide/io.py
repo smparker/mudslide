@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 """Util functions"""
 
-import os
-import sys
-
 from .constants import bohr_to_angstrom
 
 def write_xyz(coords, atom_types, file, comment=""):
@@ -18,11 +15,12 @@ def write_xyz(coords, atom_types, file, comment=""):
 
 def write_trajectory_xyz(model, trace, filename, every=1):
     """Write trajectory to XYZ file"""
-    with open(filename, "w") as file:
+    natom, nd = model.dimensionality
+    with open(filename, "w", encoding='utf-8') as file:
         for i, frame in enumerate(trace):
             if i % every != 0:
                 continue
             desc = f"E={frame['energy']:g}; t={frame['time']:g}"
-            coords = frame["position"].reshape(-1, 3)
-            atom_types = model.atom_types if model.atom_types is not None else ["X"] * len(coords//3)
+            coords = frame["position"].reshape(natom, nd)
+            atom_types = model.atom_types if model.atom_types is not None else ["X"] * natom
             write_xyz(coords, atom_types, file, comment=desc)
