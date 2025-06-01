@@ -8,6 +8,7 @@ nonadiabatic molecular dynamics.
 from .version import __version__
 
 from .trajectory_sh import *
+from .adiabatic_propagator import *
 from .adiabatic_md import *
 from .cumulative_sh import *
 from .even_sampling import *
