@@ -71,8 +71,7 @@ class TestTMModel(unittest.TestCase):
         nprocs = 1
         trace_type = "yaml"
         electronic_integration = 'exp'
-        trace_options["location"] = ""
-        trace_options["base_name"] = "TMtrace"
+        trace_options = {"location": "", "base_name": "TMtrace"}
         every = 1
         model=tm_model
         traj_gen = TrajGenConst(positions, mom, 3, dt)
@@ -80,14 +79,12 @@ class TestTMModel(unittest.TestCase):
         fssh = mudslide.BatchedTraj(model,
                        traj_gen,
                        trajectory_type=EvenSamplingTrajectory,
-                       mom=mom,
-                       positions=positions,
                        samples=samples,
                        max_time = max_time,
                        nprocs=nprocs,
                        dt=dt,
                        t0=t0,
-                       tracemanager=TraceManager(TraceType=trace_type),
+                       tracemanager=TraceManager(trace_type=trace_type),
                        trace_every=every,
                        spawn_stack=sample_stack,
                        electronic_integration=electronic_integration)

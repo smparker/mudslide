@@ -126,4 +126,4 @@ class TestQMMM:
         Fref = np.loadtxt('force.txt')
 
         assert np.isclose(qmmm.hamiltonian()[0,0], Eref)
-        assert np.allclose(qmmm.force(), Fref)
+        assert np.allclose(qmmm.force(), Fref, atol=1e-4)

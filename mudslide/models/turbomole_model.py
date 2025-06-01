@@ -254,22 +254,23 @@ class TMModel(ElectronicModel_):
         expert: bool=False,  # when False, will update turbomole parameters for best NAMD performance
         turbomole_modules: Dict=None
     ):
-        # read coordinates and elements from the control file
-        elements, X = self.control.read_coords()
-        nparts, ndims = X.shape
-        self._elements = elements
-        ElectronicModel_.__init__(self, ndims=ndims, nparticles=nparts,
-                                representation=representation, reference=reference)
-        self.mass = self.control.get_masses(self._elements) 
-
         self.workdir_stem = workdir_stem
         self.run_turbomole_dir = run_turbomole_dir
         unique_workdir = find_unique_name(self.workdir_stem, self.run_turbomole_dir, always_enumerate=True)
         work = os.path.join(os.path.abspath(self.run_turbomole_dir), unique_workdir)
-        self.expert = expert
-
         subprocess.run(["cpc", work], cwd=self.run_turbomole_dir)
         self.control = TurboControl(workdir=work)
+
+        # read coordinates and elements from the control file
+        elements, X = self.control.read_coords()
+        nparts, ndims = X.shape
+        self._position = X.flatten()
+        self._elements = elements
+        ElectronicModel_.__init__(self, ndims=ndims, nparticles=nparts,
+                                representation=representation, reference=reference)
+        self.mass = self.control.get_masses(self._elements)
+
+        self.expert = expert
 
         self.states = states
         self.nstates_ = len(self.states)

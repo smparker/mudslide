@@ -45,7 +45,7 @@ class QMMM(ElectronicModel_):
         and the MM model.
         """
         qm_elements = self._qm_model._elements
-        qm_elements_in_mm = [ self._mm_model._elements[i] for i in qm_atoms ]
+        qm_elements_in_mm = [ self._mm_model.atom_types[i] for i in qm_atoms ]
         return qm_elements == qm_elements_in_mm
 
     def remove_qm_interactions(self, qm_atoms):
