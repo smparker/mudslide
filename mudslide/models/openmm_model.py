@@ -1,7 +1,11 @@
-import numpy as np
+# -*- coding: utf-8 -*-
+""" OpenMM interface for mudslide """
 
 from typing import Any
-from mudslide.typing import ArrayLike, DtypeLike
+
+import numpy as np
+
+from mudslide.typing import ArrayLike
 from mudslide.models import ElectronicModel_
 from mudslide.constants import bohr_to_angstrom, amu_to_au, Hartree_to_kJmol
 from mudslide.periodic_table import masses
@@ -45,17 +49,20 @@ class OpenMM(ElectronicModel_):
             )
 
         # check if there are virtual sites
-        if any([ self._system.isVirtualSite(i) for i in range(self._system.getNumParticles()) ]):
+        if any( self._system.isVirtualSite(i) for i in range(self._system.getNumParticles()) ):
             raise ValueError(
                 "OpenMM system has virtual sites, which are not supported by mudslide."
             )
 
         # get charges
         try:
-            nonbonded = [ f for f in self._system.getForces() if isinstance(f, openmm.NonbondedForce) ][0]
-            self._charges = np.array([ nonbonded.getParticleParameters(i)[0].value_in_unit(openmm.unit.elementary_charge) for i in range(self._natoms)])
-        except IndexError:
-            raise ValueError("Can't find charges from OpenMM, probably because mudslide only understands Amber-like forces")
+            nonbonded = [ f for f in self._system.getForces()
+                    if isinstance(f, openmm.NonbondedForce) ][0]
+            self._charges = np.array([ nonbonded.getParticleParameters(i)[0].value_in_unit(
+                openmm.unit.elementary_charge) for i in range(self._natoms)])
+        except IndexError as exc:
+            raise ValueError("Can't find charges from OpenMM,"
+                " probably because mudslide only understands Amber-like forces") from exc
 
         # make dummy integrator
         self._integrator = openmm.VerletIntegrator(0.001 *
@@ -81,6 +88,7 @@ class OpenMM(ElectronicModel_):
             for i in range(3)
         ])
         self.mass *= amu_to_au
+        self.energies = np.zeros([1], dtype=np.float64)
 
     def _convert_au_position_to_openmm(self, xyz):
         """Convert position from bohr to nanometer using OpenMM units"""
@@ -106,13 +114,13 @@ class OpenMM(ElectronicModel_):
         return energy / kjmol / Hartree_to_kJmol
 
     def compute(self,
-                position: ArrayLike,
+                X: ArrayLike,
                 couplings: Any = None,
                 gradients: Any = None,
                 reference: Any = None):
         """Compute energy and forces"""
-        self._position = position
-        xyz = self._convert_au_position_to_openmm(position)
+        self._position = X
+        xyz = self._convert_au_position_to_openmm(X)
 
         self._simulation.context.setPositions(xyz)
         state = self._simulation.context.getState(getPositions=True,
@@ -126,4 +134,3 @@ class OpenMM(ElectronicModel_):
         self._force = self._convert_openmm_force_to_au(
             state.getForces(asNumpy=True))
         self._forces_available[:] = True
-
