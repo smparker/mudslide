@@ -5,7 +5,7 @@ from collections import deque
 import warnings
 import numpy as np
 
-from .util import remove_center_of_mass_motion, remove_angular_momentum
+from .util import remove_center_of_mass_motion
 
 from .typing import ArrayLike
 from .constants import boltzmann
@@ -41,7 +41,7 @@ def boltzmann_velocities(mass, temperature, remove_translation=True,
     if remove_translation:
         v = p / mass
         v3 = v.reshape((-1, 3))
-        M = mass.reshape((-1, 3))[:,0]
+        M = mass.reshape((-1, 3))[:,0] # pylint: disable=invalid-name
 
         v = remove_center_of_mass_motion(v3, M).flatten()
         p = v * mass
@@ -52,8 +52,8 @@ def boltzmann_velocities(mass, temperature, remove_translation=True,
     #    v = remove_angular_momentum(v3, M, np.zeros_like(v3)).flatten()
 
     if scale:
-        avg_KE = 0.5 * np.dot(p**2, np.reciprocal(mass)) / mass.size
-        kbT2 = 0.5 * kt
+        avg_KE = 0.5 * np.dot(p**2, np.reciprocal(mass)) / mass.size # pylint: disable=invalid-name
+        kbT2 = 0.5 * kt # pylint: disable=invalid-name
         scal = np.sqrt(kbT2 / avg_KE)
         p *= scal
 
@@ -63,6 +63,7 @@ def boltzmann_velocities(mass, temperature, remove_translation=True,
 
 
 class RollingAverage:
+    """A class to compute a rolling average of a series of values."""
     def __init__(self, window_size=50):
         """
         Initialize the RollingAverage calculator.
