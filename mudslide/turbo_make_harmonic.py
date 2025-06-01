@@ -37,8 +37,8 @@ def make_harmonic_main(control: str, model_dest: str, output: Any):
     if not turbomole_is_installed():
         raise RuntimeError("Turbomole is not available")
 
-    print(f"Reading Turbomole control file from {control}", output=file)
-    print(output=file)
+    print(f"Reading Turbomole control file from {control}", file=output)
+    print(file=output)
 
     # get Turbomole control file
     turbo = TurboControl(control)
@@ -62,7 +62,7 @@ def make_harmonic_main(control: str, model_dest: str, output: Any):
     print(np.linalg.eigvalsh(hessian), file=output)
     print(file=output)
 
-    harmonic = HarmonicModel(coords, 0.0, hessian, masses)
+    harmonic = HarmonicModel(coords, 0.0, hessian, masses, symbols, ndims=3, nparticles=len(symbols))
 
     print(f"Writing harmonic model to {model_dest}", file=output)
     harmonic.to_file(model_dest)

@@ -6,7 +6,8 @@ import sys
 
 import numpy as np
 
-def find_unique_name(name: str, location="", always_enumerate: bool = False, ending: str = "") -> str:
+def find_unique_name(name: str, location="", always_enumerate: bool = False,
+                     ending: str = "") -> str:
     """
     Given an input basename, checks whether a file with the given name already exists.
     If a file already exists, a suffix is added to make the file unique.
@@ -15,16 +16,15 @@ def find_unique_name(name: str, location="", always_enumerate: bool = False, end
 
     :returns: unique basename
     """
-    name_yaml = "{}{}".format(name, ending)
+    name_yaml = f"{name}{ending}"
     if not always_enumerate and not os.path.exists(os.path.join(location, name_yaml)):
         return name
     for i in range(sys.maxsize):
-        out = "{}-{:d}".format(name, i)
-        out_yaml = "{}{}".format(out, ending)
+        out = f"{name}-{i:d}"
+        out_yaml = f"{out}{ending}"
         if not os.path.exists(os.path.join(location, out_yaml)):
             return out
-    raise Exception("No unique name could be made from base {}.".format(name))
-    return ""
+    raise FileExistsError(f"No unique name could be made from base {name}.")
 
 def is_string(x) -> bool:
     """
@@ -47,7 +47,8 @@ def remove_center_of_mass_motion(velocities: np.ndarray, masses: np.ndarray) -> 
     com = np.sum(velocities * masses[:, np.newaxis], axis=0) / np.sum(masses)
     return velocities - com
 
-def remove_angular_momentum(velocities: np.ndarray, masses: np.ndarray, coordinates: np.ndarray) -> np.ndarray:
+def remove_angular_momentum(velocities: np.ndarray, masses: np.ndarray,
+                            coordinates: np.ndarray) -> np.ndarray:
     """
     Remove the angular momentum from a set of coordinates, velocities, and masses.
 
@@ -93,7 +94,7 @@ def check_options(options: dict, recognized: list, strict: bool = True) -> None:
     problems = [ x for x in options if x not in recognized ]
 
     if problems:
-        if strict:
+        if strict:  # pylint: disable=no-else-raise
             raise ValueError(f"Unrecognized options found: {problems}.")
         else:
             print(f"WARNING: Ignoring unrecognized options: {problems}.")
