@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Propagate Adiabatic MD trajectory"""
+# pylint: disable=too-few-public-methods, too-many-arguments, invalid-name
 
 from typing import Any
 
@@ -109,10 +110,10 @@ class NoseHooverChainPropagator(Propagator_):
         self.G = np.zeros(nchains)
 
         print("Nose-Hoover chain thermostat initialized with:")
-        print("  Temperature: {:.2f} K".format(temperature))
-        print("  Number of chains: {}".format(nchains))
-        print("  Timescale: {:.2f} fs".format(timescale / fs_to_au))
-        print("  Thermostat mass: {}".format(self.nh_mass))
+        print(f"  Temperature: {temperature:.2f} K")
+        print(f"  Number of chains: {nchains}")
+        print(f"  Timescale: {timescale / fs_to_au:.2f} fs")
+        print(f"  Thermostat mass: {self.nh_mass}")
 
     def nhc_step(self, velocity, mass, dt: float):
         """
@@ -230,9 +231,9 @@ class AdiabaticPropagator:
 
         if isinstance(prop_options, dict):
             prop_type = prop_options.pop("type", "vv")
-            if prop_type in ["vv", "velocity verlet"]:
+            if prop_type in ["vv", "velocity verlet"]: # pylint: disable=no-else-return
                 return VVPropagator(**prop_options)
-            if prop_type in ["nh", "nhc", "nose-hoover"]:
+            elif prop_type in ["nh", "nhc", "nose-hoover"]:
                 return NoseHooverChainPropagator(**prop_options)
             else:
                 raise ValueError(f"Unknown propagator type: {prop_type}")
