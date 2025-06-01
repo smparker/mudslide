@@ -186,7 +186,7 @@ class AdiabaticMD:
 
         :return: True if trajectory should keep running, False if it should finish
         """
-        if self.force_quit:
+        if self.force_quit: # pylint: disable=no-else-return
             return False
         elif self.duration["max_steps"] >= 0 and self.nsteps >= self.duration["max_steps"]:
             return False
@@ -297,7 +297,7 @@ class AdiabaticMD:
 
         # propagation
         while True:
-            self.propagator(self, 1)
+            self.propagator(self, 1) # pylint: disable=not-callable
 
             # ending condition
             if not self.continue_simulating():
