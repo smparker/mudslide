@@ -5,19 +5,19 @@ import numpy as np
 
 from .math import poisson_prob_scale
 from .propagation import rk4
-from .trajectory_sh import TrajectorySH
+from .surface_hopping_md import SurfaceHoppingMD
 
 from typing import Any, Union
 from .typing import ArrayLike, DtypeLike, ElectronicT
 
-class AugmentedFSSH(TrajectorySH):
+class AugmentedFSSH(SurfaceHoppingMD):
     """Augmented-FSSH (A-FSSH) dynamics, by Subotnik and coworkers
 
     Initial implementation based on original paper:
       Subotnik, Shenvi JCP 134, 024105 (2011); doi: 10.1063/1.3506779
     """
     def __init__(self, *args: Any, **options: Any):
-        TrajectorySH.__init__(self, *args, **options)
+        SurfaceHoppingMD.__init__(self, *args, **options)
 
         self.augmented_integration = options.get("augmented_integration", self.electronic_integration).lower()
 
@@ -30,7 +30,7 @@ class AugmentedFSSH(TrajectorySH):
             this_electronics: ElectronicT) -> None:
         """Move classical position and delR"""
         # Use base class propagation
-        TrajectorySH.advance_position(self, last_electronics, this_electronics)
+        SurfaceHoppingMD.advance_position(self, last_electronics, this_electronics)
 
         self.advance_delR(last_electronics, this_electronics)
 
@@ -38,7 +38,7 @@ class AugmentedFSSH(TrajectorySH):
             this_electronics: ElectronicT) -> None:
         """Move classical velocity and delP"""
         # Use base class propagation
-        TrajectorySH.advance_velocity(self, last_electronics, this_electronics)
+        SurfaceHoppingMD.advance_velocity(self, last_electronics, this_electronics)
 
         self.advance_delP(last_electronics, this_electronics)
 
@@ -174,7 +174,7 @@ class AugmentedFSSH(TrajectorySH):
         :param last_electronics: ElectronicStates from previous step
         :param this_electronics: ElectronicStates from current step
         """
-        TrajectorySH.surface_hopping(self, last_electronics, this_electronics)
+        SurfaceHoppingMD.surface_hopping(self, last_electronics, this_electronics)
 
         gamma = self.gamma_collapse(this_electronics)
 

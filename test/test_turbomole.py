@@ -113,7 +113,7 @@ class TestTMExDynamics(_TestTM):
         # yapf: enable
 
         log = mudslide.YAMLTrace(base_name="TMtrace", location=self.rundir, log_pitch=8)
-        traj = mudslide.TrajectorySH(model, positions, mom, 3, tracer=log, dt=20, max_time=81, t0=1,
+        traj = mudslide.SurfaceHoppingMD(model, positions, mom, 3, tracer=log, dt=20, max_time=81, t0=1,
                                      seed_sequence=57892)
         results = traj.simulate()
 

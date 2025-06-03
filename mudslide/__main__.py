@@ -8,7 +8,7 @@ import numpy as np
 import pickle
 import sys
 
-from .trajectory_sh import TrajectorySH
+from .surface_hopping_md import SurfaceHoppingMD
 from .cumulative_sh import TrajectoryCum
 from .even_sampling import EvenSamplingTrajectory
 from .ehrenfest import Ehrenfest
@@ -23,7 +23,7 @@ from typing import Any
 
 # Add a method into this dictionary to register it with argparse
 methods = {
-    "fssh": TrajectorySH,
+    "fssh": SurfaceHoppingMD,
     "cumulative-sh": TrajectoryCum,
     "ehrenfest": Ehrenfest,
     "afssh": AugmentedFSSH,

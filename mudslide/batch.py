@@ -138,7 +138,7 @@ class TrajGenBoltzmann(object):
 
 
 class BatchedTraj(object):
-    """Class to manage many TrajectorySH trajectories
+    """Class to manage many SurfaceHoppingMD trajectories
 
     Requires a model object which is a class that has functions V(x), dV(x), nstates(), and ndim()
     that return the Hamiltonian at position x, gradient of the Hamiltonian at position x

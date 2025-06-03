@@ -3,17 +3,17 @@
 
 import numpy as np
 
-from .trajectory_sh import TrajectorySH
+from .surface_hopping_md import SurfaceHoppingMD
 
 from typing import Any
 from .typing import ArrayLike, DtypeLike, ElectronicT
 
 
-class Ehrenfest(TrajectorySH):
+class Ehrenfest(SurfaceHoppingMD):
     """Ehrenfest dynamics"""
 
     def __init__(self, *args: Any, **kwargs: Any):
-        TrajectorySH.__init__(self, *args, **kwargs)
+        SurfaceHoppingMD.__init__(self, *args, **kwargs)
 
     def potential_energy(self, electronics: ElectronicT = None) -> DtypeLike:
         """Ehrenfest potential energy = tr(rho * H)

@@ -9,14 +9,71 @@ import numpy as np
 from .typing import ElectronicT, ArrayLike, DtypeLike
 
 from .util import check_options, is_string
-from .constants import boltzmann
+from .constants import boltzmann, fs_to_au
 from .propagation import propagate_exponential, propagate_interpolated_rk4
 from .tracer import Trace
 from .math import poisson_prob_scale
+from.propagator import Propagator_
 
-class TrajectorySH(object):
+class SHVVPropagator(Propagator_):
+    """Surface Hopping Velocity Verlet propagator"""
+
+    def __init__(self, **options: Any) -> None:
+        """Constructor
+
+        :param options: option dictionary
+        """
+        super().__init__()
+
+    def __call__(self, traj: 'SurfaceHoppingMD', nsteps: int) -> None:
+        """Propagate trajectory using Surface Hopping Velocity Verlet algorithm
+
+        :param traj: trajectory object to propagate
+        :param nsteps: number of steps to propagate
+        """
+        dt = traj.dt
+        # first update nuclear coordinates
+        for _ in range(nsteps):
+            traj.advance_position(traj.last_electronics, traj.electronics)
+
+            # calculate electronics at new position
+            traj.last_electronics, traj.electronics = traj.electronics, traj.model.update(
+                traj.position, electronics=traj.electronics)
+
+            # update velocity
+            traj.advance_velocity(traj.last_electronics, traj.electronics)
+
+            # now propagate the electronic wavefunction to the new time
+            traj.propagate_electronics(traj.last_electronics, traj.electronics, dt)
+            traj.surface_hopping(traj.last_electronics, traj.electronics)
+
+            traj.time += dt
+            traj.nsteps += 1
+
+class SHPropagator(Propagator_):
+    """Surface Hopping propagator factory"""
+
+    def __new__(cls, model: Any, prop_options: Any = "vv") -> 'SHPropagator':
+        """Factory method to create a Surface Hopping propagator
+
+        :param model: Model object defining problem
+        :param prop_options: options for propagator, can be "vv" or "fssh"
+        :return: SHPropagator object
+        """
+        if is_string(prop_options):
+            prop_options = {"type": prop_options}
+        elif not isinstance(prop_options, dict):
+            raise Exception("prop_options must be a string or a dictionary")
+
+        proptype = prop_options.get("type", "vv")
+        if proptype.lower() == "vv":
+            return SHVVPropagator(**prop_options)
+        else:
+            raise ValueError(f"Unrecognized surface hopping propagator type: {proptype}.")
+
+class SurfaceHoppingMD(object):
     """Class to propagate a single FSSH trajectory"""
-    recognized_options = [ "last_velocity", "bounds",
+    recognized_options = [ "propagator", "last_velocity", "bounds",
         "duration", "dt", "t0", "previous_steps", "trace_every", "max_time",
         "seed_sequence",
         "outcome_type",
@@ -48,9 +105,12 @@ class TrajectorySH(object):
         check_options(options, self.recognized_options, strict=strict_option_check)
 
         self.model = model
+        self.mass = model.mass
         self.tracer = Trace(tracer)
         self.queue: Any = queue
-        self.mass = model.mass
+
+
+        # initial conditions
         self.position = np.array(x0, dtype=np.float64).reshape(model.ndim())
         self.velocity = np.array(p0, dtype=np.float64).reshape(model.ndim()) / self.mass
         self.last_velocity = np.zeros_like(self.velocity, dtype=np.float64)
@@ -82,7 +142,8 @@ class TrajectorySH(object):
         self.time = float(options.get("t0", 0.0))
         self.nsteps = int(options.get("previous_steps", 0))
         self.trace_every = int(options.get("trace_every", 1))
-        self.dt = float(options["dt"])
+        self.dt = float(options.get("dt", fs_to_au))
+        self.propagator = SHPropagator(self.model, options.get("propagator", "vv"))
 
         self.outcome_type = options.get("outcome_type", "state")
 
@@ -91,6 +152,7 @@ class TrajectorySH(object):
         self.random_state = np.random.default_rng(self.seed_sequence)
 
         self.electronics = options.get("electronics", None)
+        self.last_electronics = options.get("last_electronics", None)
         self.hopping = 0.0
 
         self.electronic_integration = options.get("electronic_integration", "exp").lower()
@@ -110,7 +172,7 @@ class TrajectorySH(object):
         self.zeta = 0.0
 
     @classmethod
-    def restart(cls, model, log, **options) -> 'TrajectorySH':
+    def restart(cls, model, log, **options) -> 'SurfaceHoppingMD':
         last_snap = log[-1]
         penultimate_snap = log[-2]
 
@@ -150,7 +212,7 @@ class TrajectorySH(object):
         if self.weight == 0.0:
             self.force_quit = True
 
-    def __deepcopy__(self, memo: Any) -> 'TrajectorySH':
+    def __deepcopy__(self, memo: Any) -> 'SurfaceHoppingMD':
         """Override deepcopy"""
         cls = self.__class__
         result = cls.__new__(cls)
@@ -160,7 +222,7 @@ class TrajectorySH(object):
             setattr(result, k, cp.deepcopy(v, memo) if v not in shallow_only else cp.copy(v))
         return result
 
-    def clone(self) -> 'TrajectorySH':
+    def clone(self) -> 'SurfaceHoppingMD':
         """Clone existing trajectory for spawning
 
         :return: copy of current object
@@ -264,7 +326,7 @@ class TrajectorySH(object):
 
         :return: kinetic energy
         """
-        return 0.5 * np.einsum('m,m,m', self.mass, self.velocity, self.velocity)
+        return 0.5 * np.sum(self.mass * self.velocity**2)
 
     def potential_energy(self, electronics: ElectronicT = None) -> DtypeLike:
         """Potential energy
@@ -352,7 +414,7 @@ class TrajectorySH(object):
         if dE > 0.0:
             return True
         u = direction / np.linalg.norm(direction)
-        a = np.einsum('m,m,m', np.reciprocal(self.mass), u, u)
+        a = np.sum(u**2 / self.mass)
         b = 2.0 * np.dot(self.velocity, u)
         c = -2.0 * dE
         return (b * b > 4.0 * a * c)
@@ -551,8 +613,6 @@ class TrajectorySH(object):
         if not self.continue_simulating():
             return self.tracer
 
-        last_electronics = None
-
         if self.electronics is None:
             self.electronics = self.model.update(self.position)
 
@@ -560,22 +620,8 @@ class TrajectorySH(object):
             self.trace()
 
         # propagation
-        while (True):
-            # first update nuclear coordinates
-            self.advance_position(last_electronics, self.electronics)
-
-            # calculate electronics at new position
-            last_electronics, self.electronics = self.electronics, self.model.update(self.position, electronics=self.electronics)
-
-            # update velocity
-            self.advance_velocity(last_electronics, self.electronics)
-
-            # now propagate the electronic wavefunction to the new time
-            self.propagate_electronics(last_electronics, self.electronics, self.dt)
-            self.surface_hopping(last_electronics, self.electronics)
-
-            self.time += self.dt
-            self.nsteps += 1
+        while True:
+            self.propagator(self, 1) # pylint: disable=not-callable
 
             # ending condition
             if not self.continue_simulating():

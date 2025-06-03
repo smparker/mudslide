@@ -7,7 +7,7 @@ dimensional potentials.
 ## Contents
 * `mudslide` package that contains
   - implementation of all surface hopping methods
-    - `TrajectorySH` - FSSH
+    - `SurfaceHoppingMD` - FSSH
     - `TrajectoryCum` - FSSH with a cumulative point of view
     - `Ehrenfest` - Ehrenfest dynamics
   - collection of 1D models
@@ -63,7 +63,7 @@ provided. For example:
     # Generates trajectories always with starting position -5, starting momentum 10.0, on ground state
     traj_gen = mudslide.TrajGenConst(-5.0, 10.0, 0)
 
-    simulator = mudslide.BatchedTraj(simple_model, traj_gen, mudslide.TrajectorySH, samples = 4, bounds=[[-4],[4]])
+    simulator = mudslide.BatchedTraj(simple_model, traj_gen, mudslide.SurfaceHoppingMD, samples = 4, bounds=[[-4],[4]])
     results = simulator.compute()
     outcomes = results.outcomes
 

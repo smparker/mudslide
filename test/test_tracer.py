@@ -27,7 +27,7 @@ class TrajectoryTest(unittest.TestCase):
 
         model = mudslide.models.TullySimpleAvoidedCrossing()
         log = mudslide.YAMLTrace(base_name="test-traj", location=rundir, log_pitch=8)
-        traj = mudslide.TrajectorySH(model, [-3.0], [10.0],
+        traj = mudslide.SurfaceHoppingMD(model, [-3.0], [10.0],
                                      0,
                                      dt=4,
                                      tracer=log,
@@ -58,7 +58,7 @@ class TrajectoryTest(unittest.TestCase):
 
         model = mudslide.models.TullySimpleAvoidedCrossing()
         log = mudslide.YAMLTrace(base_name="test-traj", location=rundir, log_pitch=8)
-        traj = mudslide.TrajectorySH(model, [-3.0], [10.0],
+        traj = mudslide.SurfaceHoppingMD(model, [-3.0], [10.0],
                                      0,
                                      dt=4,
                                      tracer=log,
@@ -71,7 +71,7 @@ class TrajectoryTest(unittest.TestCase):
         assert main_log == "test-traj-0.yaml"
 
         yaml_trace = mudslide.load_log(os.path.join(results.location, main_log))
-        traj2 = mudslide.TrajectorySH.restart(model, yaml_trace, max_time=80)
+        traj2 = mudslide.SurfaceHoppingMD.restart(model, yaml_trace, max_time=80)
         results2 = traj2.simulate()
         snap_t16 = results2[16]
 

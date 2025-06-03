@@ -5,13 +5,13 @@ from __future__ import division
 
 import numpy as np
 
-from .trajectory_sh import TrajectorySH
+from .surface_hopping_md import SurfaceHoppingMD
 
 from typing import Any, List, Dict
 from .typing import ArrayLike
 
 
-class TrajectoryCum(TrajectorySH):
+class TrajectoryCum(SurfaceHoppingMD):
     """
     Trajectory surface hopping using a cumulative approach rather than instantaneous
 
@@ -22,8 +22,8 @@ class TrajectoryCum(TrajectorySH):
     """
 
     def __init__(self, *args: Any, **kwargs: Any):
-        """Constructor (see TrajectorySH constructor)"""
-        TrajectorySH.__init__(self, *args, **kwargs)
+        """Constructor (see SurfaceHoppingMD constructor)"""
+        SurfaceHoppingMD.__init__(self, *args, **kwargs)
 
         self.prob_cum = np.longdouble(0.0)
         self.zeta = self.draw_new_zeta()
