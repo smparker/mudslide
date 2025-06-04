@@ -25,7 +25,8 @@ class SurfaceHoppingMD(object):
         "weight",
         "restarting",
         "hopping_probability", "zeta_list",
-        "state0"
+        "state0",
+        "use_cumulative_hopping"
         ]
 
     def __init__(self,
@@ -114,6 +115,12 @@ class SurfaceHoppingMD(object):
 
         self.zeta_list = list(options.get("zeta_list", []))
         self.zeta = 0.0
+
+        # Add cumulative hopping option
+        self.use_cumulative_hopping = options.get("use_cumulative_hopping", False)
+        if self.use_cumulative_hopping:
+            self.prob_cum = np.longdouble(0.0)
+            self.zeta = self.draw_new_zeta()
 
     @classmethod
     def restart(cls, model, log, **options) -> 'SurfaceHoppingMD':
@@ -244,19 +251,21 @@ class SurfaceHoppingMD(object):
         :return: dictionary with all data from current time step
         """
         out = {
-            "time": self.time,
+            "time": float(self.time),
             "position": self.position.tolist(),
             "velocity": self.velocity.tolist(),
-            "potential": self.potential_energy().item(),
-            "kinetic": self.kinetic_energy().item(),
-            "temperature": 2 * self.kinetic_energy().item() / ( boltzmann * self.model.ndim()),
-            "energy": self.total_energy().item(),
+            "potential": float(self.potential_energy()),
+            "kinetic": float(self.kinetic_energy()),
+            "temperature": float(2 * self.kinetic_energy() / ( boltzmann * self.model.ndim())),
+            "energy": float(self.total_energy()),
             "density_matrix": self.rho.view(dtype=np.float64).tolist(),
-            "active": self.state,
+            "active": int(self.state),
             "electronics": self.electronics.as_dict(),
-            "hopping": self.hopping,
-            "zeta": self.zeta
+            "hopping": float(self.hopping),
+            "zeta": float(self.zeta)
         }
+        if self.use_cumulative_hopping:
+            out["prob_cum"] = float(self.prob_cum)
         return out
 
     def trouble_shooter(self):
@@ -469,7 +478,6 @@ class SurfaceHoppingMD(object):
         :param probs: [nstates] numpy array of individual hopping probabilities
         :return: [(target_state, weight)] list of (target_state, weight) pairs
         """
-
         probs = np.zeros_like(gkndt)
         if self.hopping_probability == "tully":
             probs = gkndt
@@ -479,19 +487,38 @@ class SurfaceHoppingMD(object):
             raise Exception("Unrecognized option for hopping_probability")
         self.hopping = np.sum(probs).item()  # store total hopping probability
 
-        self.zeta = self.draw_new_zeta()
-        acc_prob = np.cumsum(probs)
-        hops = np.less(self.zeta, acc_prob)
-        if any(hops):
-            hop_to = -1
-            for i in range(self.model.nstates()):
-                if hops[i]:
-                    hop_to = i
-                    break
+        if self.use_cumulative_hopping:
+            accumulated = np.longdouble(self.prob_cum)
+            gkdt = np.sum(gkndt)
+            accumulated += (accumulated - 1.0) * np.expm1(-gkdt)
+            if accumulated > self.zeta:  # then hop
+                # where to hop
+                hop_choice = gkndt / gkdt
+                zeta = self.zeta
+                target = self.random_state.choice(list(range(self.model.nstates())), p=hop_choice)
 
-            return [{"target": hop_to, "weight": 1.0, "zeta": self.zeta, "prob": acc_prob[hop_to]}]
-        else:
+                # reset probabilities and random
+                self.prob_cum = 0.0
+                self.zeta = self.draw_new_zeta()
+
+                return [{"target": target, "weight": 1.0, "zeta": zeta, "prob": accumulated}]
+
+            self.prob_cum = accumulated
             return []
+        else:
+            self.zeta = self.draw_new_zeta()
+            acc_prob = np.cumsum(probs)
+            hops = np.less(self.zeta, acc_prob)
+            if any(hops):
+                hop_to = -1
+                for i in range(self.model.nstates()):
+                    if hops[i]:
+                        hop_to = i
+                        break
+
+                return [{"target": hop_to, "weight": 1.0, "zeta": self.zeta, "prob": acc_prob[hop_to]}]
+            else:
+                return []
 
     def hop_update(self, hop_from, hop_to):
         """Handle any extra operations that need to occur after a hop"""
