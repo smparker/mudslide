@@ -9,7 +9,6 @@ import pickle
 import sys
 
 from .surface_hopping_md import SurfaceHoppingMD
-from .cumulative_sh import TrajectoryCum
 from .even_sampling import EvenSamplingTrajectory
 from .ehrenfest import Ehrenfest
 from .afssh import AugmentedFSSH
@@ -24,7 +23,7 @@ from typing import Any
 # Add a method into this dictionary to register it with argparse
 methods = {
     "fssh": SurfaceHoppingMD,
-    "cumulative-sh": TrajectoryCum,
+    "cumulative-sh": lambda *args, **kwargs: SurfaceHoppingMD(*args, hopping_method="cumulative", **kwargs),
     "ehrenfest": Ehrenfest,
     "afssh": AugmentedFSSH,
     "even-sampling": EvenSamplingTrajectory

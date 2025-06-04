@@ -7,8 +7,8 @@ import copy as cp
 
 import numpy as np
 
-from .cumulative_sh import TrajectoryCum
 from .integration import quadrature
+from .surface_hopping_md import SurfaceHoppingMD
 
 from typing import Optional, List, Any, Dict, Union
 from .typing import ArrayLike, ElectronicT
@@ -252,19 +252,17 @@ class SpawnStack(object):
         return cls(forest, weight)
 
 
-class EvenSamplingTrajectory(TrajectoryCum):
-    """Trajectory surface hopping using an even sampling approach
-
-    Related to the cumulative trajectory picture, but instead of hopping
-    stochastically, new trajectories are spawned at even intervals of the
-    of the cumulative probability distribution. This is an *experimental*
-    in principle deterministic algorithm for FSSH simulations.
+class EvenSamplingTrajectory(SurfaceHoppingMD):
     """
-    recognized_options = TrajectoryCum.recognized_options + [ "spawn_stack", "quadrature", "mcsamples" ]
+    Trajectory surface hopping with even sampling of phase space
+    """
 
-    def __init__(self, *args: Any, **options: Any):
-        """Constructor (see TrajectoryCum constructor)"""
-        TrajectoryCum.__init__(self, *args, **options)
+    recognized_options = SurfaceHoppingMD.recognized_options + [ "spawn_stack", "quadrature", "mcsamples" ]
+
+    def __init__(self, *args, **options):
+        """Constructor (see SurfaceHoppingMD constructor)"""
+        options['hopping_method'] = 'cumulative'  # Force cumulative hopping
+        SurfaceHoppingMD.__init__(self, *args, **options)
 
         ss = options["spawn_stack"]
         if isinstance(ss, SpawnStack):
@@ -373,7 +371,7 @@ class EvenSamplingTrajectory(TrajectoryCum):
             for hop in hop_to:
                 stack = hop["stack"]
                 spawn = self.clone(stack)
-                TrajectoryCum.hop_to_it(spawn, [hop], electronics=spawn.electronics)
+                SurfaceHoppingMD.hop_to_it(spawn, [hop], electronics=spawn.electronics)
                 spawn.time+= spawn.dt 
                 spawn.nsteps += 1
 
@@ -385,4 +383,4 @@ class EvenSamplingTrajectory(TrajectoryCum):
             self.update_weight(self.spawn_stack.weight())
         else:
             self.prob_cum = 0.0
-            TrajectoryCum.hop_to_it(self, hop_to, electronics=self.electronics)
+            SurfaceHoppingMD.hop_to_it(self, hop_to, electronics=self.electronics)

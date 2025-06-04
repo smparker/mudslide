@@ -7,9 +7,10 @@ dimensional potentials.
 ## Contents
 * `mudslide` package that contains
   - implementation of all surface hopping methods
-    - `SurfaceHoppingMD` - FSSH
-    - `TrajectoryCum` - FSSH with a cumulative point of view
+    - `SurfaceHoppingMD` - Standard FSSH implementation
     - `Ehrenfest` - Ehrenfest dynamics
+    - `AugmentedFSSH` - Augmented FSSH implementation
+    - `EvenSamplingTrajectory` - FSSH with even sampling of phase space
   - collection of 1D models
     - `TullySimpleAvoidedCrossing`
     - `TullyDualAvoidedCrossing`
