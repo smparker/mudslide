@@ -287,7 +287,7 @@ class EvenSamplingTrajectory(TrajectoryCum):
         out = EvenSamplingTrajectory(
             self.model,
             self.position,
-            self.velocity * self.mass,
+            self.velocity,
             self.rho,
             tracer=self.tracer.clone(),
             queue=self.queue,

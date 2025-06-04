@@ -31,7 +31,7 @@ class SurfaceHoppingMD(object):
     def __init__(self,
                  model: Any,
                  x0: ArrayLike,
-                 p0: ArrayLike,
+                 v0: ArrayLike,
                  rho0: ArrayLike,
                  tracer: Any = "default",
                  queue: Any = None,
@@ -40,7 +40,7 @@ class SurfaceHoppingMD(object):
         """Constructor
         :param model: Model object defining problem
         :param x0: Initial position
-        :param p0: Initial momentum
+        :param v0: Initial velocity
         :param rho0: Initial density matrix
         :param tracer: spawn from TraceManager to collect results
         :param queue: Trajectory queue
@@ -53,11 +53,10 @@ class SurfaceHoppingMD(object):
         self.tracer = Trace(tracer)
         self.queue: Any = queue
 
-
         # initial conditions
         self.position = np.array(x0, dtype=np.float64).reshape(model.ndim())
         self.last_position = np.zeros_like(self.position, dtype=np.float64)
-        self.velocity = np.array(p0, dtype=np.float64).reshape(model.ndim()) / self.mass
+        self.velocity = np.array(v0, dtype=np.float64).reshape(model.ndim())
         self.last_velocity = np.zeros_like(self.velocity, dtype=np.float64)
         if "last_velocity" in options:
             self.last_velocity[:] = options["last_velocity"]
@@ -122,8 +121,8 @@ class SurfaceHoppingMD(object):
         penultimate_snap = log[-2]
 
         x = last_snap["position"]
-        p = last_snap["momentum"]
-        last_velocity = penultimate_snap["momentum"] / model.mass
+        v = np.array(last_snap["momentum"]) / model.mass
+        last_velocity = np.array(penultimate_snap["momentum"]) / model.mass
         t0 = last_snap["time"]
         dt = t0 - penultimate_snap["time"]
         k = last_snap["active"]
@@ -138,7 +137,7 @@ class SurfaceHoppingMD(object):
 
         return cls(model,
                    x,
-                   p,
+                   v,
                    rho,
                    tracer=log,
                    state0=k,

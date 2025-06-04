@@ -23,7 +23,7 @@ class AdiabaticMD:
     def __init__(self,
                  model: Any,
                  x0: ArrayLike,
-                 p0: ArrayLike,
+                 v0: ArrayLike,
                  tracer: Any = None,
                  queue: Any = None,
                  strict_option_check: bool = True,
@@ -31,7 +31,7 @@ class AdiabaticMD:
         """Constructor
         :param model: Model object defining problem
         :param x0: Initial position
-        :param p0: Initial momentum
+        :param v0: Initial velocity
         :param tracer: spawn from TraceManager to collect results
         :param queue: Trajectory queue
         :param options: option dictionary
@@ -43,7 +43,7 @@ class AdiabaticMD:
         self.queue: Any = queue
         self.mass = model.mass
         self.position = np.array(x0, dtype=np.float64).reshape(model.ndim())
-        self.velocity = np.array(p0, dtype=np.float64).reshape(model.ndim()) / self.mass
+        self.velocity = np.array(v0, dtype=np.float64).reshape(model.ndim())
         self.last_velocity = np.zeros_like(self.velocity, dtype=np.float64)
         if "last_velocity" in options:
             self.last_velocity[:] = options["last_velocity"]
@@ -95,8 +95,8 @@ class AdiabaticMD:
         penultimate_snap = log[-2]
 
         x = last_snap["position"]
-        p = last_snap["momentum"]
-        last_velocity = penultimate_snap["momentum"] / model.mass
+        v = np.array(last_snap["momentum"]) / model.mass
+        last_velocity = np.array(penultimate_snap["momentum"]) / model.mass
         t0 = last_snap["time"]
         dt = t0 - penultimate_snap["time"]
         weight = log.weight
@@ -109,7 +109,7 @@ class AdiabaticMD:
 
         return cls(model,
                    x,
-                   p,
+                   v,
                    tracer=log,
                    t0=t0,
                    last_velocity=last_velocity,

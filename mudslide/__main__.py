@@ -154,19 +154,18 @@ def main(argv=None, file=sys.stdout) -> None:
         print(file=file)
 
     for k in kpoints:
+        v = k / model.mass
         traj_gen: Any = None
         if args.ksampling == "none":
-            traj_gen = TrajGenConst(args.position, k, 0, seed=args.seed)
+            traj_gen = TrajGenConst(args.position, v, 0, seed=args.seed)
         elif args.ksampling == "normal":
-            traj_gen = TrajGenNormal(args.position, k, 0, sigma=args.normal / k, seed=args.seed)
+            traj_gen = TrajGenNormal(args.position, v, 0, sigma=args.normal / v, seed=args.seed)
 
         dt = (args.dt / k) if args.scale_dt else args.dt
 
         fssh = BatchedTraj(model,
                            traj_gen,
                            trajectory_type=trajectory_type,
-                           momentum=k,
-                           position=args.position,
                            samples=args.samples,
                            nprocs=args.nprocs,
                            dt=dt,

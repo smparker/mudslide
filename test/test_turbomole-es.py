@@ -59,6 +59,7 @@ class TestTMModel(unittest.TestCase):
                 2.145175145340160000,  0.594918215579156000,  1.075977514428970000,
                -2.269965412856570000,  0.495551832268249000,  1.487150300486560000]
         # yapf: enable
+        velocities = mom / tm_model.mass
         positions = tm_model._position
         mass = tm_model.mass
         q = queue.Queue()
@@ -74,7 +75,7 @@ class TestTMModel(unittest.TestCase):
         trace_options = {"location": "", "base_name": "TMtrace"}
         every = 1
         model=tm_model
-        traj_gen = TrajGenConst(positions, mom, 3, dt)
+        traj_gen = TrajGenConst(positions, velocities, 3, dt)
 
         fssh = mudslide.BatchedTraj(model,
                        traj_gen,

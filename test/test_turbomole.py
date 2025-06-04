@@ -112,8 +112,10 @@ class TestTMExDynamics(_TestTM):
                -2.269965412856570000,  0.495551832268249000,  1.487150300486560000]
         # yapf: enable
 
+        velocities = np.array(mom) / model.mass
+
         log = mudslide.YAMLTrace(base_name="TMtrace", location=self.rundir, log_pitch=8)
-        traj = mudslide.SurfaceHoppingMD(model, positions, mom, 3, tracer=log, dt=20, max_time=81, t0=1,
+        traj = mudslide.SurfaceHoppingMD(model, positions, velocities, 3, tracer=log, dt=20, max_time=81, t0=1,
                                      seed_sequence=57892)
         results = traj.simulate()
 

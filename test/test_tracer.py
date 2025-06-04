@@ -27,7 +27,7 @@ class TrajectoryTest(unittest.TestCase):
 
         model = mudslide.models.TullySimpleAvoidedCrossing()
         log = mudslide.YAMLTrace(base_name="test-traj", location=rundir, log_pitch=8)
-        traj = mudslide.SurfaceHoppingMD(model, [-3.0], [10.0],
+        traj = mudslide.SurfaceHoppingMD(model, [-3.0], [10.0 / model.mass],
                                      0,
                                      dt=4,
                                      tracer=log,
@@ -58,7 +58,7 @@ class TrajectoryTest(unittest.TestCase):
 
         model = mudslide.models.TullySimpleAvoidedCrossing()
         log = mudslide.YAMLTrace(base_name="test-traj", location=rundir, log_pitch=8)
-        traj = mudslide.SurfaceHoppingMD(model, [-3.0], [10.0],
+        traj = mudslide.SurfaceHoppingMD(model, [-3.0], [10.0 / model.mass],
                                      0,
                                      dt=4,
                                      tracer=log,

@@ -25,10 +25,9 @@ if __name__ == "__main__":
 
     masses = mm.mass
     velocities = mudslide.math.boltzmann_velocities(masses, 300.0, seed=1234)
-    p = velocities * masses
-    KE = 0.5 * np.sum(p**2 / masses)
+    KE = 0.5 * np.sum(velocities**2 * masses)
 
-    traj = mudslide.AdiabaticMD(mm, mm._position, p, dt=40, max_steps=1000)
+    traj = mudslide.AdiabaticMD(mm, mm._position, velocities, dt=40, max_steps=1000)
     results = traj.simulate()
 
     mudslide.io.write_trajectory_xyz(mm, results, 'ala3.xyz')

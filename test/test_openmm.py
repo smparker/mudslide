@@ -93,12 +93,11 @@ class TestOpenMM:
 
         masses = mm.mass
         velocities = mudslide.math.boltzmann_velocities(masses, 300.0, remove_translation=False, seed=1234)
-        p = velocities * masses
-        KE = 0.5 * np.sum(p**2 / masses)
+        KE = 0.5 * np.sum(velocities**2 * masses)
 
         assert np.isclose(KE, 0.021375978053325008)
 
-        traj = mudslide.AdiabaticMD(mm, mm._position, p, dt=20, max_steps=10)
+        traj = mudslide.AdiabaticMD(mm, mm._position, velocities, dt=20, max_steps=10)
         results = traj.simulate()
 
         xref = np.loadtxt("x.txt")

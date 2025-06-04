@@ -22,14 +22,14 @@ class TrajGenConst(object):
     """Canned class whose call function acts as a generator for static initial conditions
 
     :param position: initial position
-    :param momentum: initial momentum
+    :param velocity: initial velocity
     :param initial_state: initial state specification should be either an integer or "ground"
     :param seed: entropy seed for random generator (unused)
     """
 
-    def __init__(self, position: ArrayLike, momentum: ArrayLike, initial_state: Any, seed: Any = None):
+    def __init__(self, position: ArrayLike, velocity: ArrayLike, initial_state: Any, seed: Any = None):
         self.position = position
-        self.momentum = momentum
+        self.velocity = velocity
         self.initial_state = initial_state
         self.seed_sequence = np.random.SeedSequence(seed)
 
@@ -40,7 +40,7 @@ class TrajGenConst(object):
         """
         seedseqs = self.seed_sequence.spawn(nsamples)
         for i in range(nsamples):
-            yield (self.position, self.momentum, self.initial_state, {"seed_sequence": seedseqs[i]})
+            yield (self.position, self.velocity, self.initial_state, {"seed_sequence": seedseqs[i]})
 
 
 class TrajGenNormal(object):
@@ -48,33 +48,33 @@ class TrajGenNormal(object):
 
     def __init__(self,
                  position: ArrayLike,
-                 momentum: ArrayLike,
+                 velocity: ArrayLike,
                  initial_state: Any,
                  sigma: ArrayLike,
                  seed: Any = None,
                  seed_traj: Any = None):
         """
         :param position: center of normal distribution for position
-        :param momentum: center of normal distribution for momentum
+        :param velocity: center of normal distribution for velocity
         :param initial_state: initial state designation
         :param sigma: standard deviation of distribution
         :param seed: initial seed to give to trajectory
         """
         self.position = position
         self.position_deviation = 0.5 * sigma
-        self.momentum = momentum
-        self.momentum_deviation = 1.0 / sigma
+        self.velocity = velocity
+        self.velocity_deviation = 1.0 / sigma
         self.initial_state = initial_state
         self.seed_sequence = np.random.SeedSequence(seed)
         self.random_state = np.random.default_rng(seed_traj)
 
-    def kskip(self, ktest: float) -> bool:
-        """Whether to skip given momentum
-        :param ktest: momentum
+    def vskip(self, vtest: float) -> bool:
+        """Whether to skip given velocity
+        :param vtest: velocity
 
         :returns: True/False
         """
-        return np.any(ktest < 0.0)
+        return np.any(vtest < 0.0)
 
     def __call__(self, nsamples: int) -> Iterator:
         """Generate nsamples initial conditions
@@ -83,15 +83,15 @@ class TrajGenNormal(object):
         seedseqs = self.seed_sequence.spawn(nsamples)
         for i in range(nsamples):
             x = self.random_state.normal(self.position, self.position_deviation)
-            k = self.random_state.normal(self.momentum, self.momentum_deviation)
+            v = self.random_state.normal(self.velocity, self.velocity_deviation)
 
-            if (self.kskip(k)):
+            if (self.vskip(v)):
                 continue
-            yield (x, k, self.initial_state, {"seed_sequence": seedseqs[i]})
+            yield (x, v, self.initial_state, {"seed_sequence": seedseqs[i]})
 
 
 class TrajGenBoltzmann(object):
-    """Generate momenta randomly according to the Boltzmann distribution"""
+    """Generate velocities randomly according to the Boltzmann distribution"""
 
     def __init__(self,
                  position: ArrayLike,
@@ -100,13 +100,13 @@ class TrajGenBoltzmann(object):
                  initial_state: Any,
                  scale: bool = True,
                  seed: Any = None,
-                 momentum_seed: Any = None):
+                 velocity_seed: Any = None):
         """
         :param position: initial positions
         :param mass: array of particle masses
-        :param temperature: initial temperature to determine momenta
+        :param temperature: initial temperature to determine velocities
         :param seed: initial seed to give trajectory
-        :param momentum_seed: initial seed for momentum random generator
+        :param velocity_seed: initial seed for velocity random generator
         """
         assert position.shape == mass.shape
 
@@ -116,7 +116,7 @@ class TrajGenBoltzmann(object):
         self.initial_state = initial_state
         self.scale = scale
         self.seed_sequence = np.random.SeedSequence(seed)
-        self.random_state = np.random.default_rng(momentum_seed)
+        self.random_state = np.random.default_rng(velocity_seed)
         self.kt = boltzmann * self.temperature
         self.sigma = np.sqrt(self.kt * self.mass)
 
@@ -128,13 +128,15 @@ class TrajGenBoltzmann(object):
         for i in range(nsamples):
             x = self.position
             p = self.random_state.normal(0.0, self.sigma)
+            v = p / self.mass
+
             if self.scale:
-                avg_KE = 0.5 * np.dot(p**2, np.reciprocal(self.mass)) / x.size
+                avg_KE = 0.5 * np.dot(v**2, self.mass) / x.size
                 kbT2 = 0.5 * self.kt
                 scal = np.sqrt(kbT2 / avg_KE)
-                p *= scal
-
-            yield (x, p, self.initial_state, {"seed_sequence": seedseqs[i]})
+                v *= scal
+                
+            yield (x, v, self.initial_state, {"seed_sequence": seedseqs[i]})
 
 
 class BatchedTraj(object):
@@ -202,12 +204,12 @@ class BatchedTraj(object):
         #for p in procs:
         #    p.start()
 
-        for x0, p0, initial, params in self.traj_gen(nsamples):
+        for x0, v0, initial, params in self.traj_gen(nsamples):
             traj_input = self.traj_options
             traj_input.update(params)
             traj = self.trajectory(self.model,
                                    x0,
-                                   p0,
+                                   v0,
                                    initial,
                                    self.tracemanager.spawn_tracer(),
                                    queue=traj_queue,
