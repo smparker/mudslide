@@ -9,10 +9,10 @@ class TrajectoryCum(SurfaceHoppingMD):
     Factory class for creating SurfaceHoppingMD instances with cumulative hopping enabled.
     
     This class is maintained for backward compatibility. It simply creates a SurfaceHoppingMD
-    instance with use_cumulative_hopping=True. All other options are passed through unchanged.
+    instance with hopping_method="cumulative". All other options are passed through unchanged.
     """
 
     def __init__(self, *args, **kwargs):
         """Constructor that creates a SurfaceHoppingMD instance with cumulative hopping enabled"""
-        kwargs['use_cumulative_hopping'] = True
+        kwargs['hopping_method'] = 'cumulative'
         super().__init__(*args, **kwargs) 

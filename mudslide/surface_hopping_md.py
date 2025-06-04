@@ -26,7 +26,7 @@ class SurfaceHoppingMD(object):
         "restarting",
         "hopping_probability", "zeta_list",
         "state0",
-        "use_cumulative_hopping"
+        "hopping_method"
         ]
 
     def __init__(self,
@@ -116,9 +116,12 @@ class SurfaceHoppingMD(object):
         self.zeta_list = list(options.get("zeta_list", []))
         self.zeta = 0.0
 
-        # Add cumulative hopping option
-        self.use_cumulative_hopping = options.get("use_cumulative_hopping", False)
-        if self.use_cumulative_hopping:
+        # Add hopping method option
+        self.hopping_method = options.get("hopping_method", "instantaneous")
+        if self.hopping_method not in ["instantaneous", "cumulative"]:
+            raise Exception("hopping_method accepts only \"instantaneous\" or \"cumulative\" options")
+        
+        if self.hopping_method == "cumulative":
             self.prob_cum = np.longdouble(0.0)
             self.zeta = self.draw_new_zeta()
 
@@ -264,7 +267,7 @@ class SurfaceHoppingMD(object):
             "hopping": float(self.hopping),
             "zeta": float(self.zeta)
         }
-        if self.use_cumulative_hopping:
+        if self.hopping_method == "cumulative":
             out["prob_cum"] = float(self.prob_cum)
         return out
 
@@ -487,7 +490,7 @@ class SurfaceHoppingMD(object):
             raise Exception("Unrecognized option for hopping_probability")
         self.hopping = np.sum(probs).item()  # store total hopping probability
 
-        if self.use_cumulative_hopping:
+        if self.hopping_method == "cumulative":
             accumulated = np.longdouble(self.prob_cum)
             gkdt = np.sum(gkndt)
             accumulated += (accumulated - 1.0) * np.expm1(-gkdt)
@@ -505,7 +508,7 @@ class SurfaceHoppingMD(object):
 
             self.prob_cum = accumulated
             return []
-        else:
+        else:  # instantaneous
             self.zeta = self.draw_new_zeta()
             acc_prob = np.cumsum(probs)
             hops = np.less(self.zeta, acc_prob)
