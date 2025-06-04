@@ -1,14 +1,83 @@
 # -*- coding: utf-8 -*-
 """Propagating Augmented-FSSH (A-FSSH) trajectories"""
 
+from typing import Any, Union
+
 import numpy as np
 
+from .typing import ArrayLike, DtypeLike, ElectronicT
+from .util import is_string
 from .math import poisson_prob_scale
 from .propagation import rk4
 from .surface_hopping_md import SurfaceHoppingMD
+from .propagator import Propagator_
 
-from typing import Any, Union
-from .typing import ArrayLike, DtypeLike, ElectronicT
+
+class AFSSHVVPropagator(Propagator_):
+    """Surface Hopping Velocity Verlet propagator"""
+
+    def __init__(self, **options: Any) -> None:
+        """Constructor
+
+        :param options: option dictionary
+        """
+        super().__init__()
+
+    def __call__(self, traj: 'SurfaceHoppingMD', nsteps: int) -> None:
+        """Propagate trajectory using Surface Hopping Velocity Verlet algorithm
+
+        :param traj: trajectory object to propagate
+        :param nsteps: number of steps to propagate
+        """
+        dt = traj.dt
+        # first update nuclear coordinates
+        for _ in range(nsteps):
+            # Advance position using Velocity Verlet
+            acceleration = traj._force(traj.electronics) / traj.mass
+            traj.last_position = traj.position
+            traj.position += traj.velocity * dt + 0.5 * acceleration * dt * dt
+
+            traj.advance_delR(traj.last_electronics, traj.electronics)
+
+            # calculate electronics at new position
+            traj.last_electronics, traj.electronics = traj.electronics, traj.model.update(
+                traj.position, electronics=traj.electronics)
+
+            # Update velocity using Velocity Verlet
+            last_acceleration = traj._force(traj.last_electronics) / traj.mass
+            this_acceleration = traj._force(traj.electronics) / traj.mass
+            traj.last_velocity = traj.velocity
+            traj.velocity += 0.5 * (last_acceleration + this_acceleration) * dt
+
+            traj.advance_delP(traj.last_electronics, traj.electronics)
+
+            # now propagate the electronic wavefunction to the new time
+            traj.propagate_electronics(traj.last_electronics, traj.electronics, dt)
+            traj.surface_hopping(traj.last_electronics, traj.electronics)
+
+            traj.time += dt
+            traj.nsteps += 1
+
+class AFSSHPropagator(Propagator_):
+    """Surface Hopping propagator factory"""
+
+    def __new__(cls, model: Any, prop_options: Any = "vv") -> 'SHPropagator':
+        """Factory method to create a Surface Hopping propagator
+
+        :param model: Model object defining problem
+        :param prop_options: options for propagator, can be "vv" or "fssh"
+        :return: SHPropagator object
+        """
+        if is_string(prop_options):
+            prop_options = {"type": prop_options}
+        elif not isinstance(prop_options, dict):
+            raise Exception("prop_options must be a string or a dictionary")
+
+        proptype = prop_options.get("type", "vv")
+        if proptype.lower() == "vv":
+            return AFSSHVVPropagator(**prop_options)
+        else:
+            raise ValueError(f"Unrecognized surface hopping propagator type: {proptype}.")
 
 class AugmentedFSSH(SurfaceHoppingMD):
     """Augmented-FSSH (A-FSSH) dynamics, by Subotnik and coworkers
@@ -25,22 +94,24 @@ class AugmentedFSSH(SurfaceHoppingMD):
                 dtype=np.complex128)
         self.delP = np.zeros([self.model.ndim(), self.model.nstates(), self.model.nstates()],
                 dtype=np.complex128)
+        
+        self.propagator = AFSSHPropagator(self.model, "vv")  
 
-    def advance_position(self, last_electronics: Union[ElectronicT,None],
-            this_electronics: ElectronicT) -> None:
-        """Move classical position and delR"""
-        # Use base class propagation
-        SurfaceHoppingMD.advance_position(self, last_electronics, this_electronics)
+    # def advance_position(self, last_electronics: Union[ElectronicT,None],
+    #         this_electronics: ElectronicT) -> None:
+    #     """Move classical position and delR"""
+    #     # Use base class propagation
+    #     SurfaceHoppingMD.advance_position(self, last_electronics, this_electronics)
 
-        self.advance_delR(last_electronics, this_electronics)
+    #     self.advance_delR(last_electronics, this_electronics)
 
-    def advance_velocity(self, last_electronics: Union[ElectronicT,None],
-            this_electronics: ElectronicT) -> None:
-        """Move classical velocity and delP"""
-        # Use base class propagation
-        SurfaceHoppingMD.advance_velocity(self, last_electronics, this_electronics)
+    # def advance_velocity(self, last_electronics: Union[ElectronicT,None],
+    #         this_electronics: ElectronicT) -> None:
+    #     """Move classical velocity and delP"""
+    #     # Use base class propagation
+    #     SurfaceHoppingMD.advance_velocity(self, last_electronics, this_electronics)
 
-        self.advance_delP(last_electronics, this_electronics)
+    #     self.advance_delP(last_electronics, this_electronics)
 
     def compute_delF(self, this_electronics):
         delF = np.copy(this_electronics.force_matrix())
@@ -196,12 +267,12 @@ class AugmentedFSSH(SurfaceHoppingMD):
                 self.delR[:,:,:] = 0.0
                 self.delP[:,:,:] = 0.0
 
-                self.tracer.record_event("collapse", {
+                self.tracer.record_event({
                     "time" : self.time,
                     "removed" : i,
                     "gamma" : gamma[i],
                     "eta" : eta
-                    })
+                    }, event_type="collapse")
 
     def hop_update(self, hop_from, hop_to):
         """Shift delR and delP after hops"""

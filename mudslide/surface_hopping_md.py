@@ -13,63 +13,7 @@ from .constants import boltzmann, fs_to_au
 from .propagation import propagate_exponential, propagate_interpolated_rk4
 from .tracer import Trace
 from .math import poisson_prob_scale
-from.propagator import Propagator_
-
-class SHVVPropagator(Propagator_):
-    """Surface Hopping Velocity Verlet propagator"""
-
-    def __init__(self, **options: Any) -> None:
-        """Constructor
-
-        :param options: option dictionary
-        """
-        super().__init__()
-
-    def __call__(self, traj: 'SurfaceHoppingMD', nsteps: int) -> None:
-        """Propagate trajectory using Surface Hopping Velocity Verlet algorithm
-
-        :param traj: trajectory object to propagate
-        :param nsteps: number of steps to propagate
-        """
-        dt = traj.dt
-        # first update nuclear coordinates
-        for _ in range(nsteps):
-            traj.advance_position(traj.last_electronics, traj.electronics)
-
-            # calculate electronics at new position
-            traj.last_electronics, traj.electronics = traj.electronics, traj.model.update(
-                traj.position, electronics=traj.electronics)
-
-            # update velocity
-            traj.advance_velocity(traj.last_electronics, traj.electronics)
-
-            # now propagate the electronic wavefunction to the new time
-            traj.propagate_electronics(traj.last_electronics, traj.electronics, dt)
-            traj.surface_hopping(traj.last_electronics, traj.electronics)
-
-            traj.time += dt
-            traj.nsteps += 1
-
-class SHPropagator(Propagator_):
-    """Surface Hopping propagator factory"""
-
-    def __new__(cls, model: Any, prop_options: Any = "vv") -> 'SHPropagator':
-        """Factory method to create a Surface Hopping propagator
-
-        :param model: Model object defining problem
-        :param prop_options: options for propagator, can be "vv" or "fssh"
-        :return: SHPropagator object
-        """
-        if is_string(prop_options):
-            prop_options = {"type": prop_options}
-        elif not isinstance(prop_options, dict):
-            raise Exception("prop_options must be a string or a dictionary")
-
-        proptype = prop_options.get("type", "vv")
-        if proptype.lower() == "vv":
-            return SHVVPropagator(**prop_options)
-        else:
-            raise ValueError(f"Unrecognized surface hopping propagator type: {proptype}.")
+from .surface_hopping_propagator import SHPropagator
 
 class SurfaceHoppingMD(object):
     """Class to propagate a single FSSH trajectory"""
@@ -112,6 +56,7 @@ class SurfaceHoppingMD(object):
 
         # initial conditions
         self.position = np.array(x0, dtype=np.float64).reshape(model.ndim())
+        self.last_position = np.zeros_like(self.position, dtype=np.float64)
         self.velocity = np.array(p0, dtype=np.float64).reshape(model.ndim()) / self.mass
         self.last_velocity = np.zeros_like(self.velocity, dtype=np.float64)
         if "last_velocity" in options:
@@ -497,30 +442,6 @@ class SurfaceHoppingMD(object):
                     self.dt, nsteps)
         else:
             raise Exception("Unrecognized electronic integration option")
-
-    def advance_position(self, last_electronics: Union[ElectronicT, None], this_electronics: ElectronicT) -> None:
-        """
-        Move classical position forward one step
-
-        :param last_electronics: ElectronicStates from previous step
-        :param this_electronics: ElectronicStates from current step
-        """
-        acceleration = self._force(this_electronics) / self.mass
-        self.last_position = self.position
-        self.position += self.velocity * self.dt + 0.5 * acceleration * self.dt * self.dt
-
-    def advance_velocity(self, last_electronics: ElectronicT, this_electronics: ElectronicT) -> None:
-        """
-        Move classical velocity forward one step
-
-        :param electronics: ElectronicStates from current step
-        """
-
-        last_acceleration = self._force(last_electronics) / self.mass
-        this_acceleration = self._force(this_electronics) / self.mass
-
-        self.last_velocity = self.velocity
-        self.velocity += 0.5 * (last_acceleration + this_acceleration) * self.dt
 
     def surface_hopping(self, last_electronics: ElectronicT, this_electronics: ElectronicT):
         """Compute probability of hopping, generate random number, and perform hops

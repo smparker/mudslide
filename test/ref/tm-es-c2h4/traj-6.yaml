@@ -1,7 +1,8 @@
-event_log: traj-6-events.yaml
+hop_log: traj-6-hops.yaml
 log_pitch: 512
 logfiles:
 - traj-6-log_0.yaml
 name: traj-6
 nlogs: 1
 weight: 3.288033730681528e-07
+event_logs: {}

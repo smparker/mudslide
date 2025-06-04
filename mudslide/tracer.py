@@ -29,7 +29,7 @@ class Trace_(object):
         """add a single snapshot to the trace"""
         return
 
-    def record_event(self, event_dict: Dict) -> None:
+    def record_event(self, event_dict: Dict, event_type: str = "hop") -> None:
         """add a single event (e.g., hop or collapse) to the log"""
         return
 
@@ -158,13 +158,13 @@ class InMemoryTrace(Trace_):
     def hop(self, time: float, hop_from: int, hop_to: int, zeta: float, prob: float) -> None:
         self.hops.append({"time": time, "from": hop_from, "to": hop_to, "zeta": zeta, "prob": prob})
 
-    def record_event(self, event_dict):
-        self.hops.append(event_dict)
-
-    def record_event(self, event_type: str, event: Dict):
+    def record_event(self, event_dict: Dict, event_type: str = "hop"):
+        if event_type == "hop":
+            self.hops.append(event_dict)
+            return
         if event_type not in self.events:
             self.events[event_type] = []
-        self.events[event_type].append(event)
+        self.events[event_type].append(event_dict)
 
     def __iter__(self) -> Iterator:
         for snap in self.data:
@@ -208,14 +208,15 @@ class YAMLTrace(Trace_):
             # set log names
             self.main_log = self.unique_name + ".yaml"
             self.active_logfile = self.unique_name + "-log_0.yaml"
-            self.event_log = self.unique_name + "-events.yaml"
+            self.hop_log = self.unique_name + "-hops.yaml"
+            self.event_logs = {}  # Dictionary to store other event logs
 
             self.logfiles = [self.active_logfile]
 
             # create empty files
             open(os.path.join(self.location, self.main_log), "x").close()
             open(os.path.join(self.location, self.active_logfile), "x").close()
-            open(os.path.join(self.location, self.event_log), "x").close()
+            open(os.path.join(self.location, self.hop_log), "x").close()
 
             self.write_main_log()
         else:
@@ -233,7 +234,8 @@ class YAMLTrace(Trace_):
             self.active_logfile = self.logfiles[-1]
             self.nlogs = logdata["nlogs"]
             self.log_pitch = logdata["log_pitch"]
-            self.event_log = logdata["event_log"]
+            self.hop_log = logdata["hop_log"]
+            self.event_logs = logdata.get("event_logs", {})  # Get event_logs with default empty dict
             self.weight = logdata["weight"]
 
             # sizes assume log_pitch never changes. is that safe?
@@ -243,7 +245,7 @@ class YAMLTrace(Trace_):
             self.logsize = self.log_pitch * (self.nlogs - 1) + self.active_logsize
 
     def files(self, absolute_path=True):
-        rel_files = self.logfiles + [self.main_log, self.event_log]
+        rel_files = self.logfiles + [self.main_log, self.hop_log] + list(self.event_logs.values())
         if absolute_path:
             return [os.path.join(self.location, x) for x in rel_files]
         else:
@@ -256,7 +258,8 @@ class YAMLTrace(Trace_):
             "logfiles": self.logfiles,
             "nlogs": self.nlogs,
             "log_pitch": self.log_pitch,
-            "event_log": self.event_log,
+            "hop_log": self.hop_log,
+            "event_logs": self.event_logs,
             "weight": self.weight
         }
 
@@ -283,8 +286,17 @@ class YAMLTrace(Trace_):
         hop_data = {"event": "hop", "time": time, "from": hop_from, "to": hop_to, "zeta": zeta, "prob": prob}
         self.record_event(hop_data)
 
-    def record_event(self, event_dict):
-        with open(os.path.join(self.location, self.event_log), "a") as f:
+    def record_event(self, event_dict: Dict, event_type: str = "hop"):
+        if event_type == "hop":
+            log = self.hop_log
+        else:
+            if event_type not in self.event_logs:
+                # Create new event log file if it doesn't exist
+                self.event_logs[event_type] = f"{self.unique_name}-{event_type}.yaml"
+                open(os.path.join(self.location, self.event_logs[event_type]), "x").close()
+                self.write_main_log()  # Update main log with new event log
+            log = self.event_logs[event_type]
+        with open(os.path.join(self.location, log), "a") as f:
             yaml.safe_dump([event_dict], f, explicit_start=False)
 
     def clone(self):
@@ -302,7 +314,14 @@ class YAMLTrace(Trace_):
             shutil.copy(os.path.join(self.location, selflog), os.path.join(self.location, outlog))
         out.active_logfile = out.logfiles[-1]
 
-        shutil.copy(os.path.join(self.location, self.event_log), os.path.join(self.location, out.event_log))
+        # Copy hop log
+        shutil.copy(os.path.join(self.location, self.hop_log), os.path.join(self.location, out.hop_log))
+        
+        # Copy all event logs
+        out.event_logs = {}
+        for event_type, log_file in self.event_logs.items():
+            out.event_logs[event_type] = f"{out.unique_name}-{event_type}.yaml"
+            shutil.copy(os.path.join(self.location, log_file), os.path.join(self.location, out.event_logs[event_type]))
 
         out.write_main_log()
 
