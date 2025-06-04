@@ -140,7 +140,7 @@ class TestTMExDynamics(_TestTM):
         for t in ref_times:
             np.testing.assert_almost_equal(refs[t]["density_matrix"], results[t]["density_matrix"], decimal=8)
             np.testing.assert_almost_equal(refs[t]["position"], results[t]["position"], decimal=8)
-            np.testing.assert_almost_equal(refs[t]["momentum"], results[t]["momentum"], decimal=8)
+            np.testing.assert_almost_equal(refs[t]["velocity"], results[t]["velocity"], decimal=8)
 
         for t in ref_times:
             for s1 in states:

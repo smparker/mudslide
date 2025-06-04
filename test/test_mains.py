@@ -109,9 +109,9 @@ class TrajectoryTest(object):
         checkdir = os.path.join(testdir, "checks", self.method)
         options += "--logdir {}".format(checkdir).split()
 
-        clean_directory(checkdir)
+        # clean_directory(checkdir)
         os.makedirs(checkdir, exist_ok=True)
-        outfile = os.path.join(checkdir, "{:s}_k{:d}.out".format(self.model, k))
+        outfile = os.path.join(checkdir, f"{self.model:s}_k{k:d}.out")
         with open(outfile, "w") as f:
             mudslide.__main__.main(options, f)
 
@@ -241,7 +241,7 @@ class TestSurface(unittest.TestCase):
                     options = "-m {:s} -r -11 11 -n 200".format(m).split()
                 checkdir = os.path.join(testdir, "checks", "surface")
                 os.makedirs(checkdir, exist_ok=True)
-                outfile = f"{m:s}.out"
+                outfile = os.path.join(checkdir, f"{m:s}.out")
                 options.append(f"--output={outfile}")
                 with open(outfile, "w") as f:
                     mudslide.surface.main(options)

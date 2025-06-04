@@ -102,7 +102,8 @@ class TestOpenMM:
 
         xref = np.loadtxt("x.txt")
         pref = np.loadtxt("p.txt")
+        vref = pref / masses
 
         assert np.allclose(results[-1]["position"], xref)
-        assert np.allclose(results[-1]["momentum"], pref, rtol=1e-7)
+        assert np.allclose(results[-1]["velocity"], vref, rtol=1e-7)
 

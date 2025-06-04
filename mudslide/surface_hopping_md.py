@@ -121,8 +121,8 @@ class SurfaceHoppingMD(object):
         penultimate_snap = log[-2]
 
         x = last_snap["position"]
-        v = np.array(last_snap["momentum"]) / model.mass
-        last_velocity = np.array(penultimate_snap["momentum"]) / model.mass
+        v = np.array(last_snap["velocity"])
+        last_velocity = np.array(penultimate_snap["velocity"])
         t0 = last_snap["time"]
         dt = t0 - penultimate_snap["time"]
         k = last_snap["active"]
@@ -246,7 +246,7 @@ class SurfaceHoppingMD(object):
         out = {
             "time": self.time,
             "position": self.position.tolist(),
-            "momentum": (self.mass * self.velocity).tolist(),
+            "velocity": self.velocity.tolist(),
             "potential": self.potential_energy().item(),
             "kinetic": self.kinetic_energy().item(),
             "temperature": 2 * self.kinetic_energy().item() / ( boltzmann * self.model.ndim()),

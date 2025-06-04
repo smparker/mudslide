@@ -45,14 +45,14 @@ class TrajectoryTest(unittest.TestCase):
 
         ref_t16 = refs[16]
 
-        for prop in ["position", "momentum", "density_matrix"]:
+        for prop in ["position", "velocity", "density_matrix"]:
             np.testing.assert_almost_equal(snap_t16[prop], ref_t16[prop], decimal=8)
 
         for prop in ["potential", "kinetic", "hopping"]:
             self.assertAlmostEqual(snap_t16[prop], ref_t16[prop], places=8)
 
     def test_restart_from_trace(self):
-        refdir = os.path.join(_refdir, "tracer")
+        refdir = os.path.join(_refdir, "trace_restart")
         rundir = os.path.join(_checkdir, "trace_restart")
         clean_directory(rundir)
 
@@ -78,7 +78,7 @@ class TrajectoryTest(unittest.TestCase):
         refs = mudslide.load_log(os.path.join(refdir, "test-traj-0.yaml"))
         ref_t16 = refs[16]
 
-        for prop in ["position", "momentum", "density_matrix"]:
+        for prop in ["position", "velocity", "density_matrix"]:
             with self.subTest(property=prop):
                 np.testing.assert_almost_equal(snap_t16[prop], ref_t16[prop], decimal=8)
 

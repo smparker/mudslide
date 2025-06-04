@@ -33,7 +33,7 @@ class TrajectoryCum(SurfaceHoppingMD):
         out = {
             "time": self.time,
             "position": self.position.tolist(),
-            "momentum": (self.mass * self.velocity).tolist(),
+            "velocity": self.velocity.tolist(),
             "potential": self.potential_energy().item(),
             "kinetic": self.kinetic_energy().item(),
             "energy": self.total_energy().item(),

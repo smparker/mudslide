@@ -19,12 +19,12 @@ def test_zero_temperature_dynamics():
     results = traj.simulate()
 
     assert np.allclose(x, results[0]["position"])
-    assert np.allclose(v * water_model.mass, results[0]["momentum"])
+    assert np.allclose(v, results[0]["velocity"])
     assert np.isclose(water_model.E0, results[0]["potential"])
     assert np.isclose(0.0, results[0]["kinetic"])
 
     assert np.allclose(x, results[9]["position"])
-    assert np.allclose(v * water_model.mass, results[9]["momentum"])
+    assert np.allclose(v, results[9]["velocity"])
     assert np.isclose(water_model.E0, results[9]["potential"])
     assert np.isclose(0.0, results[9]["kinetic"])
 
@@ -40,7 +40,7 @@ def test_1000K_from_equilibrium():
     results = traj.simulate()
 
     assert np.allclose(x, results[0]["position"])
-    assert np.allclose(velocities * masses, results[0]["momentum"])
+    assert np.allclose(velocities, results[0]["velocity"])
     assert np.isclose(water_model.E0, results[0]["potential"])
     assert np.isclose(KE, results[0]["kinetic"])
 
@@ -50,6 +50,6 @@ def test_1000K_from_equilibrium():
     KE9 = 0.013957193155584462
 
     assert np.allclose(x9, results[9]["position"])
-    assert np.allclose(v9 * masses, results[9]["momentum"])
+    assert np.allclose(v9, results[9]["velocity"])
     assert np.isclose(V9, results[9]["potential"])
     assert np.isclose(KE9, results[9]["kinetic"])

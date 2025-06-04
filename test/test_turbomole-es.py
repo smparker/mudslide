@@ -110,7 +110,7 @@ class TestTMModel(unittest.TestCase):
         for t in ref_times:
             np.testing.assert_almost_equal(refs[t]["density_matrix"], results[1][t]["density_matrix"], decimal=8)
             np.testing.assert_almost_equal(refs[t]["position"], results[1][t]["position"], decimal=8)
-            np.testing.assert_almost_equal(refs[t]["momentum"], results[1][t]["momentum"], decimal=8)
+            np.testing.assert_almost_equal(refs[t]["velocity"], results[1][t]["velocity"], decimal=8)
 
         for t in ref_times:
             for s1 in states:

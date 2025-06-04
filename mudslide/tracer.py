@@ -76,7 +76,7 @@ class Trace_(object):
             headerlist += ["%12s" % "hopping"]
         print("#" + " ".join(headerlist), file=file)
         for i in self:
-            line = " {time:12.6f} {position[0]:12.6f} {momentum[0]:12.6f} {potential:12.6f} {kinetic:12.6f} {energy:12.6f} ".format(
+            line = " {time:12.6f} {position[0]:12.6f} {velocity[0]:12.6f} {potential:12.6f} {kinetic:12.6f} {energy:12.6f} ".format(
                 **i)
             if has_electronic_wfn:
                 line += " ".join(["%12.6f" % x for x in np.real(np.diag(i["density_matrix"]))])

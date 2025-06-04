@@ -1,3 +1,4 @@
+event_logs: {}
 hop_log: traj-0-hops.yaml
 log_pitch: 512
 logfiles:
@@ -5,4 +6,3 @@ logfiles:
 name: traj-0
 nlogs: 1
 weight: 1.0
-event_logs: {}
