@@ -15,7 +15,11 @@ from .math import poisson_prob_scale
 from .propagator import Propagator_
 
 class SHVVPropagator(Propagator_):
-    """Surface Hopping Velocity Verlet propagator"""
+    """Velocity Verlet propagator for surface hopping dynamics.
+    
+    This class implements the Velocity Verlet algorithm for propagating
+    classical trajectories in surface hopping molecular dynamics simulations.
+    """
 
     def __init__(self, **options: Any) -> None:
         """Constructor
@@ -25,10 +29,14 @@ class SHVVPropagator(Propagator_):
         super().__init__()
 
     def __call__(self, traj: 'SurfaceHoppingMD', nsteps: int) -> None:
-        """Propagate trajectory using Surface Hopping Velocity Verlet algorithm
-
-        :param traj: trajectory object to propagate
-        :param nsteps: number of steps to propagate
+        """Propagate trajectory using Velocity Verlet algorithm.
+        
+        Parameters
+        ----------
+        traj : SurfaceHoppingMD
+            Trajectory object to propagate
+        nsteps : int
+            Number of steps to propagate
         """
         dt = traj.dt
         # first update nuclear coordinates
@@ -56,14 +64,31 @@ class SHVVPropagator(Propagator_):
             traj.nsteps += 1
 
 class SHPropagator(Propagator_):
-    """Surface Hopping propagator factory"""
+    """Surface Hopping propagator factory.
+    
+    This class serves as a factory for creating different types of propagators
+    used in surface hopping molecular dynamics simulations.
+    """
 
     def __new__(cls, model: Any, prop_options: Any = "vv") -> 'SHPropagator':
-        """Factory method to create a Surface Hopping propagator
-
-        :param model: Model object defining problem
-        :param prop_options: options for propagator, can be "vv" or "fssh"
-        :return: SHPropagator object
+        """Create a new surface hopping propagator instance.
+        
+        Parameters
+        ----------
+        model : Any
+            Model object defining the problem
+        prop_options : Any, optional
+            Propagator options, can be a string or dictionary, by default "vv"
+            
+        Returns
+        -------
+        SHPropagator
+            A new propagator instance
+            
+        Raises
+        ------
+        ValueError
+            If the propagator type is unknown
         """
         if is_string(prop_options):
             prop_options = {"type": prop_options}

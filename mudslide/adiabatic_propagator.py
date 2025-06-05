@@ -11,20 +11,31 @@ from .propagator import Propagator_
 from .util import remove_center_of_mass_motion, remove_angular_momentum
 
 class VVPropagator(Propagator_):
-    """Velocity Verlet propagator"""
+    """Velocity Verlet propagator.
+    
+    This class implements the Velocity Verlet algorithm for propagating
+    classical trajectories in molecular dynamics simulations.
+    """
 
     def __init__(self, **options: Any) -> None:
-        """Constructor
-
-        :param options: option dictionary
+        """Initialize the Velocity Verlet propagator.
+        
+        Parameters
+        ----------
+        **options : Any
+            Additional options for the propagator
         """
         super().__init__()
 
     def __call__(self, traj: 'AdiabaticMD', nsteps: int) -> None:
-        """Propagate trajectory using Velocity Verlet algorithm
-
-        :param traj: trajectory object to propagate
-        :param nsteps: number of steps to propagate
+        """Propagate trajectory using Velocity Verlet algorithm.
+        
+        Parameters
+        ----------
+        traj : AdiabaticMD
+            Trajectory object to propagate
+        nsteps : int
+            Number of steps to propagate
         """
         dt = traj.dt
         # first update nuclear coordinates
@@ -65,7 +76,13 @@ class VVPropagator(Propagator_):
             traj.nsteps += 1
 
 class NoseHooverChainPropagator(Propagator_):
-    """
+    """Nose-Hoover Chain thermostat propagator.
+    
+    Implements the Nose-Hoover Chain thermostat algorithm for constant temperature
+    molecular dynamics simulations. Based on the work of Martyna et al. (1996).
+    
+    References
+    ----------
     G. J. Martyna, M. E. Tuckerman, D. J. Tobias, and Michael L. Klein,
     "Explicit reversible integrators for extended systems dynamics"
     Molecular Physics, 87, 1117-1157 (1996)
@@ -73,11 +90,22 @@ class NoseHooverChainPropagator(Propagator_):
 
     def __init__(self, temperature: np.float64, timescale: np.float64 = 1e2 * fs_to_au,
                  ndof: int = 3, nchains: int = 3, nys: int = 3, nc: int = 1):
-        """Constructor
-
-        :param temperature: thermostat temperature
-        :param timescale: thermostat timescale
-        :param nchains: number of thermostat chains
+        """Initialize the Nose-Hoover Chain thermostat.
+        
+        Parameters
+        ----------
+        temperature : np.float64
+            Thermostat temperature
+        timescale : np.float64, optional
+            Thermostat timescale, by default 1e2 * fs_to_au
+        ndof : int, optional
+            Number of degrees of freedom, by default 3
+        nchains : int, optional
+            Number of thermostat chains, by default 3
+        nys : int, optional
+            Number of Yoshida-Suzuki steps, by default 3
+        nc : int, optional
+            Number of cycles, by default 1
         """
         self.temperature = temperature
         self.timescale = timescale
@@ -215,14 +243,30 @@ class NoseHooverChainPropagator(Propagator_):
             traj.nsteps += 1
 
 class AdiabaticPropagator:
-    """Factory class for creating propagator objects"""
+    """Factory class for creating propagator objects.
+    
+    This class serves as a factory for creating different types of propagators
+    used in adiabatic molecular dynamics simulations.
+    """
     def __new__(cls, model: Any, prop_options: Any = "vv") -> Propagator_:
-        """Factory function for creating propagator objects
-
-        :param prop_type: string or dict propagator type
-        :param model: model object (may be necessary to set some defaults)
-
-        :return: propagator object
+        """Create a new propagator instance.
+        
+        Parameters
+        ----------
+        model : Any
+            Model object defining the problem
+        prop_options : Any, optional
+            Propagator options, can be a string or dictionary, by default "vv"
+            
+        Returns
+        -------
+        Propagator_
+            A new propagator instance
+            
+        Raises
+        ------
+        ValueError
+            If the propagator type is unknown
         """
         if isinstance(prop_options, str):
             prop_options = { "type": prop_options.lower() }
@@ -231,7 +275,7 @@ class AdiabaticPropagator:
 
         if isinstance(prop_options, dict):
             prop_type = prop_options.pop("type", "vv")
-            if prop_type in ["vv", "velocity verlet"]: # pylint: disable=no-else-return
+            if prop_type in ["vv", "velocity verlet"]:
                 return VVPropagator(**prop_options)
             elif prop_type in ["nh", "nhc", "nose-hoover"]:
                 return NoseHooverChainPropagator(**prop_options)

@@ -17,8 +17,7 @@ from mudslide.typing import ElectronicT
 
 
 class ElectronicModel_(object):
-    """
-    Base class for handling electronic structure part of dynamics
+    """Base class for handling electronic structure part of dynamics.
     
     The electronic model is a base class for handling the electronic
     structure part of the dynamics.
@@ -48,16 +47,35 @@ class ElectronicModel_(object):
     _forces_available : ArrayLike
         A boolean array indicating which forces are available.
     _derivative_coupling : ArrayLike
-
+        The derivative coupling matrix.
     """
     def __init__(self, representation: str = "adiabatic", reference: Any = None,
                  nstates: int = 0, ndims: int = 1, nparticles: int = 1, ndim: int = None,
                  atom_types: List[str] = None):
+        """Initialize the electronic model.
+        
+        Parameters
+        ----------
+        representation : str, optional
+            The representation to use ("adiabatic" or "diabatic"), by default "adiabatic"
+        reference : Any, optional
+            The reference electronic state, by default None
+        nstates : int, optional
+            Number of electronic states, by default 0
+        ndims : int, optional
+            Number of dimensions per particle, by default 1
+        nparticles : int, optional
+            Number of particles, by default 1
+        ndim : int, optional
+            Total number of classical degrees of freedom, by default None
+        atom_types : List[str], optional
+            List of atom types, by default None
+        """
         self._ndims = ndims
         self._nparticles = nparticles
-        if ndim is None: # if ndim is not given, it is set to ndims * nparticles
+        if ndim is None:
             self.ndim_ = ndims * nparticles
-        else: # if ndim is given, it overrides the default
+        else:
             self.ndim_ = ndim
             self._ndims = ndim
             self._nparticles = 1
@@ -76,30 +94,66 @@ class ElectronicModel_(object):
         self.atom_types: List[str] = atom_types
 
     def ndim(self) -> int:
-        """Number of classical degrees of freedom"""
+        """Get the number of classical degrees of freedom.
+        
+        Returns
+        -------
+        int
+            Number of classical degrees of freedom
+        """
         return self.ndim_
 
     @property
     def nparticles(self) -> int:
-        """Number of particles"""
+        """Get the number of particles.
+        
+        Returns
+        -------
+        int
+            Number of particles
+        """
         return self._nparticles
 
     @property
     def ndims(self) -> int:
-        """Number of dimensions for each particle"""
+        """Get the number of dimensions per particle.
+        
+        Returns
+        -------
+        int
+            Number of dimensions per particle
+        """
         return self._ndims
 
     @property
     def dimensionality(self) -> Tuple[int, int]:
-        """Number of particles and number of dimensions"""
+        """Get the number of particles and dimensions.
+        
+        Returns
+        -------
+        Tuple[int, int]
+            Tuple of (number of particles, number of dimensions)
+        """
         return self._nparticles, self._ndims
 
     def nstates(self) -> int:
-        """Number of electronic states"""
+        """Get the number of electronic states.
+        
+        Returns
+        -------
+        int
+            Number of electronic states
+        """
         return self.nstates_
 
     def hamiltonian(self) -> ArrayLike:
-        """Return the electronic hamiltonian"""
+        """Get the electronic Hamiltonian.
+        
+        Returns
+        -------
+        ArrayLike
+            The electronic Hamiltonian matrix
+        """
         return self._hamiltonian
 
     def force(self, state: int=0) -> ArrayLike:
@@ -198,24 +252,48 @@ class ElectronicModel_(object):
 
 
 class DiabaticModel_(ElectronicModel_):
-    '''
-    Base class to handle model problems given in
-    simple diabatic forms.
-
-    To derive from DiabaticModel_, the following functions
-    must be implemented:
-        - def V(self, X: ArrayLike) -> ArrayLike
-          V(x) should return an ndarray of shape (nstates, nstates)
-        - def dV(self, X: ArrayLike) -> ArrayLike
-          dV(x) shoudl return an ndarry of shape (nstates, nstates, ndim)
-    '''
+    """Base class to handle model problems given in simple diabatic forms.
+    
+    To derive from DiabaticModel_, the following functions must be implemented:
+    
+    - def V(self, X: ArrayLike) -> ArrayLike
+      V(x) should return an ndarray of shape (nstates, nstates)
+    - def dV(self, X: ArrayLike) -> ArrayLike
+      dV(x) should return an ndarray of shape (nstates, nstates, ndim)
+    """
 
     def __init__(self, representation: str = "adiabatic", reference: Any = None,
                  nstates:int = 0, ndim: int = 0):
+        """Initialize the diabatic model.
+        
+        Parameters
+        ----------
+        representation : str, optional
+            The representation to use, by default "adiabatic"
+        reference : Any, optional
+            The reference electronic state, by default None
+        nstates : int, optional
+            Number of electronic states, by default 0
+        ndim : int, optional
+            Number of classical degrees of freedom, by default 0
+        """
         ElectronicModel_.__init__(self, representation=representation, reference=reference,
                                   nstates=nstates, ndim=ndim)
 
     def compute(self, X: ArrayLike, couplings: Any = None, gradients: Any = None, reference: Any = None) -> None:
+        """Compute electronic properties at position X.
+        
+        Parameters
+        ----------
+        X : ArrayLike
+            Position at which to compute properties
+        couplings : Any, optional
+            Coupling information, by default None
+        gradients : Any, optional
+            Gradient information, by default None
+        reference : Any, optional
+            Reference state information, by default None
+        """
         self._position = X
 
         self._reference, self._hamiltonian = self._compute_basis_states(self.V(X), reference=reference)
@@ -295,25 +373,71 @@ class DiabaticModel_(ElectronicModel_):
 
 
 class AdiabaticModel_(ElectronicModel_):
-    '''
-    Base class to handle model problems that have an auxiliary electronic problem admitting
+    """Base class to handle model problems that have an auxiliary electronic problem.
+    
+    This class handles model problems that have an auxiliary electronic problem admitting
     many electronic states that are truncated to just a few. Sort of a truncated DiabaticModel_.
-    '''
+    """
 
     def __init__(self, representation: str = "adiabatic", reference: Any = None,
                  nstates:int = 0, ndim: int = 0):
+        """Initialize the adiabatic model.
+        
+        Parameters
+        ----------
+        representation : str, optional
+            The representation to use, by default "adiabatic"
+        reference : Any, optional
+            The reference electronic state, by default None
+        nstates : int, optional
+            Number of electronic states, by default 0
+        ndim : int, optional
+            Number of classical degrees of freedom, by default 0
+            
+        Raises
+        ------
+        Exception
+            If representation is set to "diabatic"
+        """
         if representation == "diabatic":
             raise Exception('Adiabatic models can only be run in adiabatic mode')
         ElectronicModel_.__init__(self, representation=representation, reference=reference,
                                   nstates=nstates, ndim=ndim)
 
     def nstates(self) -> int:
+        """Get the number of electronic states.
+        
+        Returns
+        -------
+        int
+            Number of electronic states
+        """
         return self.nstates_
 
     def ndim(self) -> int:
+        """Get the number of classical degrees of freedom.
+        
+        Returns
+        -------
+        int
+            Number of classical degrees of freedom
+        """
         return self.ndim_
 
     def compute(self, X: ArrayLike, couplings: Any = None, gradients: Any = None, reference: Any = None) -> None:
+        """Compute electronic properties at position X.
+        
+        Parameters
+        ----------
+        X : ArrayLike
+            Position at which to compute properties
+        couplings : Any, optional
+            Coupling information, by default None
+        gradients : Any, optional
+            Gradient information, by default None
+        reference : Any, optional
+            Reference state information, by default None
+        """
         self._position = X
 
         self._reference, self._hamiltonian = self._compute_basis_states(self.V(X), reference=reference)
@@ -328,6 +452,24 @@ class AdiabaticModel_(ElectronicModel_):
         self._force_matrix = self._compute_force_matrix(dV, self._reference)
 
     def update(self, X: ArrayLike, electronics: Any = None, couplings: Any = None, gradients: Any = None) -> 'AdiabaticModel_':
+        """Update the model with new position and electronic information.
+        
+        Parameters
+        ----------
+        X : ArrayLike
+            New position
+        electronics : Any, optional
+            Electronic state information, by default None
+        couplings : Any, optional
+            Coupling information, by default None
+        gradients : Any, optional
+            Gradient information, by default None
+            
+        Returns
+        -------
+        AdiabaticModel_
+            Updated model instance
+        """
         out = cp.copy(self)
         if electronics:
             self._reference = electronics._reference

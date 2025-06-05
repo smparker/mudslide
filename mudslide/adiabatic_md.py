@@ -28,13 +28,54 @@ class AdiabaticMD:
                  queue: Any = None,
                  strict_option_check: bool = True,
                  **options: Any):
-        """Constructor
-        :param model: Model object defining problem
-        :param x0: Initial position
-        :param v0: Initial velocity
-        :param tracer: spawn from TraceManager to collect results
-        :param queue: Trajectory queue
-        :param options: option dictionary
+        """
+        Initialize the AdiabaticMD class.
+
+        Parameters
+        ----------
+        model : Any
+            Model object defining problem
+        x0 : ArrayLike
+            Initial position
+        v0 : ArrayLike
+            Initial velocity
+        tracer : Any, optional
+            spawn from TraceManager to collect results, by default None
+        queue : Any, optional
+            Trajectory queue, by default None
+        strict_option_check : bool, optional
+            Whether to strictly check options, by default True
+        **options : Any
+            Additional options for the simulation. Recognized options are:
+
+            dt : float, optional
+                Time step for nuclear propagation (in atomic units). Required.
+            t0 : float, optional
+                Initial time. Default is 0.0.
+            trace_every : int, optional
+                Interval (in steps) at which to record trajectory data. Default is 1.
+            remove_com_every : int, optional
+                Interval for removing center-of-mass motion. Default is 0 (never).
+            remove_angular_momentum_every : int, optional
+                Interval for removing angular momentum. Default is 0 (never).
+            max_steps : int, optional
+                Maximum number of steps. Default is 100000.
+            max_time : float, optional
+                Maximum simulation time. Default is 1e25.
+            bounds : tuple or list, optional
+                Tuple or list of (lower, upper) bounds for the simulation box. Default is None.
+            propagator : str or dict, optional
+                The propagator to use for nuclear motion. Can be a string (e.g., 'VV') or a dictionary with more options. Default is 'VV'.
+            seed_sequence : int or numpy.random.SeedSequence, optional
+                Seed or SeedSequence for random number generation. Default is None.
+            electronics : object, optional
+                Initial electronic state object. Default is None.
+            outcome_type : str, optional
+                Type of outcome to record (e.g., 'state'). Default is 'state'.
+            weight : float, optional
+                Statistical weight of the trajectory. Default is 1.0.
+            restarting : bool, optional
+                Whether this is a restarted trajectory. Default is False.
         """
         check_options(options, self.recognized_options, strict=strict_option_check)
 

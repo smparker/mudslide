@@ -15,13 +15,20 @@ from .tracer import Trace
 from .math import poisson_prob_scale
 from .surface_hopping_propagator import SHPropagator
 
-class SurfaceHoppingMD(object):
-    """Class to propagate a single FSSH trajectory"""
+class SurfaceHoppingMD:
+    """Class to propagate a single FSSH trajectory.
+    
+    This class implements the Fewest Switches Surface Hopping (FSSH) algorithm
+    for nonadiabatic molecular dynamics simulations. It handles the propagation
+    of both nuclear and electronic degrees of freedom, including surface hopping
+    events between electronic states.
+    """
     recognized_options = [ "propagator", "last_velocity", "bounds",
         "duration", "dt", "t0", "previous_steps", "trace_every", "max_time",
         "seed_sequence",
         "outcome_type",
-        "electronics", "electronic_integration", "max_electronic_dt", "starting_electronic_intervals",
+        "electronics",
+        "electronic_integration", "max_electronic_dt", "starting_electronic_intervals",
         "weight",
         "restarting",
         "hopping_probability", "zeta_list",
@@ -38,14 +45,69 @@ class SurfaceHoppingMD(object):
                  queue: Any = None,
                  strict_option_check: bool = True,
                  **options: Any):
-        """Constructor
-        :param model: Model object defining problem
-        :param x0: Initial position
-        :param v0: Initial velocity
-        :param rho0: Initial density matrix
-        :param tracer: spawn from TraceManager to collect results
-        :param queue: Trajectory queue
-        :param options: option dictionary
+        """Initialize the SurfaceHoppingMD class.
+        
+        Parameters
+        ----------
+        model : Any
+            Model object defining problem
+        x0 : ArrayLike
+            Initial position
+        v0 : ArrayLike
+            Initial velocity
+        rho0 : ArrayLike
+            Initial density matrix
+        tracer : Any, optional
+            spawn from TraceManager to collect results, by default "default"
+        queue : Any, optional
+            Trajectory queue, by default None
+        strict_option_check : bool, optional
+            Whether to strictly check options, by default True
+        **options : Any
+            Additional options for the simulation. Recognized options are:
+
+            propagator : str or dict, optional
+                The propagator to use for nuclear motion. Can be a string (e.g., 'vv', 'fssh') or a dictionary with more options. Default is 'vv'.
+            last_velocity : array-like, optional
+                The velocity from the previous step, used for restarts. Default is zeros.
+            bounds : tuple or list, optional
+                Tuple or list of (lower, upper) bounds for the simulation box. Used to determine if the trajectory is inside a region. Default is None.
+            duration : dict, optional
+                Dictionary controlling simulation duration (overrides max_steps, max_time, etc.). Default is auto-generated.
+            dt : float, optional
+                Time step for nuclear propagation (in atomic units). Default is fs_to_au.
+            t0 : float, optional
+                Initial time. Default is 0.0.
+            previous_steps : int, optional
+                Number of previous steps (for restarts). Default is 0.
+            trace_every : int, optional
+                Interval (in steps) at which to record trajectory data. Default is 1.
+            max_time : float, optional
+                Maximum simulation time. Default is 1e25.
+            seed_sequence : int or numpy.random.SeedSequence, optional
+                Seed or SeedSequence for random number generation. Default is None.
+            outcome_type : str, optional
+                Type of outcome to record (e.g., 'state'). Default is 'state'.
+            electronics : object, optional
+                Initial electronic state object. Default is None.
+            electronic_integration : str, optional
+                Method for integrating electronic equations ('exp' or 'linear-rk4'). Default is 'exp'.
+            max_electronic_dt : float, optional
+                Maximum time step for electronic integration. Default is 0.1.
+            starting_electronic_intervals : int, optional
+                Initial number of intervals for electronic integration. Default is 4.
+            weight : float, optional
+                Statistical weight of the trajectory. Default is 1.0.
+            restarting : bool, optional
+                Whether this is a restarted trajectory. Default is False.
+            hopping_probability : str, optional
+                Method for computing hopping probability ('tully' or 'poisson'). Default is 'tully'.
+            zeta_list : list, optional
+                List of pre-determined random numbers for hopping decisions. Default is [].
+            state0 : int, optional
+                Initial electronic state (used if rho0 is a matrix). Required if rho0 is not scalar.
+            hopping_method : str, optional
+                Hopping method: 'cumulative' or 'instantaneous'. Default is 'cumulative'.
         """
         check_options(options, self.recognized_options, strict=strict_option_check)
 
@@ -127,6 +189,22 @@ class SurfaceHoppingMD(object):
 
     @classmethod
     def restart(cls, model, log, **options) -> 'SurfaceHoppingMD':
+        """Restart a simulation from a previous trajectory log.
+        
+        Parameters
+        ----------
+        model : Any
+            Model object defining problem
+        log : Any
+            Previous trajectory log
+        **options : Any
+            Additional options for the simulation
+            
+        Returns
+        -------
+        SurfaceHoppingMD
+            New instance initialized from the log data
+        """
         last_snap = log[-1]
         penultimate_snap = log[-2]
 
@@ -159,7 +237,13 @@ class SurfaceHoppingMD(object):
                    **options)
 
     def update_weight(self, weight: float) -> None:
-        """Update weight held by trajectory and by trace"""
+        """Update weight held by trajectory and by trace.
+        
+        Parameters
+        ----------
+        weight : float
+            New weight value
+        """
         self.weight = weight
         self.tracer.weight = weight
 
@@ -167,7 +251,18 @@ class SurfaceHoppingMD(object):
             self.force_quit = True
 
     def __deepcopy__(self, memo: Any) -> 'SurfaceHoppingMD':
-        """Override deepcopy"""
+        """Override deepcopy.
+        
+        Parameters
+        ----------
+        memo : Any
+            Memo dictionary for deepcopy
+            
+        Returns
+        -------
+        SurfaceHoppingMD
+            Deep copy of the instance
+        """
         cls = self.__class__
         result = cls.__new__(cls)
         memo[id(self)] = result
@@ -177,23 +272,32 @@ class SurfaceHoppingMD(object):
         return result
 
     def clone(self) -> 'SurfaceHoppingMD':
-        """Clone existing trajectory for spawning
-
-        :return: copy of current object
+        """Clone existing trajectory for spawning.
+        
+        Returns
+        -------
+        SurfaceHoppingMD
+            Copy of current object
         """
         return cp.deepcopy(self)
 
     def random(self) -> np.float64:
-        """Get random number for hopping decisions
-
-        :return: uniform random number between 0 and 1
+        """Get random number for hopping decisions.
+        
+        Returns
+        -------
+        np.float64
+            Uniform random number between 0 and 1
         """
         return self.random_state.uniform()
 
     def currently_interacting(self) -> bool:
-        """Determines whether trajectory is currently inside an interaction region
-
-        :return: boolean
+        """Determine whether trajectory is currently inside an interaction region.
+        
+        Returns
+        -------
+        bool
+            True if trajectory is inside interaction region, False otherwise
         """
         if self.duration["box_bounds"] is None:
             return False
@@ -201,11 +305,13 @@ class SurfaceHoppingMD(object):
             self.position < self.duration["box_bounds"][1])
 
     def duration_initialize(self, options: Dict[str, Any]) -> None:
-        """Initializes variables related to continue_simulating
-
-        :param options: dictionary with options
+        """Initialize variables related to continue_simulating.
+        
+        Parameters
+        ----------
+        options : Dict[str, Any]
+            Dictionary with options for simulation duration
         """
-
         duration = {}  # type: Dict[str, Any]
         duration['found_box'] = False
 
@@ -220,9 +326,12 @@ class SurfaceHoppingMD(object):
         self.duration = duration
 
     def continue_simulating(self) -> bool:
-        """Decide whether trajectory should keep running
-
-        :return: True if trajectory should keep running, False if it should finish
+        """Decide whether trajectory should keep running.
+        
+        Returns
+        -------
+        bool
+            True if trajectory should keep running, False if it should finish
         """
         if self.force_quit:
             return False
@@ -239,19 +348,26 @@ class SurfaceHoppingMD(object):
             return True
 
     def trace(self, force: bool = False) -> None:
-        """Add results from current time point to tracing function
-        Only adds snapshot if nsteps%trace_every == 0, unless force=True
-
-        :param force: force snapshot
+        """Add results from current time point to tracing function.
+        
+        Only adds snapshot if nsteps%trace_every == 0, unless force=True.
+        
+        Parameters
+        ----------
+        force : bool, optional
+            Force snapshot regardless of trace_every, by default False
         """
         if force or (self.nsteps % self.trace_every) == 0:
             self.tracer.collect(self.snapshot())
             #self.trouble_shooter()
 
     def snapshot(self) -> Dict[str, Any]:
-        """Collect data from run for logging
-
-        :return: dictionary with all data from current time step
+        """Collect data from run for logging.
+        
+        Returns
+        -------
+        Dict[str, Any]
+            Dictionary with all data from current time step
         """
         out = {
             "time": float(self.time),
@@ -272,59 +388,87 @@ class SurfaceHoppingMD(object):
         return out
 
     def trouble_shooter(self):
+        """Write debugging information to snapout.dat file."""
         log = self.snapshot()
         with open("snapout.dat", "a") as file:
             file.write("{}\t{}\t{}\t{}\t{}\n".format(log["time"], log["potential"], log["kinetic"], log["energy"],
                                                      log["active"]))
 
     def kinetic_energy(self) -> np.float64:
-        """Kinetic energy
-
-        :return: kinetic energy
+        """Calculate kinetic energy.
+        
+        Returns
+        -------
+        np.float64
+            Kinetic energy
         """
         return 0.5 * np.sum(self.mass * self.velocity**2)
 
     def potential_energy(self, electronics: ElectronicT = None) -> DtypeLike:
-        """Potential energy
-
-        :param electronics: ElectronicStates from current step
-        :return: potential energy
+        """Calculate potential energy.
+        
+        Parameters
+        ----------
+        electronics : ElectronicT, optional
+            ElectronicStates from current step, by default None
+            
+        Returns
+        -------
+        DtypeLike
+            Potential energy
         """
         if electronics is None:
             electronics = self.electronics
         return electronics.hamiltonian()[self.state, self.state]
 
     def total_energy(self, electronics: ElectronicT = None) -> DtypeLike:
-        """
-        Kinetic energy + Potential energy
-
-        :param electronics: ElectronicStates from current step
-        :return: total energy
+        """Calculate total energy (kinetic + potential).
+        
+        Parameters
+        ----------
+        electronics : ElectronicT, optional
+            ElectronicStates from current step, by default None
+            
+        Returns
+        -------
+        DtypeLike
+            Total energy
         """
         potential = self.potential_energy(electronics)
         kinetic = self.kinetic_energy()
         return potential + kinetic
 
     def _force(self, electronics: ElectronicT = None) -> ArrayLike:
-        """
-        Compute force on active state
-
-        :param electronics: ElectronicStates from current step
-
-        :return: [ndim] force on active electronic state
+        """Compute force on active state.
+        
+        Parameters
+        ----------
+        electronics : ElectronicT, optional
+            ElectronicStates from current step, by default None
+            
+        Returns
+        -------
+        ArrayLike
+            Force on active electronic state
         """
         if electronics is None:
             electronics = self.electronics
         return electronics.force(self.state)
 
     def NAC_matrix(self, electronics: ElectronicT = None, velocity: ArrayLike = None) -> ArrayLike:
-        """
-        Nonadiabatic coupling matrix
-
-        :param electronics: ElectronicStates from current step
-        :param velocity: velocity used to compute NAC (defaults to self.velocity)
-
-        :return: [nstates, nstates] NAC matrix
+        """Calculate nonadiabatic coupling matrix.
+        
+        Parameters
+        ----------
+        electronics : ElectronicT, optional
+            ElectronicStates from current step, by default None
+        velocity : ArrayLike, optional
+            Velocity used to compute NAC, by default None
+            
+        Returns
+        -------
+        ArrayLike
+            NAC matrix
         """
         velo = velocity if velocity is not None else self.velocity
         if electronics is None:
@@ -332,12 +476,17 @@ class SurfaceHoppingMD(object):
         return electronics.NAC_matrix(velo)
 
     def mode_kinetic_energy(self, direction: ArrayLike) -> np.float64:
-        """
-        Kinetic energy along given momentum mode
-
-        :param direction: [ndim] numpy array defining direction
-
-        :return: kinetic energy along specified direction
+        """Calculate kinetic energy along given momentum mode.
+        
+        Parameters
+        ----------
+        direction : ArrayLike
+            Numpy array defining direction
+            
+        Returns
+        -------
+        np.float64
+            Kinetic energy along specified direction
         """
         u = direction / np.linalg.norm(direction)
         momentum = self.velocity * self.mass
@@ -345,27 +494,35 @@ class SurfaceHoppingMD(object):
         return 0.5 * np.einsum('m,m,m', 1.0 / self.mass, component, component)
 
     def draw_new_zeta(self) -> float:
-        """
-        Returns a new zeta value for hopping. First it checks the input list of
-        zeta values in self.zeta_list. If no value is found in zeta_list, then
-        a random number is pulled.
-
-        :returns: zeta
+        """Get a new zeta value for hopping.
+        
+        First checks the input list of zeta values in self.zeta_list.
+        If no value is found in zeta_list, then a random number is pulled.
+        
+        Returns
+        -------
+        float
+            Zeta value for hopping
         """
         if self.zeta_list:
             return self.zeta_list.pop(0)
         else:
             return self.random()
 
-    def hop_allowed(self, direction: ArrayLike, dE: float):
-        """
-        Returns whether a hop with the given rescale direction and requested energy change
-        is allowed
-
-        :param direction: momentum unit vector
-        :param dE: change in energy such that Enew = Eold + dE
-
-        :return: whether to hop
+    def hop_allowed(self, direction: ArrayLike, dE: float) -> bool:
+        """Determine if a hop with given rescale direction and energy change is allowed.
+        
+        Parameters
+        ----------
+        direction : ArrayLike
+            Momentum unit vector
+        dE : float
+            Change in energy such that Enew = Eold + dE
+            
+        Returns
+        -------
+        bool
+            Whether the hop is allowed
         """
         if dE > 0.0:
             return True
@@ -373,17 +530,25 @@ class SurfaceHoppingMD(object):
         a = np.sum(u**2 / self.mass)
         b = 2.0 * np.dot(self.velocity, u)
         c = -2.0 * dE
-        return (b * b > 4.0 * a * c)
+        return b * b > 4.0 * a * c
 
     def direction_of_rescale(self, source: int, target: int, electronics: ElectronicT = None) -> np.ndarray:
         """
-        Return direction in which to rescale momentum
+        Return direction in which to rescale momentum.
 
-        :param source: active state before hop
-        :param target: active state after hop
-        :param electronics: electronic model information (used to pull derivative coupling)
+        Parameters
+        ----------
+        source : int
+            Active state before hop
+        target : int
+            Active state after hop
+        electronics : ElectronicT, optional
+            Electronic model information (used to pull derivative coupling), by default None
 
-        :return: unit vector pointing in direction of rescale
+        Returns
+        -------
+        np.ndarray
+            Unit vector pointing in direction of rescale
         """
         elec_states = self.electronics if electronics is None else electronics
         out = elec_states.derivative_coupling(source, target)
@@ -391,10 +556,14 @@ class SurfaceHoppingMD(object):
 
     def rescale_component(self, direction: ArrayLike, reduction: DtypeLike) -> None:
         """
-        Updates velocity by rescaling the *momentum* in the specified direction and amount
+        Update velocity by rescaling the *momentum* in the specified direction and amount.
 
-        :param direction: the direction of the *momentum* to rescale
-        :param reduction: how much kinetic energy should be damped
+        Parameters
+        ----------
+        direction : ArrayLike
+            The direction of the *momentum* to rescale
+        reduction : DtypeLike
+            How much kinetic energy should be damped
         """
         # normalize
         u = direction / np.linalg.norm(direction)
@@ -410,10 +579,22 @@ class SurfaceHoppingMD(object):
                                last_electronics: ElectronicT,
                                this_electronics: ElectronicT,
                                velo: ArrayLike = None) -> np.ndarray:
-        """Compute the Hamiltonian used to propagate the electronic wavefunction
+        """
+        Compute the Hamiltonian used to propagate the electronic wavefunction.
 
-        :param elec_states: ElectronicStates at current time step
-        :return: nonadiabatic coupling H - i W at midpoint between current and previous time steps
+        Parameters
+        ----------
+        last_electronics : ElectronicT
+            ElectronicStates at previous time step
+        this_electronics : ElectronicT
+            ElectronicStates at current time step
+        velo : ArrayLike, optional
+            Velocity at midpoint between current and previous time steps, by default None
+
+        Returns
+        -------
+        np.ndarray
+            Nonadiabatic coupling Hamiltonian at midpoint between current and previous time steps
         """
         if velo is None:
             velo = 0.5 * (self.velocity + self.last_velocity)
@@ -429,13 +610,20 @@ class SurfaceHoppingMD(object):
 
     def propagate_electronics(self, last_electronics: ElectronicT, this_electronics: ElectronicT,
                               dt: DtypeLike) -> None:
-        """Propagates density matrix from t to t+dt
+        """
+        Propagate density matrix from t to t+dt.
 
         The propagation assumes the electronic energies and couplings are static throughout.
-        This will only be true for fairly small time steps
+        This will only be true for fairly small time steps.
 
-        :param elec_states: ElectronicStates at t
-        :param dt: time step
+        Parameters
+        ----------
+        last_electronics : ElectronicT
+            ElectronicStates at t
+        this_electronics : ElectronicT
+            ElectronicStates at t+dt
+        dt : DtypeLike
+            Time step
         """
         if self.electronic_integration == "exp":
             # Use midpoint propagator
@@ -444,7 +632,7 @@ class SurfaceHoppingMD(object):
             propagate_exponential(self.rho, W, self.dt)
         elif self.electronic_integration == "linear-rk4":
             nsteps = self.starting_electronic_intervals
-            while (dt / nsteps > self.max_electronic_dt):
+            while (dt / nsteps) > self.max_electronic_dt:
                 nsteps *= 2
 
             propagate_interpolated_rk4(self.rho,
@@ -455,9 +643,15 @@ class SurfaceHoppingMD(object):
             raise Exception("Unrecognized electronic integration option")
 
     def surface_hopping(self, last_electronics: ElectronicT, this_electronics: ElectronicT):
-        """Compute probability of hopping, generate random number, and perform hops
+        """
+        Compute probability of hopping, generate random number, and perform hops.
 
-        :param elec_states: ElectronicStates from current step
+        Parameters
+        ----------
+        last_electronics : ElectronicT
+            ElectronicStates at previous time step
+        this_electronics : ElectronicT
+            ElectronicStates at current time step
         """
         H = self.hamiltonian_propagator(last_electronics, this_electronics)
 
@@ -476,10 +670,17 @@ class SurfaceHoppingMD(object):
 
     def hopper(self, gkndt: np.ndarray) -> List[Dict[str, float]]:
         """
-        Determine whether and where to hop
+        Determine whether and where to hop.
 
-        :param probs: [nstates] numpy array of individual hopping probabilities
-        :return: [(target_state, weight)] list of (target_state, weight) pairs
+        Parameters
+        ----------
+        gkndt : np.ndarray
+            Array of individual hopping probabilities
+
+        Returns
+        -------
+        List[Dict[str, float]]
+            List of dictionaries with (target_state, weight) pairs
         """
         probs = np.zeros_like(gkndt)
         if self.hopping_probability == "tully":
@@ -522,16 +723,28 @@ class SurfaceHoppingMD(object):
                 return []
 
     def hop_update(self, hop_from, hop_to):
-        """Handle any extra operations that need to occur after a hop"""
+        """
+        Handle any extra operations that need to occur after a hop.
+
+        Parameters
+        ----------
+        hop_from : int
+            State before hop
+        hop_to : int
+            State after hop
+        """
         return
 
     def hop_to_it(self, hop_targets: List[Dict[str, Union[float,int]]], electronics: ElectronicT = None) -> None:
         """
-        Hop from the current active state to the given state, including
-        rescaling the momentum
+        Hop from the current active state to the given state, including rescaling the momentum.
 
-        :param hop_targets: list of (target, weight) pairs
-        :param electronics: ElectronicStates for current step
+        Parameters
+        ----------
+        hop_targets : List[Dict[str, Union[float, int]]]
+            List of (target, weight) pairs
+        electronics : ElectronicT, optional
+            ElectronicStates for current step, by default None
         """
         hop_dict = hop_targets[0]
         hop_to = int(hop_dict["target"])
@@ -553,11 +766,13 @@ class SurfaceHoppingMD(object):
 
     def simulate(self) -> 'Trace':
         """
-        Simulate
+        Run the surface hopping molecular dynamics simulation.
 
-        :return: Trace of trajectory
+        Returns
+        -------
+        Trace
+            Trace of trajectory
         """
-
         if not self.continue_simulating():
             return self.tracer
 

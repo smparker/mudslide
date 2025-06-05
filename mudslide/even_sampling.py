@@ -260,7 +260,25 @@ class EvenSamplingTrajectory(SurfaceHoppingMD):
     recognized_options = SurfaceHoppingMD.recognized_options + [ "spawn_stack", "quadrature", "mcsamples" ]
 
     def __init__(self, *args, **options):
-        """Constructor (see SurfaceHoppingMD constructor)"""
+        """
+        Initialize the EvenSamplingTrajectory class.
+
+        Parameters
+        ----------
+        *args :
+            Positional arguments passed to SurfaceHoppingMD
+        **options : Any
+            Additional options for the simulation. Recognized options are:
+
+            All SurfaceHoppingMD options, plus:
+
+            spawn_stack : list or SpawnStack, optional
+                Stack of zeta values or a SpawnStack object for even sampling. Required.
+            quadrature : str, optional
+                Quadrature method for generating zeta values ('gl', etc.). Default is 'gl'.
+            mcsamples : int, optional
+                Number of Monte Carlo samples per quadrature point. Default is 1.
+        """
         options['hopping_method'] = 'cumulative'  # Force cumulative hopping
         SurfaceHoppingMD.__init__(self, *args, **options)
 

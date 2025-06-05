@@ -59,14 +59,31 @@ class AFSSHVVPropagator(Propagator_):
             traj.nsteps += 1
 
 class AFSSHPropagator(Propagator_):
-    """Surface Hopping propagator factory"""
+    """Surface Hopping propagator factory.
+    
+    This class serves as a factory for creating different types of propagators
+    used in adiabatic FSSH molecular dynamics simulations.
+    """
 
     def __new__(cls, model: Any, prop_options: Any = "vv") -> 'SHPropagator':
-        """Factory method to create a Surface Hopping propagator
-
-        :param model: Model object defining problem
-        :param prop_options: options for propagator, can be "vv" or "fssh"
-        :return: SHPropagator object
+        """Create a new surface hopping propagator instance.
+        
+        Parameters
+        ----------
+        model : Any
+            Model object defining the problem
+        prop_options : Any, optional
+            Propagator options, can be a string or dictionary, by default "vv"
+            
+        Returns
+        -------
+        SHPropagator
+            A new propagator instance
+            
+        Raises
+        ------
+        ValueError
+            If the propagator type is unknown
         """
         if is_string(prop_options):
             prop_options = {"type": prop_options}

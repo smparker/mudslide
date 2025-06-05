@@ -20,35 +20,113 @@ from .constants import fs_to_au
 import yaml
 
 
-class Trace_(object):
+class Trace_:
+    """Base class for collecting and storing trajectory data.
+    
+    This class provides the interface for collecting and storing data from
+    molecular dynamics trajectories. It can store snapshots of the system
+    state and record events like surface hops.
+    """
 
     def __init__(self, weight: float = 1.0):
+        """Initialize the trace object.
+        
+        Parameters
+        ----------
+        weight : float, optional
+            Statistical weight of the trajectory, by default 1.0
+        """
         self.weight: float = weight
 
     def collect(self, snapshot: Any) -> None:
-        """add a single snapshot to the trace"""
+        """Add a single snapshot to the trace.
+        
+        Parameters
+        ----------
+        snapshot : Any
+            Snapshot data to add to the trace
+        """
         return
 
     def record_event(self, event_dict: Dict, event_type: str = "hop") -> None:
-        """add a single event (e.g., hop or collapse) to the log"""
+        """Add a single event to the log.
+        
+        Parameters
+        ----------
+        event_dict : Dict
+            Dictionary containing event data
+        event_type : str, optional
+            Type of event, by default "hop"
+        """
         return
 
     def __iter__(self) -> Iterator:
-        """option to iterate through every snapshot"""
+        """Get an iterator over all snapshots.
+        
+        Returns
+        -------
+        Iterator
+            Iterator over snapshots
+        """
         pass
 
     def __getitem__(self, i: int) -> Any:
-        """option to get a particular snapshot"""
+        """Get a particular snapshot by index.
+        
+        Parameters
+        ----------
+        i : int
+            Index of snapshot to retrieve
+            
+        Returns
+        -------
+        Any
+            Snapshot data
+        """
         pass
 
     def __len__(self) -> int:
+        """Get the number of snapshots in the trace.
+        
+        Returns
+        -------
+        int
+            Number of snapshots
+        """
         return 0
 
     def frustrated_hop(self, time: float, hop_from: int, hop_to: int, zeta: float, prob: float) -> None:
+        """Record a frustrated hop event.
+        
+        Parameters
+        ----------
+        time : float
+            Time of the hop
+        hop_from : int
+            Initial state
+        hop_to : int
+            Target state
+        zeta : float
+            Random number used in hop decision
+        prob : float
+            Hop probability
+        """
         hop_data = {"event": "frustrated_hop", "time": time, "from": hop_from, "to": hop_to, "zeta": zeta, "prob": prob}
         self.record_event(hop_data)
 
     def form_data(self, snap_dict: Dict) -> Dict:
+        """Convert snapshot dictionary to appropriate data types.
+        
+        Parameters
+        ----------
+        snap_dict : Dict
+            Dictionary containing snapshot data
+            
+        Returns
+        -------
+        Dict
+            Processed snapshot data
+        """
         out = {}
         for k, v in snap_dict.items():
             if isinstance(v, list):
@@ -63,6 +141,13 @@ class Trace_(object):
         return out
 
     def clone(self) -> 'Trace_':
+        """Create a deep copy of the trace.
+        
+        Returns
+        -------
+        Trace_
+            Deep copy of the trace object
+        """
         return cp.deepcopy(self)
 
     def print(self, file: Any = sys.stdout) -> None:
