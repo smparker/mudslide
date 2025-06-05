@@ -63,51 +63,51 @@ class SurfaceHoppingMD:
             Trajectory queue, by default None
         strict_option_check : bool, optional
             Whether to strictly check options, by default True
-        **options : Any
-            Additional options for the simulation. Recognized options are:
-
-            propagator : str or dict, optional
-                The propagator to use for nuclear motion. Can be a string (e.g., 'vv', 'fssh') or a dictionary with more options. Default is 'vv'.
-            last_velocity : array-like, optional
-                The velocity from the previous step, used for restarts. Default is zeros.
-            bounds : tuple or list, optional
-                Tuple or list of (lower, upper) bounds for the simulation box. Used to determine if the trajectory is inside a region. Default is None.
-            duration : dict, optional
-                Dictionary controlling simulation duration (overrides max_steps, max_time, etc.). Default is auto-generated.
-            dt : float, optional
-                Time step for nuclear propagation (in atomic units). Default is fs_to_au.
-            t0 : float, optional
-                Initial time. Default is 0.0.
-            previous_steps : int, optional
-                Number of previous steps (for restarts). Default is 0.
-            trace_every : int, optional
-                Interval (in steps) at which to record trajectory data. Default is 1.
-            max_time : float, optional
-                Maximum simulation time. Default is 1e25.
-            seed_sequence : int or numpy.random.SeedSequence, optional
-                Seed or SeedSequence for random number generation. Default is None.
-            outcome_type : str, optional
-                Type of outcome to record (e.g., 'state'). Default is 'state'.
-            electronics : object, optional
-                Initial electronic state object. Default is None.
-            electronic_integration : str, optional
-                Method for integrating electronic equations ('exp' or 'linear-rk4'). Default is 'exp'.
-            max_electronic_dt : float, optional
-                Maximum time step for electronic integration. Default is 0.1.
-            starting_electronic_intervals : int, optional
-                Initial number of intervals for electronic integration. Default is 4.
-            weight : float, optional
-                Statistical weight of the trajectory. Default is 1.0.
-            restarting : bool, optional
-                Whether this is a restarted trajectory. Default is False.
-            hopping_probability : str, optional
-                Method for computing hopping probability ('tully' or 'poisson'). Default is 'tully'.
-            zeta_list : list, optional
-                List of pre-determined random numbers for hopping decisions. Default is [].
-            state0 : int, optional
-                Initial electronic state (used if rho0 is a matrix). Required if rho0 is not scalar.
-            hopping_method : str, optional
-                Hopping method: 'cumulative' or 'instantaneous'. Default is 'cumulative'.
+        
+        Other Parameters
+        ----------------
+        propagator : str or dict, optional
+            The propagator to use for nuclear motion. Can be a string (e.g., 'vv', 'fssh') or a dictionary with more options. Default is 'vv'.
+        last_velocity : array-like, optional
+            The velocity from the previous step, used for restarts. Default is zeros.
+        bounds : tuple or list, optional
+            Tuple or list of (lower, upper) bounds for the simulation box. Used to determine if the trajectory is inside a region. Default is None.
+        duration : dict, optional
+            Dictionary controlling simulation duration (overrides max_steps, max_time, etc.). Default is auto-generated.
+        dt : float, optional
+            Time step for nuclear propagation (in atomic units). Default is fs_to_au.
+        t0 : float, optional
+            Initial time. Default is 0.0.
+        previous_steps : int, optional
+            Number of previous steps (for restarts). Default is 0.
+        trace_every : int, optional
+            Interval (in steps) at which to record trajectory data. Default is 1.
+        max_time : float, optional
+            Maximum simulation time. Default is 1e25.
+        seed_sequence : int or numpy.random.SeedSequence, optional
+            Seed or SeedSequence for random number generation. Default is None.
+        outcome_type : str, optional
+            Type of outcome to record (e.g., 'state'). Default is 'state'.
+        electronics : object, optional
+            Initial electronic state object. Default is None.
+        electronic_integration : str, optional
+            Method for integrating electronic equations ('exp' or 'linear-rk4'). Default is 'exp'.
+        max_electronic_dt : float, optional
+            Maximum time step for electronic integration. Default is 0.1.
+        starting_electronic_intervals : int, optional
+            Initial number of intervals for electronic integration. Default is 4.
+        weight : float, optional
+            Statistical weight of the trajectory. Default is 1.0.
+        restarting : bool, optional
+            Whether this is a restarted trajectory. Default is False.
+        hopping_probability : str, optional
+            Method for computing hopping probability ('tully' or 'poisson'). Default is 'tully'.
+        zeta_list : list, optional
+            List of pre-determined random numbers for hopping decisions. Default is [].
+        state0 : int, optional
+            Initial electronic state (used if rho0 is a matrix). Required if rho0 is not scalar.
+        hopping_method : str, optional
+            Hopping method: 'cumulative' or 'instantaneous'. Default is 'cumulative'.
         """
         check_options(options, self.recognized_options, strict=strict_option_check)
 

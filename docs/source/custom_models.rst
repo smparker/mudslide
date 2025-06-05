@@ -8,7 +8,7 @@ General Models
 --------------
 
 To use a custom model, you need to create a class that derives
-from ``mudslide.Electronics_`` and that implements the following:
+from ``mudslide.models.Electronics_`` and that implements the following:
 
 * ``ndim_``: member variable with the number of classical degrees of freedom
 * ``nstates_``: member variable with the number of electronic states
@@ -58,7 +58,7 @@ class with the appropriate resources.
 Diabatic Models
 ---------------
 
-For diabatic models there is a convenience class, ``mudslide.DiabaticModel_``, to streamline
+For diabatic models there is a convenience class, ``mudslide.models.DiabaticModel_``, to streamline
 making a working mudslide model. To create a diabatic model for use with mudslide,
 your model class should inherit from ``DiabaticModel_`` and implement the following:
 
