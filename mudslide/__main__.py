@@ -22,7 +22,7 @@ from typing import Any
 
 # Add a method into this dictionary to register it with argparse
 methods = {
-    "fssh": SurfaceHoppingMD,
+    "fssh": lambda *args, **kwargs: SurfaceHoppingMD(*args, hopping_method="instantaneous", **kwargs),
     "cumulative-sh": lambda *args, **kwargs: SurfaceHoppingMD(*args, hopping_method="cumulative", **kwargs),
     "ehrenfest": Ehrenfest,
     "afssh": AugmentedFSSH,

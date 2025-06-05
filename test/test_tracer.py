@@ -32,7 +32,8 @@ class TrajectoryTest(unittest.TestCase):
                                      dt=4,
                                      tracer=log,
                                      max_time=80,
-                                     zeta_list=[0.2, 0.2, 0.9])
+                                     zeta_list=[0.2, 0.2, 0.9],
+                                     hopping_method="instantaneous")
         results = traj.simulate()
 
         main_log = results.main_log
@@ -63,7 +64,8 @@ class TrajectoryTest(unittest.TestCase):
                                      dt=4,
                                      tracer=log,
                                      max_time=40,
-                                     zeta_list=[0.2, 0.2, 0.9])
+                                     zeta_list=[0.2, 0.2, 0.9],
+                                     hopping_method="instantaneous")
         results = traj.simulate()
 
         main_log = results.main_log

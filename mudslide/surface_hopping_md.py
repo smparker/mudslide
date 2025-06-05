@@ -111,15 +111,15 @@ class SurfaceHoppingMD(object):
 
         self.hopping_probability = options.get("hopping_probability", "tully")
         if self.hopping_probability not in ["tully", "poisson"]:
-            raise Exception("hopping_probability accepts only \"tully\" or \"poisson\" options")
+            raise ValueError("hopping_probability accepts only \"tully\" or \"poisson\" options")
 
         self.zeta_list = list(options.get("zeta_list", []))
         self.zeta = 0.0
 
         # Add hopping method option
-        self.hopping_method = options.get("hopping_method", "instantaneous")
+        self.hopping_method = options.get("hopping_method", "cumulative")
         if self.hopping_method not in ["instantaneous", "cumulative"]:
-            raise Exception("hopping_method accepts only \"instantaneous\" or \"cumulative\" options")
+            raise ValueError("hopping_method accepts only \"instantaneous\" or \"cumulative\" options")
         
         if self.hopping_method == "cumulative":
             self.prob_cum = np.longdouble(0.0)
@@ -486,8 +486,6 @@ class SurfaceHoppingMD(object):
             probs = gkndt
         elif self.hopping_probability == "poisson":
             probs = gkndt * poisson_prob_scale(np.sum(gkndt))
-        else:
-            raise Exception("Unrecognized option for hopping_probability")
         self.hopping = np.sum(probs).item()  # store total hopping probability
 
         if self.hopping_method == "cumulative":

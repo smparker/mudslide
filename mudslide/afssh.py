@@ -86,6 +86,7 @@ class AugmentedFSSH(SurfaceHoppingMD):
       Subotnik, Shenvi JCP 134, 024105 (2011); doi: 10.1063/1.3506779
     """
     def __init__(self, *args: Any, **options: Any):
+        options['hopping_method'] = 'instantaneous' # force instantaneous hopping
         SurfaceHoppingMD.__init__(self, *args, **options)
 
         self.augmented_integration = options.get("augmented_integration", self.electronic_integration).lower()
@@ -96,22 +97,6 @@ class AugmentedFSSH(SurfaceHoppingMD):
                 dtype=np.complex128)
         
         self.propagator = AFSSHPropagator(self.model, "vv")  
-
-    # def advance_position(self, last_electronics: Union[ElectronicT,None],
-    #         this_electronics: ElectronicT) -> None:
-    #     """Move classical position and delR"""
-    #     # Use base class propagation
-    #     SurfaceHoppingMD.advance_position(self, last_electronics, this_electronics)
-
-    #     self.advance_delR(last_electronics, this_electronics)
-
-    # def advance_velocity(self, last_electronics: Union[ElectronicT,None],
-    #         this_electronics: ElectronicT) -> None:
-    #     """Move classical velocity and delP"""
-    #     # Use base class propagation
-    #     SurfaceHoppingMD.advance_velocity(self, last_electronics, this_electronics)
-
-    #     self.advance_delP(last_electronics, this_electronics)
 
     def compute_delF(self, this_electronics):
         delF = np.copy(this_electronics.force_matrix())
