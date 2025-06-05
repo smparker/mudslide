@@ -8,7 +8,7 @@ import numpy as np
 
 from .typing import ElectronicT, ArrayLike, DtypeLike
 
-from .util import check_options, is_string
+from .util import check_options
 from .constants import boltzmann, fs_to_au
 from .propagation import propagate_exponential, propagate_interpolated_rk4
 from .tracer import Trace
@@ -130,13 +130,15 @@ class SurfaceHoppingMD:
                 self.rho[state, state] = 1.0
                 self.state = state
             except:
-                raise Exception("Unrecognized initial state option")
+                raise ValueError("Initial state rho0 must be convertible to an integer state index")
         else:
             try:
                 self.rho = np.copy(rho0)
-                self.state = int(options["state0"])
-            except:
-                raise Exception("Unrecognized initial state option")
+                self.state = int(options["state0"]) 
+            except KeyError:
+                raise KeyError("state0 option required when rho0 is a density matrix")
+            except (ValueError, TypeError):
+                raise ValueError("state0 option must be convertible to an integer state index")
 
         # function duration_initialize should get us ready to for future continue_simulating calls
         # that decide whether the simulation has finished
@@ -180,8 +182,9 @@ class SurfaceHoppingMD:
 
         # Add hopping method option
         self.hopping_method = options.get("hopping_method", "cumulative")
-        if self.hopping_method not in ["instantaneous", "cumulative"]:
-            raise ValueError("hopping_method accepts only \"instantaneous\" or \"cumulative\" options")
+        allowed_methods = ["instantaneous", "cumulative"]
+        if self.hopping_method not in allowed_methods:
+            raise ValueError(f"hopping_method should be one of {allowed_methods}")
         
         if self.hopping_method == "cumulative":
             self.prob_cum = np.longdouble(0.0)
@@ -386,13 +389,6 @@ class SurfaceHoppingMD:
         if self.hopping_method == "cumulative":
             out["prob_cum"] = float(self.prob_cum)
         return out
-
-    def trouble_shooter(self):
-        """Write debugging information to snapout.dat file."""
-        log = self.snapshot()
-        with open("snapout.dat", "a") as file:
-            file.write("{}\t{}\t{}\t{}\t{}\n".format(log["time"], log["potential"], log["kinetic"], log["energy"],
-                                                     log["active"]))
 
     def kinetic_energy(self) -> np.float64:
         """Calculate kinetic energy.
@@ -640,7 +636,10 @@ class SurfaceHoppingMD:
                     this_electronics.hamiltonian(), this_electronics.derivative_coupling_tensor(), self.velocity,
                     self.dt, nsteps)
         else:
-            raise Exception("Unrecognized electronic integration option")
+            raise ValueError(
+                f"Unrecognized electronic integration option: {self.electronic_integration}. "
+                "Must be one of ['exp', 'linear-rk4']"
+            )
 
     def surface_hopping(self, last_electronics: ElectronicT, this_electronics: ElectronicT):
         """
@@ -722,7 +721,7 @@ class SurfaceHoppingMD:
             else:
                 return []
 
-    def hop_update(self, hop_from, hop_to):
+    def hop_update(self, hop_from, hop_to):  # pylint: disable=unused-argument
         """
         Handle any extra operations that need to occur after a hop.
 
@@ -753,7 +752,6 @@ class SurfaceHoppingMD:
         new_potential, old_potential = H[hop_to, hop_to], H[self.state, self.state]
         delV = new_potential - old_potential
         rescale_vector = self.direction_of_rescale(self.state, hop_to)
-        component_kinetic = self.mode_kinetic_energy(rescale_vector)
         hop_from = self.state
 
         if self.hop_allowed(rescale_vector, -delV):
