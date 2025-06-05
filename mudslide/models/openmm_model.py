@@ -11,6 +11,11 @@ from mudslide.constants import bohr_to_angstrom, amu_to_au, Hartree_to_kJmol
 from mudslide.periodic_table import masses
 
 try:
+    # Suppress OpenMM warnings
+    import warnings
+    warnings.filterwarnings("ignore", message=".*SwigPyPacked.*")
+    warnings.filterwarnings("ignore", message=".*SwigPyObject.*")
+    warnings.filterwarnings("ignore", message=".*swigvarlink.*")
     import openmm
     import openmm.app
     OPENMM_INSTALLED = True
