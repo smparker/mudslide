@@ -472,12 +472,12 @@ class EvenSamplingTrajectory(SurfaceHoppingMD):
                         "prob": accumulated,
                         "stack": self.spawn_stack.spawn(spawn_weight * hop_choice[i]),
                     }
-                    for i in range(self.model.nstates())
+                    for i in range(self.model.nstates)
                     if i != self.state
                     for j in range(nspawn)
                 ]
             else:
-                target = self.random_state.choice(list(range(self.model.nstates())), p=hop_choice)
+                target = self.random_state.choice(list(range(self.model.nstates)), p=hop_choice)
                 targets = [
                     {
                         "target": target,

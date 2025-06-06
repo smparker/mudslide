@@ -147,7 +147,7 @@ def main(argv=None, file=sys.stdout) -> None:
 
     if (args.output == "averaged" or args.output == "pickle"):
         print("# momentum ", end='', file=file)
-        for ist in range(model.nstates()):
+        for ist in range(model.nstates):
             for d in ["reflected", "transmitted"]:
                 print("%d_%s" % (ist, d), end=' ', file=file)
         print(file=file)
@@ -182,7 +182,7 @@ def main(argv=None, file=sys.stdout) -> None:
             results.traces[0].print(file=file)
         elif (args.output == "swarm"):
             maxsteps = max([len(t) for t in results.traces])
-            outfiles = ["state_%d.trace" % i for i in range(model.nstates())]
+            outfiles = ["state_%d.trace" % i for i in range(model.nstates)]
             fils = [open(o, "w") for o in outfiles]
             for i in range(maxsteps):
                 nswarm = [0 for x in fils]
@@ -192,7 +192,7 @@ def main(argv=None, file=sys.stdout) -> None:
                         nswarm[iact] += 1
                         print("{position:12.6f}".format(**t[i]), file=fils[iact])
 
-                for ist in range(model.nstates()):
+                for ist in range(model.nstates):
                     if nswarm[ist] == 0:
                         print("%12.6f" % -9999999, file=fils[ist])
                     print(file=fils[ist])

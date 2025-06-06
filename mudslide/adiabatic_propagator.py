@@ -329,7 +329,7 @@ class AdiabaticPropagator:
         if isinstance(prop_options, str):
             prop_options = { "type": prop_options.lower() }
 
-        prop_options["ndof"] = model.ndof()
+        prop_options["ndof"] = model.ndof
 
         if isinstance(prop_options, dict):
             prop_type = prop_options.pop("type", "vv")

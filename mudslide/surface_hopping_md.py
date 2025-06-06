@@ -121,16 +121,16 @@ class SurfaceHoppingMD:
         self.queue: Any = queue
 
         # initial conditions
-        self.position = np.array(x0, dtype=np.float64).reshape(model.ndof())
+        self.position = np.array(x0, dtype=np.float64).reshape(model.ndof)
         self.last_position = np.zeros_like(self.position, dtype=np.float64)
-        self.velocity = np.array(v0, dtype=np.float64).reshape(model.ndof())
+        self.velocity = np.array(v0, dtype=np.float64).reshape(model.ndof)
         self.last_velocity = np.zeros_like(self.velocity, dtype=np.float64)
         if "last_velocity" in options:
             self.last_velocity[:] = options["last_velocity"]
         if np.isscalar(rho0):
             try:
                 state = int(rho0)
-                self.rho = np.zeros([model.nstates(), model.nstates()], dtype=np.complex128)
+                self.rho = np.zeros([model.nstates, model.nstates], dtype=np.complex128)
                 self.rho[state, state] = 1.0
                 self.state = state
             except:
@@ -393,7 +393,7 @@ class SurfaceHoppingMD:
             "velocity": self.velocity.tolist(),
             "potential": float(self.potential_energy()),
             "kinetic": float(self.kinetic_energy()),
-            "temperature": float(2 * self.kinetic_energy() / ( boltzmann * self.model.ndof())),
+            "temperature": float(2 * self.kinetic_energy() / ( boltzmann * self.model.ndof)),
             "energy": float(self.total_energy()),
             "density_matrix": self.rho.view(dtype=np.float64).tolist(),
             "active": int(self.state),
@@ -430,7 +430,7 @@ class SurfaceHoppingMD:
         """
         if electronics is None:
             electronics = self.electronics
-        return electronics.hamiltonian()[self.state, self.state]
+        return electronics.hamiltonian[self.state, self.state]
 
     def total_energy(self, electronics: ElectronicT = None) -> DtypeLike:
         """Calculate total energy (kinetic + potential).
@@ -612,7 +612,7 @@ class SurfaceHoppingMD:
         if last_electronics is None:
             last_electronics = this_electronics
 
-        H = 0.5 * (this_electronics.hamiltonian() + last_electronics.hamiltonian())  # type: ignore
+        H = 0.5 * (this_electronics.hamiltonian + last_electronics.hamiltonian)  # type: ignore
         TV = 0.5 * np.einsum(
             "ijx,x->ij",
             this_electronics._derivative_coupling + last_electronics._derivative_coupling,  #type: ignore
@@ -647,8 +647,8 @@ class SurfaceHoppingMD:
                 nsteps *= 2
 
             propagate_interpolated_rk4(self.rho,
-                    last_electronics.hamiltonian(), last_electronics.derivative_coupling_tensor(), self.last_velocity,
-                    this_electronics.hamiltonian(), this_electronics.derivative_coupling_tensor(), self.velocity,
+                    last_electronics.hamiltonian, last_electronics.derivative_coupling_tensor, self.last_velocity,
+                    this_electronics.hamiltonian, this_electronics.derivative_coupling_tensor, self.velocity,
                     self.dt, nsteps)
         else:
             raise ValueError(
@@ -717,7 +717,7 @@ class SurfaceHoppingMD:
                 # where to hop
                 hop_choice = gkndt / gkdt
                 zeta = self.zeta
-                target = self.random_state.choice(list(range(self.model.nstates())), p=hop_choice)
+                target = self.random_state.choice(list(range(self.model.nstates)), p=hop_choice)
 
                 # reset probabilities and random
                 self.prob_cum = 0.0
@@ -735,7 +735,7 @@ class SurfaceHoppingMD:
             hops = np.less(self.zeta, acc_prob)
             if any(hops):
                 hop_to = -1
-                for i in range(self.model.nstates()):
+                for i in range(self.model.nstates):
                     if hops[i]:
                         hop_to = i
                         break
@@ -771,7 +771,7 @@ class SurfaceHoppingMD:
         hop_dict = hop_targets[0]
         hop_to = int(hop_dict["target"])
         elec_states = electronics if electronics is not None else self.electronics
-        H = elec_states.hamiltonian()
+        H = elec_states.hamiltonian
         new_potential, old_potential = H[hop_to, hop_to], H[self.state, self.state]
         delV = new_potential - old_potential
         rescale_vector = self.direction_of_rescale(self.state, hop_to)

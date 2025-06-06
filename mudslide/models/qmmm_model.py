@@ -25,15 +25,15 @@ class QMMM(ElectronicModel_):
         # initialize position with mm_model
         self._position = np.copy(mm_model._position)
 
-        self._ndof_qm = qm_model.ndof()
-        self._ndof_mm = mm_model.ndof() - self._ndof_qm
+        self._ndof_qm = qm_model.ndof
+        self._ndof_mm = mm_model.ndof - self._ndof_qm
         self._qm_atoms = list(range(self._ndof_qm//3))
         self._nqm = len(self._qm_atoms)
 
         # update position for qm atoms, just in case they are different
         self._position[:self._ndof_qm] = qm_model._position
 
-        super().__init__(nstates=qm_model.nstates(), ndof=mm_model.ndof())
+        super().__init__(nstates=qm_model.nstates, ndof=mm_model.ndof)
 
         if not self.check_qm_and_mm_regions(self._qm_atoms):
             raise ValueError("QM atoms must have the same elements in the QM and MM models.")
@@ -116,11 +116,11 @@ class QMMM(ElectronicModel_):
         self._qm_model.control.add_point_charges(only_mm_xyz.reshape(-1,3), only_mm_charges)
         self._qm_model.compute(qmxyz)
 
-        self._hamiltonian = self._mm_model.hamiltonian() + self._qm_model.hamiltonian()
+        self._hamiltonian = self._mm_model.hamiltonian + self._qm_model.hamiltonian
 
         mmforce = self._mm_model._force
         qmforce = self._qm_model._force
-        self._force = np.zeros([self.nstates(), self.ndof()])
+        self._force = np.zeros([self.nstates, self.ndof])
 
         self._force[:,:] = mmforce
         self._force[:,:self._ndof_qm] += qmforce

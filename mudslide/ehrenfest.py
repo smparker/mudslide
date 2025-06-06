@@ -48,7 +48,7 @@ class Ehrenfest(SurfaceHoppingMD):
         """
         if electronics is None:
             electronics = self.electronics
-        return np.real(np.trace(np.dot(self.rho, electronics.hamiltonian())))
+        return np.real(np.trace(np.dot(self.rho, electronics.hamiltonian)))
 
     def _force(self, electronics: ElectronicT = None) -> ArrayLike:
         """Calculate Ehrenfest force.
@@ -69,8 +69,8 @@ class Ehrenfest(SurfaceHoppingMD):
         if electronics is None:
             electronics = self.electronics
 
-        out = np.zeros([electronics.ndof()])
-        for i in range(electronics.nstates()):
+        out = np.zeros([electronics.ndof])
+        for i in range(electronics.nstates):
             out += np.real(self.rho[i,i]) * electronics.force(i)
         return out
 

@@ -24,19 +24,19 @@ def get_ref_data(model_name, nstates, ndof):
 def test_subotnik_model_w():
     model = mudslide.models.SubotnikModelW()
 
-    assert model.ndof() == 1
-    assert model.nstates() == 8
+    assert model.ndof == 1
+    assert model.nstates == 8
 
     X = np.zeros([1])
     X[:] = -0.5
 
     model.compute(X)
 
-    H = model.hamiltonian()
+    H = model.hamiltonian
     force = model.force()
     dc = model._derivative_coupling
 
-    H_ref, force_ref, dc_ref = get_ref_data('model_w', model.nstates(), model.ndof())
+    H_ref, force_ref, dc_ref = get_ref_data('model_w', model.nstates, model.ndof)
 
     assert np.allclose(H, H_ref)
     assert np.allclose(force, force_ref)
@@ -45,19 +45,19 @@ def test_subotnik_model_w():
 def test_subotnik_model_z():
     model = mudslide.models.SubotnikModelZ()
 
-    assert model.ndof() == 1
-    assert model.nstates() == 8
+    assert model.ndof == 1
+    assert model.nstates == 8
 
     X = np.zeros([1])
     X[:] = -0.5
 
     model.compute(X)
 
-    H = model.hamiltonian()
+    H = model.hamiltonian
     force = model.force()
     dc = model._derivative_coupling
 
-    H_ref, force_ref, dc_ref = get_ref_data('model_z', model.nstates(), model.ndof())
+    H_ref, force_ref, dc_ref = get_ref_data('model_z', model.nstates, model.ndof)
 
     assert np.allclose(H, H_ref)
     assert np.allclose(force, force_ref)

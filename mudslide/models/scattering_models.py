@@ -83,7 +83,7 @@ class TullySimpleAvoidedCrossing(DiabaticModel_):
         self.B = b
         self.C = c
         self.D = d
-        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndof())
+        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndof)
 
     def V(self, X: ArrayLike) -> ArrayLike:
         """:math:`V(x)`"""
@@ -129,7 +129,7 @@ class TullyDualAvoidedCrossing(DiabaticModel_):
         self.C = c
         self.D = d
         self.E0 = e
-        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndof())
+        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndof)
 
     def V(self, X: ArrayLike) -> ArrayLike:
         """:math:`V(x)`"""
@@ -176,7 +176,7 @@ class TullyExtendedCouplingReflection(DiabaticModel_):
         self.A = a
         self.B = b
         self.C = c
-        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndof())
+        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndof)
 
     def V(self, X: ArrayLike) -> ArrayLike:
         """:math:`V(x)`"""
@@ -219,7 +219,7 @@ class SuperExchange(DiabaticModel_):
         self.v33 = v33
         self.v12 = v12
         self.v23 = v23
-        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndof())
+        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndof)
 
     def V(self, x: ArrayLike) -> ArrayLike:
         """:math:`V(x)`"""
@@ -257,7 +257,7 @@ class SubotnikModelX(DiabaticModel_):
         self.b = float(b)
         self.c = float(c)
         self.xp = float(xp)
-        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndof())
+        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndof)
 
     def V(self, x: ArrayLike) -> ArrayLike:
         """:math:`V(x)`"""
@@ -315,7 +315,7 @@ class SubotnikModelS(DiabaticModel_):
         self.c = float(c)
         self.d = float(d)
         self.xp = float(xp)
-        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndof())
+        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndof)
 
     def V(self, x: ArrayLike) -> ArrayLike:
         """:math:`V(x)`"""
@@ -377,7 +377,7 @@ class Subotnik2D(DiabaticModel_):
         self.f = float(f)
         self.g = float(g)
         self.w = float(w)
-        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndof())
+        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndof)
 
     def V(self, r: ArrayLike) -> ArrayLike:
         """:math:`V(x)`"""
@@ -436,7 +436,7 @@ class ShinMetiu(AdiabaticModel_):
         self.Rf = Rf
         self.Rl = Rl
         self.Rr = Rr
-        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndof())
+        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndof)
         self.m_el = m_el
 
         if box is None:
@@ -516,7 +516,7 @@ class LinearVibronic(DiabaticModel_):
     ):
         DiabaticModel_.__init__(self, representation=representation, reference=reference,
                                 nstates=2, ndof=5)
-        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndof())
+        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndof)
         self.E1 = float(E1 / eVtoHartree)
         self.E2 = float(E2 / eVtoHartree)
         self.lamb = float(lamb / eVtoHartree)
@@ -593,11 +593,11 @@ class SubotnikModelW(DiabaticModel_):
     ):
         DiabaticModel_.__init__(self, representation=representation, reference=reference,
                                 nstates=nstates, ndof=1)
-        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndof())
+        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndof)
         self.eps = eps
 
     def V(self, X: ArrayLike) -> ArrayLike:
-        N = self.nstates()
+        N = self.nstates
         m = np.arange(0, N) + 1
 
         v = 0.1 / np.sqrt(N)
@@ -610,7 +610,7 @@ class SubotnikModelW(DiabaticModel_):
         return out
 
     def dV(self, X: ArrayLike) -> ArrayLike:
-        N = self.nstates()
+        N = self.nstates
         m = np.arange(0, N) + 1
 
         v = 0.1 / np.sqrt(N)
@@ -633,11 +633,11 @@ class SubotnikModelZ(DiabaticModel_):
     ):
         DiabaticModel_.__init__(self, representation=representation, reference=reference,
                                 nstates=nstates, ndof=1)
-        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndof())
+        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndof)
         self.eps = eps
 
     def V(self, X: ArrayLike) -> ArrayLike:
-        N = self.nstates()
+        N = self.nstates
         m = np.arange(0, N)
 
         v = 0.1 / np.sqrt(N)
@@ -656,7 +656,7 @@ class SubotnikModelZ(DiabaticModel_):
         return out
 
     def dV(self, X: ArrayLike) -> ArrayLike:
-        N = self.nstates()
+        N = self.nstates
 
         v = 0.1 / np.sqrt(N)
         m1 = np.arange(0, N//2) + 1

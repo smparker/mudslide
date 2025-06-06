@@ -22,11 +22,11 @@ class SubotnikW(DiabaticModel_):
     ):
         DiabaticModel_.__init__(self, representation=representation, reference=reference,
                                 nstates=nstates, ndof=1)
-        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndof())
+        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndof)
         self.eps = eps
 
     def V(self, X: ArrayLike) -> ArrayLike:
-        N = self.nstates()
+        N = self.nstates
         m = np.arange(0, N)
 
         v = 0.1 / np.sqrt(N)
@@ -39,7 +39,7 @@ class SubotnikW(DiabaticModel_):
         return out
 
     def dV(self, X: ArrayLike) -> ArrayLike:
-        N = self.nstates()
+        N = self.nstates
         m = np.arange(0, N)
 
         v = 0.1 / np.sqrt(N)
@@ -62,11 +62,11 @@ class SubotnikZ(DiabaticModel_):
     ):
         DiabaticModel_.__init__(self, representation=representation, reference=reference,
                                 nstates=states, ndof=1)
-        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndof())
+        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndof)
         self.eps = eps
 
     def V(self, X: ArrayLike) -> ArrayLike:
-        N = self.nstates()
+        N = self.nstates
         m = np.arange(0, N)
 
         v = 0.1 / np.sqrt(N)
@@ -85,7 +85,7 @@ class SubotnikZ(DiabaticModel_):
         return out
 
     def dV(self, X: ArrayLike) -> ArrayLike:
-        N = self.nstates()
+        N = self.nstates
         m = np.arange(0, N)
 
         diag = np.zeros(N, dtype=np.float64)

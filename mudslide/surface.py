@@ -78,8 +78,8 @@ def surface_main(model: str, scan_range: List[float], n: int, scan_dimension: in
 
     xr = np.linspace(start, end, samples, dtype=np.float64)
 
-    nstates = model.nstates()
-    ndof = model.ndof()
+    nstates = model.nstates
+    ndof = model.ndof
 
     if len(x0) != ndof:
         print("Must provide reference vector of same length as the model problem")
@@ -106,9 +106,9 @@ def surface_main(model: str, scan_range: List[float], n: int, scan_dimension: in
 
     def lineprinter(x: ArrayLike, model: Any, estates: Any) -> str:
         V = model.V(x)
-        ndof = estates.ndof()
+        ndof = estates.ndof
         diabats = [V[i, i] for i in range(nstates)]  # type: List[float]
-        energies = [estates.hamiltonian()[i, i] for i in range(nstates)]  # type: List[float]
+        energies = [estates.hamiltonian[i, i] for i in range(nstates)]  # type: List[float]
         dc = [estates._derivative_coupling[j, i, 0] for i in range(nstates) for j in range(i)]  # type: List[float]
         forces = [float(-estates.force(i)[j]) for i in range(nstates) for j in range(ndof)]  # type: List[float]
         plist = list(x.flatten()) + diabats + energies + dc + forces  # type: List[float]

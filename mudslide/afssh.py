@@ -117,9 +117,9 @@ class AugmentedFSSH(SurfaceHoppingMD):
 
         self.augmented_integration = options.get("augmented_integration", self.electronic_integration).lower()
 
-        self.delR = np.zeros([self.model.ndof(), self.model.nstates(), self.model.nstates()],
+        self.delR = np.zeros([self.model.ndof, self.model.nstates, self.model.nstates],
                 dtype=np.complex128)
-        self.delP = np.zeros([self.model.ndof(), self.model.nstates(), self.model.nstates()],
+        self.delP = np.zeros([self.model.ndof, self.model.nstates, self.model.nstates],
                 dtype=np.complex128)
 
         self.propagator = AFSSHPropagator(self.model, "vv")
@@ -137,9 +137,9 @@ class AugmentedFSSH(SurfaceHoppingMD):
         numpy.ndarray
             Matrix of force differences between states.
         """
-        delF = np.copy(this_electronics.force_matrix())
+        delF = np.copy(this_electronics.force_matrix)
         F0 = self._force(this_electronics)
-        for i in range(self.model.nstates()):
+        for i in range(self.model.nstates):
             delF[i,i,:] -= F0
         return delF
 
@@ -268,8 +268,8 @@ class AugmentedFSSH(SurfaceHoppingMD):
         numpy.ndarray
             Array of collapse probabilities for each state.
         """
-        nst = self.model.nstates()
-        ndof = self.model.ndof()
+        nst = self.model.nstates
+        ndof = self.model.ndof
         out = np.zeros(nst, dtype=np.float64)
 
         def shifted_diagonal(X, k: int) -> np.ndarray:
@@ -281,7 +281,7 @@ class AugmentedFSSH(SurfaceHoppingMD):
         ddR = shifted_diagonal(self.delR, self.state)
         ddP = shifted_diagonal(self.delP, self.state)
         ddP = np.where(np.abs(ddP) == 0.0, 1e-10, ddP)
-        ddF = shifted_diagonal(np.einsum("pqx->xpq", electronics.force_matrix()), self.state)
+        ddF = shifted_diagonal(np.einsum("pqx->xpq", electronics.force_matrix), self.state)
         ddR = ddR * np.sign(ddR/ddP)
 
         for i in range(nst):
@@ -306,14 +306,14 @@ class AugmentedFSSH(SurfaceHoppingMD):
         gamma = self.gamma_collapse(this_electronics)
 
         eta = np.zeros_like(gamma)
-        for i in range(self.model.nstates()):
+        for i in range(self.model.nstates):
             if i == self.state:
                 continue
             e = self.random()
             eta[i] = e
 
             if e < gamma[i]:
-                assert self.model.nstates() == 2
+                assert self.model.nstates == 2
 
                 # reset the density matrix
                 self.rho[:,:] = 0.0
@@ -343,6 +343,6 @@ class AugmentedFSSH(SurfaceHoppingMD):
         dRb = self.delR[:, hop_to, hop_to]
         dPb = self.delP[:, hop_to, hop_to]
 
-        for i in range(self.model.nstates()):
+        for i in range(self.model.nstates):
             self.delR[:,i,i] -= dRb
             self.delP[:,i,i] -= dPb

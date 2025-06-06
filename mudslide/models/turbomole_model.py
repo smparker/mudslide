@@ -336,7 +336,7 @@ class TMModel(ElectronicModel_):
 
         :param X: numpy array of shape (n_atoms * 3) with coordinates in Bohr
         """
-        X = X.reshape((self.ndof() // 3, 3))
+        X = X.reshape((self.ndof // 3, 3))
         coord_path = self.control.where_is_dg("coord", absolute_path=True)
 
         with open(coord_path, "r", encoding='utf-8') as f:
@@ -368,8 +368,8 @@ class TMModel(ElectronicModel_):
     def call_turbomole(self, outname="turbo.out") -> None:
         """Call Turbomole to run the calculation"""
         # which forces are actually found?
-        self._force = np.zeros((self.nstates(), self.ndof()))
-        self._forces_available = np.zeros(self.nstates(), dtype=bool)
+        self._force = np.zeros((self.nstates, self.ndof))
+        self._forces_available = np.zeros(self.nstates, dtype=bool)
 
         with open(outname, "w", encoding='utf-8') as f:
             for turbomole_module in self.turbomole_modules.values():
@@ -399,14 +399,14 @@ class TMModel(ElectronicModel_):
 
             # egrad couplings
             parsed_nac_coupling = data_dict["egrad"]["coupling"]
-            self._derivative_coupling = np.zeros((self.nstates(), self.nstates(), self.ndof()))
-            self._derivative_couplings_available = np.zeros((self.nstates(), self.nstates()),
+            self._derivative_coupling = np.zeros((self.nstates, self.nstates, self.ndof))
+            self._derivative_couplings_available = np.zeros((self.nstates, self.nstates),
                                                             dtype=bool)
             for dct in parsed_nac_coupling:
                 i = dct["bra_state"]
                 j = dct["ket_state"]
 
-                ddr = np.array(dct["d/dR"]).reshape(self.ndof(), order="F")
+                ddr = np.array(dct["d/dR"]).reshape(self.ndof, order="F")
                 self._derivative_coupling[i, j, :] = ddr
                 self._derivative_coupling[j, i, :] = -(self._derivative_coupling[i, j, :])
                 self._derivative_couplings_available[i, j] = True
@@ -431,7 +431,7 @@ class TMModel(ElectronicModel_):
         self.update_coords(X)
         self.call_turbomole(outname = Path(self.control.workdir)/"turbo.out")
 
-        self._hamiltonian = np.zeros([self.nstates(), self.nstates()])
+        self._hamiltonian = np.zeros([self.nstates, self.nstates])
         self._hamiltonian = np.diag(self.energies)
 
     def clone(self):

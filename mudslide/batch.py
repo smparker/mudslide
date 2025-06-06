@@ -204,7 +204,7 @@ class TrajGenBoltzmann:
 class BatchedTraj:
     """Class to manage many SurfaceHoppingMD trajectories.
 
-    Requires a model object which is a class that has functions V(x), dV(x), nstates(), and ndof()
+    Requires a model object which is a class that has functions V(x), dV(x), nstates, and ndof
     that return the Hamiltonian at position x, gradient of the Hamiltonian at position x,
     number of electronic states, and dimension of nuclear space, respectively.
 

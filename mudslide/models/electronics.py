@@ -86,12 +86,13 @@ class ElectronicModel_:
 
         self._hamiltonian: ArrayLike
         self._force: ArrayLike
-        self._forces_available: ArrayLike = np.zeros(self.nstates(), dtype=bool)
+        self._forces_available: ArrayLike = np.zeros(self.nstates, dtype=bool)
         self._derivative_coupling: ArrayLike
-        self._derivative_couplings_available: ArrayLike = np.zeros((self.nstates(), self.nstates()), dtype=bool)
+        self._derivative_couplings_available: ArrayLike = np.zeros((self.nstates, self.nstates), dtype=bool)
 
         self.atom_types: List[str] = atom_types
 
+    @property
     def ndof(self) -> int:
         """Get the number of classical degrees of freedom.
 
@@ -135,6 +136,7 @@ class ElectronicModel_:
         """
         return self._nparticles, self._ndims
 
+    @property
     def nstates(self) -> int:
         """Get the number of electronic states.
 
@@ -145,6 +147,7 @@ class ElectronicModel_:
         """
         return self._nstates
 
+    @property
     def hamiltonian(self) -> ArrayLike:
         """Get the electronic Hamiltonian.
 
@@ -167,6 +170,7 @@ class ElectronicModel_:
             raise ValueError("Derivative coupling between states %d and %d not available" % (state1, state2))
         return self._derivative_coupling[state1, state2, :]
 
+    @property
     def derivative_coupling_tensor(self) -> ArrayLike:
         """Return the derivative coupling tensor"""
         if not np.all(self._derivative_couplings_available):
@@ -181,6 +185,7 @@ class ElectronicModel_:
             raise ValueError("NAC_matrix needs all derivative couplings")
         return np.einsum("ijk,k->ij", self._derivative_coupling, velocity)
 
+    @property
     def force_matrix(self) -> ArrayLike:
         """Return the force matrix"""
         if not np.all(self._forces_available):
@@ -236,8 +241,8 @@ class ElectronicModel_:
     def as_dict(self):
         """Return a dictionary representation of the model"""
         out = {
-            "nstates": self.nstates(),
-            "ndof": self.ndof(),
+            "nstates": self.nstates,
+            "ndof": self.ndof,
             "position": self._position.tolist(),
             "hamiltonian": self._hamiltonian.tolist(),
             "force": self._force.tolist()
@@ -316,7 +321,7 @@ class DiabaticModel_(ElectronicModel_):
             energies, coeff = np.linalg.eigh(V)
             if reference is not None:
                 try:
-                    for mo in range(self.nstates()):
+                    for mo in range(self.nstates):
                         if (np.dot(coeff[:, mo], reference[:, mo]) < 0.0):
                             coeff[:, mo] *= -1.0
                 except:
@@ -324,19 +329,19 @@ class DiabaticModel_(ElectronicModel_):
                                     (reference))
             return (coeff, np.diag(energies))
         elif self._representation == "diabatic":
-            return (np.eye(self.nstates(), dtype=np.float64), V)
+            return (np.eye(self.nstates, dtype=np.float64), V)
         else:
             raise Exception("Unrecognized run mode")
 
     def _compute_force(self, dV: ArrayLike, coeff: ArrayLike) -> ArrayLike:
         r""":math:`-\langle \phi_{\mbox{state}} | \nabla H | \phi_{\mbox{state}} \rangle`"""
-        nst = self.nstates()
-        ndof = self.ndof()
+        nst = self.nstates
+        ndof = self.ndof
 
         half = np.einsum("xij,jp->ipx", dV, coeff)
 
         out = np.zeros([nst, ndof], dtype=np.float64)
-        for ist in range(self.nstates()):
+        for ist in range(self.nstates):
             out[ist, :] += -np.einsum("i,ix->x", coeff[:, ist], half[:, ist, :])
         return out
 
@@ -348,11 +353,11 @@ class DiabaticModel_(ElectronicModel_):
     def _compute_derivative_coupling(self, coeff: ArrayLike, dV: ArrayLike, energies: ArrayLike) -> ArrayLike:
         r"""returns :math:`\phi_{i} | \nabla_\alpha \phi_{j} = d^\alpha_{ij}`"""
         if self._representation == "diabatic":
-            return np.zeros([self.nstates(), self.nstates(), self.ndof()], dtype=np.float64)
+            return np.zeros([self.nstates, self.nstates, self.ndof], dtype=np.float64)
 
         out = np.einsum("ip,xij,jq->pqx", coeff, dV, coeff)
 
-        for j in range(self.nstates()):
+        for j in range(self.nstates):
             for i in range(j):
                 dE = energies[j] - energies[i]
                 if abs(dE) < 1.0e-10:
@@ -464,13 +469,13 @@ class AdiabaticModel_(ElectronicModel_):
         """
         if self._representation == "adiabatic":
             en, co = np.linalg.eigh(V)
-            nst = self.nstates()
+            nst = self.nstates
             coeff = co[:, :nst]
             energies = en[:nst]
 
             if reference is not None:
                 try:
-                    for mo in range(self.nstates()):
+                    for mo in range(self.nstates):
                         if (np.dot(coeff[:, mo], reference[:, mo]) < 0.0):
                             coeff[:, mo] *= -1.0
                 except:
@@ -485,13 +490,13 @@ class AdiabaticModel_(ElectronicModel_):
 
     def _compute_force(self, dV: ArrayLike, coeff: ArrayLike) -> ArrayLike:
         r""":math:`-\langle \phi_{\mbox{state}} | \nabla H | \phi_{\mbox{state}} \rangle`"""
-        nst = self.nstates()
-        ndof = self.ndof()
+        nst = self.nstates
+        ndof = self.ndof
 
         half = np.einsum("xij,jp->ipx", dV, coeff)
 
         out = np.zeros([nst, ndof], dtype=np.float64)
-        for ist in range(self.nstates()):
+        for ist in range(self.nstates):
             out[ist, :] += -np.einsum("i,ix->x", coeff[:, ist], half[:, ist, :])
         return out
 
@@ -503,11 +508,11 @@ class AdiabaticModel_(ElectronicModel_):
     def _compute_derivative_coupling(self, coeff: ArrayLike, dV: ArrayLike, energies: ArrayLike) -> ArrayLike:
         r"""returns :math:`\phi_{i} | \nabla_\alpha \phi_{j} = d^\alpha_{ij}`"""
         if self._representation == "diabatic":
-            return np.zeros([self.nstates(), self.nstates(), self.ndof()], dtype=np.float64)
+            return np.zeros([self.nstates, self.nstates, self.ndof], dtype=np.float64)
 
         out = np.einsum("ip,xij,jq->pqx", coeff, dV, coeff)
 
-        for j in range(self.nstates()):
+        for j in range(self.nstates):
             for i in range(j):
                 dE = energies[j] - energies[i]
                 if abs(dE) < 1.0e-14:

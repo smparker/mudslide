@@ -90,8 +90,8 @@ class AdiabaticMD:
         self.tracer = Trace(tracer)
         self.queue: Any = queue
         self.mass = model.mass
-        self.position = np.array(x0, dtype=np.float64).reshape(model.ndof())
-        self.velocity = np.array(v0, dtype=np.float64).reshape(model.ndof())
+        self.position = np.array(x0, dtype=np.float64).reshape(model.ndof)
+        self.velocity = np.array(v0, dtype=np.float64).reshape(model.ndof)
         self.last_velocity = np.zeros_like(self.velocity, dtype=np.float64)
         if "last_velocity" in options:
             self.last_velocity[:] = options["last_velocity"]
@@ -317,7 +317,7 @@ class AdiabaticMD:
             "potential": self.potential_energy().item(),
             "kinetic": self.kinetic_energy().item(),
             "energy": self.total_energy().item(),
-            "temperature": 2 * self.kinetic_energy() / ( boltzmann * self.model.ndof()),
+            "temperature": 2 * self.kinetic_energy() / ( boltzmann * self.model.ndof),
             "electronics": self.electronics.as_dict()
         }
         return out

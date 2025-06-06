@@ -63,7 +63,7 @@ class TestTMGround(_TestTM):
         Eref = -78.40037210973
         Fref = np.loadtxt("force.ref.txt")
 
-        assert np.isclose(model.hamiltonian()[0,0], Eref)
+        assert np.isclose(model.hamiltonian[0,0], Eref)
         assert np.allclose(model.force(0), Fref)
 
 class TestTMGroundPC(_TestTM):
@@ -82,7 +82,7 @@ class TestTMGroundPC(_TestTM):
         Eref = -78.63405047062
         Fref = np.loadtxt("force.ref.txt")
 
-        assert np.isclose(model.hamiltonian()[0,0], Eref)
+        assert np.isclose(model.hamiltonian[0,0], Eref)
         assert np.allclose(model.force(0), Fref)
 
         xyzpc1, q1, dpc = model.control.read_point_charge_gradients()
