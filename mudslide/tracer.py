@@ -1,23 +1,13 @@
 # -*- coding: utf-8 -*-
 """Collect results from single trajectories"""
 
-from __future__ import print_function, division
+    import os
+    import yaml
 
-from .version import __version__
-
-import numpy as np
-import sys, os
-import copy as cp
-import shutil
-
-from typing import List, Any, Dict, Iterator
-from .typing import ArrayLike
-
-from .util import find_unique_name, is_string
-from .math import RollingAverage
-from .constants import fs_to_au
-
-import yaml
+    from typing import Any, Dict, Iterator
+    from .typing import ArrayLike
+    from .util import find_unique_name
+    from .version import __version__
 
 
 class Trace_:

@@ -1,18 +1,16 @@
 # -*- coding: utf-8 -*-
 """Code for running batches of trajectories."""
 
-from __future__ import print_function, division
+from typing import Any, Iterator, Tuple
+import logging
 import queue
 import sys
-import logging
 
 import numpy as np
 
+from .constants import boltzmann
 from .exceptions import StillInteracting
 from .tracer import TraceManager
-from .constants import boltzmann
-
-from typing import Any, Iterator, Tuple
 from .typing import ModelT, TrajGenT, ArrayLike
 
 logger = logging.getLogger("mudslide")

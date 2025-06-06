@@ -4,18 +4,14 @@
 This module implements trajectory surface hopping with even sampling of phase space.
 """
 
-from __future__ import print_function, division
-
+from itertools import count
+from typing import Optional, List, Any, Dict, Union
 import copy as cp
-
 import numpy as np
 
 from .integration import quadrature
 from .surface_hopping_md import SurfaceHoppingMD
-
-from typing import Optional, List, Any, Dict, Union
 from .typing import ArrayLike, ElectronicT
-from itertools import count
 
 class SpawnStack:
     """Data structure to inform how new traces are spawned and weighted.

@@ -1,12 +1,5 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
-
-import sys
-
-import math as m
-import numpy as np
-
 DEBUG = False
 
 # masses of most common isotopes to 3 decimal points, from

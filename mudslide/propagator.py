@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
 """Propagators for ODEs from quantum dynamics"""
 
-from __future__ import division
-
-import numpy as np
-
 from typing import Any
+import numpy as np
 
 class Propagator_:
     """Base class for propagators.

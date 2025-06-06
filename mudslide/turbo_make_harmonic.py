@@ -3,15 +3,13 @@
 Extract harmonic parameters from a vibrational analysis
 """
 
-import sys
+from typing import Any
 import argparse
+import sys
 
 import numpy as np
 
 from mudslide.models.turbomole_model import TurboControl, turbomole_is_installed
-from mudslide.models.harmonic_model import HarmonicModel
-
-from typing import Any
 
 def add_make_harmonic_parser(subparsers):
     parser = subparsers.add_parser("make_harmonic", help="Generate a harmonic model from a vibrational analysis")

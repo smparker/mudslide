@@ -1,18 +1,14 @@
 # -*- coding: utf-8 -*-
 """Helper module for printing model surface"""
 
-from __future__ import print_function
-
-import sys
+from typing import Any, List
 
 import argparse
+import sys
+
 import numpy as np
 
 from .models import scattering_models as models
-
-from typing import Any, List
-from .typing import ArrayLike
-
 
 def add_surface_parser(subparsers: Any) -> None:
     """ Should accept a subparser object from argparse, add new subcommand, and then add arguments
