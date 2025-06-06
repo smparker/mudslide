@@ -356,26 +356,38 @@ class EvenSamplingTrajectory(SurfaceHoppingMD):
 
     This class extends SurfaceHoppingMD to implement even sampling of phase space
     during trajectory surface hopping simulations.
+
+    Parameters
+    ----------
+    *args : tuple
+        Arguments passed to SurfaceHoppingMD constructor
+    **options : dict
+        Options passed to SurfaceHoppingMD constructor
+    spawn_stack : SpawnStack, optional
+        Stack for managing trajectory spawning
+    quadrature : dict, optional
+        Quadrature parameters for sampling
+    mcsamples : int, optional
+        Number of Monte Carlo samples
     """
 
     recognized_options = SurfaceHoppingMD.recognized_options + [ "spawn_stack", "quadrature", "mcsamples" ]
 
     def __init__(self, *args, **options):
-        """Initialize the EvenSamplingTrajectory class.
+        """Initialize the EvenSamplingTrajectory.
 
         Parameters
         ----------
-        *args
-            Positional arguments passed to SurfaceHoppingMD
-        **options
-            Additional options for the simulation. Recognized options are:
-            All SurfaceHoppingMD options, plus:
-            spawn_stack : list or SpawnStack, optional
-                Stack of zeta values or a SpawnStack object for even sampling. Required.
-            quadrature : str, optional
-                Quadrature method for generating zeta values ('gl', etc.). Default is 'gl'.
-            mcsamples : int, optional
-                Number of Monte Carlo samples per quadrature point. Default is 1.
+        *args : tuple
+            Arguments passed to SurfaceHoppingMD constructor
+        **options : dict
+            Options passed to SurfaceHoppingMD constructor
+        spawn_stack : SpawnStack, optional
+            Stack for managing trajectory spawning
+        quadrature : dict, optional
+            Quadrature parameters for sampling
+        mcsamples : int, optional
+            Number of Monte Carlo samples
         """
         options['hopping_method'] = 'cumulative'  # Force cumulative hopping
         SurfaceHoppingMD.__init__(self, *args, **options)

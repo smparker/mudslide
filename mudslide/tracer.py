@@ -376,6 +376,13 @@ class YAMLTrace(Trace_):
             yaml.safe_dump([event_dict], f, explicit_start=False)
 
     def clone(self):
+        """Create a deep copy of the trace.
+
+        Returns
+        -------
+        YAMLTrace
+            Deep copy of the trace object
+        """
         out = YAMLTrace(base_name=self.base_name,
                         weight=float(self.weight),
                         location=self.location,

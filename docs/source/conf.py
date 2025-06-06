@@ -14,15 +14,17 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('../'))
 
+from mudslide.version import __version__
 
 # -- Project information -----------------------------------------------------
 
 project = 'mudslide'
-copyright = '2020, Shane M. Parker'
+copyright = '2020-2025, Shane M. Parker'
 author = 'Shane M. Parker'
 
 # The full version, including alpha/beta/rc tags
-release = '0.9'
+version = __version__
+release = __version__
 
 master_doc = 'index'
 
