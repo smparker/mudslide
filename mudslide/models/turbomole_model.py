@@ -276,15 +276,14 @@ class TMModel(ElectronicModel_):
         nparts, ndims = X.shape
         self._position = X.flatten()
         self._elements = elements
-        ElectronicModel_.__init__(self, ndims=ndims, nparticles=nparts,
+        self.states = states
+        ElectronicModel_.__init__(self, nstates=len(self.states), ndims=ndims, nparticles=nparts,
                                 representation=representation, reference=reference)
         self.mass = self.control.get_masses(self._elements)
 
         self.expert = expert
 
-        self.states = states
-        self.nstates_ = len(self.states)
-        self.energies = np.zeros(self.nstates_, dtype=np.float64)
+        self.energies = np.zeros(self._nstates, dtype=np.float64)
 
         if not turbomole_is_installed():
             raise RuntimeError("Turbomole is not installed")

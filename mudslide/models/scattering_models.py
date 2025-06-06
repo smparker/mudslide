@@ -444,8 +444,6 @@ class ShinMetiu(AdiabaticModel_):
         box_left, box_right = -0.5 * box, 0.5 * box
         self.rr = np.linspace(box_left + 1e-12, box_right - 1e-12, nel, endpoint=True, dtype=np.float64)
 
-        self.nstates_ = nstates
-
     def soft_coulomb(self, r12: ArrayLike, gamma: DtypeLike) -> ArrayLike:
         abs_r12 = np.abs(r12)
         return erf(abs_r12 / gamma) / abs_r12

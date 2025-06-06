@@ -27,7 +27,7 @@ class ElectronicModel_:
         The representation of the electronic model. Can be "adiabatic" or "diabatic".
     _reference : Any
         The reference electronic state. Can be None.
-    nstates_ : int
+    _nstates : int
         The number of electronic states.
     _ndof : int
         The number of classical degrees of freedom.
@@ -78,7 +78,7 @@ class ElectronicModel_:
             self._ndof = ndof
             self._ndims = ndof
             self._nparticles = 1
-        self.nstates_ = nstates
+        self._nstates = nstates
 
         self._representation = representation
         self._position: ArrayLike
@@ -143,7 +143,7 @@ class ElectronicModel_:
         int
             Number of electronic states
         """
-        return self.nstates_
+        return self._nstates
 
     def hamiltonian(self) -> ArrayLike:
         """Get the electronic Hamiltonian.
