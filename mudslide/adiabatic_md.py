@@ -99,6 +99,8 @@ class AdiabaticMD:
         # fixed initial parameters
         self.time = np.longdouble(options.get("t0", 0.0))
         self.nsteps = int(options.get("previous_steps", 0))
+        self.max_steps = int(options.get("max_steps", 100000))
+        self.max_time = float(options.get("max_time", 1e25))
         self.trace_every = int(options.get("trace_every", 1))
 
         self.propagator = AdiabaticPropagator(self.model, options.get("propagator", "VV"))
@@ -217,8 +219,6 @@ class AdiabaticMD:
             duration["box_bounds"] = (b0, b1)
         else:
             duration["box_bounds"] = None
-        duration["max_steps"] = options.get('max_steps', 100000)
-        duration["max_time"] = options.get('max_time', 1e25)
 
         self.duration = duration
 
@@ -229,10 +229,10 @@ class AdiabaticMD:
         """
         if self.force_quit: # pylint: disable=no-else-return
             return False
-        elif self.duration["max_steps"] >= 0 and self.nsteps >= self.duration["max_steps"]:
+        elif self.max_steps >= 0 and self.nsteps >= self.max_steps:
             return False
-        elif self.time >= self.duration["max_time"] or np.isclose(
-                self.time, self.duration["max_time"], atol=1e-8, rtol=0.0):
+        elif self.time >= self.max_time or np.isclose(
+                self.time, self.max_time, atol=1e-8, rtol=0.0):
             return False
         elif self.duration["found_box"]:
             return self.currently_interacting()

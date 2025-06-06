@@ -24,9 +24,10 @@ class SurfaceHoppingMD:
     events between electronic states.
     """
     recognized_options = [ "propagator", "last_velocity", "bounds",
-        "duration", "dt", "t0", "previous_steps", "trace_every", "max_time",
+        "dt", "t0", "previous_steps",
+        "duration", "max_steps", "max_time",
         "seed_sequence",
-        "outcome_type",
+        "outcome_type", "trace_every",
         "electronics",
         "electronic_integration", "max_electronic_dt", "starting_electronic_intervals",
         "weight",
@@ -40,7 +41,7 @@ class SurfaceHoppingMD:
                  model: Any,
                  x0: ArrayLike,
                  v0: ArrayLike,
-                 rho0: ArrayLike,
+                 rho0: Union[ArrayLike, int],
                  tracer: Any = "default",
                  queue: Any = None,
                  strict_option_check: bool = True,
@@ -55,8 +56,9 @@ class SurfaceHoppingMD:
             Initial position
         v0 : ArrayLike
             Initial velocity
-        rho0 : ArrayLike
-            Initial density matrix
+        rho0 : ArrayLike or int
+            Initial density matrix or state index. If an integer, populates a single state.
+            If a matrix, populates a density matrix (requires state0 for active state).
         tracer : Any, optional
             spawn from TraceManager to collect results, by default "default"
         queue : Any, optional
@@ -82,6 +84,8 @@ class SurfaceHoppingMD:
             Number of previous steps (for restarts). Default is 0.
         trace_every : int, optional
             Interval (in steps) at which to record trajectory data. Default is 1.
+        max_steps : int, optional
+            Maximum number of simulation steps. Default is 1000000.
         max_time : float, optional
             Maximum simulation time. Default is 1e25.
         seed_sequence : int or numpy.random.SeedSequence, optional
@@ -150,6 +154,8 @@ class SurfaceHoppingMD:
         # fixed initial parameters
         self.time = float(options.get("t0", 0.0))
         self.nsteps = int(options.get("previous_steps", 0))
+        self.max_steps = int(options.get("max_steps", 1000000))
+        self.max_time = float(options.get("max_time", 1e25))
         self.trace_every = int(options.get("trace_every", 1))
         self.dt = float(options.get("dt", fs_to_au))
         self.propagator = SHPropagator(self.model, options.get("propagator", "vv"))
@@ -334,8 +340,6 @@ class SurfaceHoppingMD:
             duration["box_bounds"] = (np.array(bounds[0], dtype=np.float64), np.array(bounds[1], dtype=np.float64))
         else:
             duration["box_bounds"] = None
-        duration["max_steps"] = options.get('max_steps', 100000)  # < 0 interpreted as no limit
-        duration["max_time"] = options.get('max_time', 1e25)  # set to an outrageous number by default
 
         self.duration = duration
 
@@ -349,10 +353,10 @@ class SurfaceHoppingMD:
         """
         if self.force_quit:
             return False
-        elif self.duration["max_steps"] >= 0 and self.nsteps >= self.duration["max_steps"]:
+        elif self.max_steps >= 0 and self.nsteps >= self.max_steps:
             return False
-        elif self.time >= self.duration["max_time"] or np.isclose(
-                self.time, self.duration["max_time"], atol=1e-8, rtol=0.0):
+        elif self.time >= self.max_time or np.isclose(
+                self.time, self.max_time, atol=1e-8, rtol=0.0):
             return False
         elif self.duration["found_box"]:
             return self.currently_interacting()
