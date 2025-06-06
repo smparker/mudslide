@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Propagate even sampling algorithm"""
+"""Propagate even sampling algorithm.
+
+This module implements trajectory surface hopping with even sampling of phase space.
+"""
 
 from __future__ import print_function, division
 
@@ -15,7 +18,15 @@ from .typing import ArrayLike, ElectronicT
 from itertools import count
 
 class SpawnStack:
-    """Data structure to inform how new traces are spawned and weighted"""
+    """Data structure to inform how new traces are spawned and weighted.
+
+    Parameters
+    ----------
+    sample_stack : list
+        Stack of samples containing zeta values and differential weights.
+    weight : float, optional
+        Base weight for the stack, by default 1.0
+    """
 
     def __init__(self, sample_stack: List, weight: float = 1.0):
         self.sample_stack = sample_stack
@@ -38,9 +49,30 @@ class SpawnStack:
         self.zeta_: float = -1.0
 
     def zeta(self) -> float:
+        """Get the current zeta value.
+
+        Returns
+        -------
+        float
+            Current zeta value.
+        """
         return self.zeta_
 
     def next_zeta(self, current_value: float, random_state: Any = np.random.RandomState()) -> float:
+        """Calculate the next zeta value.
+
+        Parameters
+        ----------
+        current_value : float
+            Current accumulated probability value.
+        random_state : Any, optional
+            Random state for generating random numbers, by default np.random.RandomState()
+
+        Returns
+        -------
+        float
+            Next zeta value for determining hops.
+        """
         if self.sample_stack:
             izeta = self.izeta
             while izeta < len(self.sample_stack) and self.sample_stack[izeta]["zeta"] < current_value:
@@ -66,9 +98,33 @@ class SpawnStack:
         return self.zeta_
 
     def weight(self) -> float:
+        """Calculate the current weight.
+
+        Returns
+        -------
+        float
+            Current weight as product of base weight and marginal weight.
+        """
         return self.base_weight * self.marginal_weight
 
     def spawn(self, reweight: float = 1.0) -> "SpawnStack":
+        """Create a new SpawnStack for spawning trajectories.
+
+        Parameters
+        ----------
+        reweight : float, optional
+            Weight adjustment factor, by default 1.0
+
+        Returns
+        -------
+        SpawnStack
+            New SpawnStack instance for spawned trajectory.
+
+        Raises
+        ------
+        Exception
+            If a hop occurs with no differential weight.
+        """
         if self.sample_stack:
             samp = self.last_stack
             dw = self.last_dw
@@ -82,13 +138,23 @@ class SpawnStack:
         return self.__class__(next_stack, weight)
 
     def do_spawn(self) -> bool:
-        """Test whether the stack indicates we should keep spawning trajectories
-        versus just following one. An empty stack means we should behave like
-        a normal cumulative surface hopping run.
+        """Test whether the stack indicates we should keep spawning trajectories.
+
+        Returns
+        -------
+        bool
+            True if stack indicates spawning should continue, False otherwise.
         """
         return bool(self.sample_stack)
 
     def spawn_size(self) -> int:
+        """Get the number of trajectories to spawn.
+
+        Returns
+        -------
+        int
+            Number of trajectories to spawn.
+        """
         if self.sample_stack:
             samp = self.last_stack
             if "spawn_size" in samp:
@@ -99,18 +165,30 @@ class SpawnStack:
             return 1
 
     def append_layer(self, zetas: list, dws: list, stack=None, node=None, nodes=None, adj_matrix=None):
-        """
-        A depth-first traversal of a sample_stack tree to append a
-        layer to all leaves. The method builds the adjacency matrix as
-        it traverses the tree. This works for arbitary depth of the stack.
+        """Append a layer to all leaves in the sample stack tree.
 
-        For example, call as:
+        A depth-first traversal of a sample_stack tree to append a layer to all leaves.
+        The method builds the adjacency matrix as it traverses the tree.
 
-            ss = SpawnStack(sample_stack=[])
-            ss.append_layer(zetas=[1.0], dws=[1.0]),
+        Parameters
+        ----------
+        zetas : list
+            List of zeta values to append.
+        dws : list
+            List of differential weights to append.
+        stack : list, optional
+            Current stack being processed, by default None
+        node : int, optional
+            Current node being processed, by default None
+        nodes : iterator, optional
+            Iterator for generating node numbers, by default None
+        adj_matrix : dict, optional
+            Adjacency matrix being built, by default None
 
-        which will append a layer recursively at the lowest layer.
-
+        Raises
+        ------
+        ValueError
+            If dimensions of dws and zetas do not match.
         """
 
         if stack is None:
@@ -148,12 +226,21 @@ class SpawnStack:
                 )
 
     def unpack(self, zeta_list, dw_list, stack=None, depth=0):
-        """
-        Recursively unpack a sample_stack, filling in the zeta_list
-        and dw_list passed in.
+        """Recursively unpack a sample stack.
 
-        zetas and dws will then be filled with the flattened lists of
-        zeta values and differential weights.
+        Fills in the zeta_list and dw_list with flattened lists of zeta values
+        and differential weights.
+
+        Parameters
+        ----------
+        zeta_list : list
+            List to be filled with zeta values.
+        dw_list : list
+            List to be filled with differential weights.
+        stack : list or dict, optional
+            Current stack being processed, by default None
+        depth : int, optional
+            Current depth in the tree, by default 0
         """
 
         if stack is None:
@@ -170,60 +257,59 @@ class SpawnStack:
 
 
     def unravel(self):
-            """
-            Calls unpack to recursively unpack a sample_stack and then
-            unravels the list of zetas and dws to create a list of tuples of
-            tuples of points and weights. This works for arbitary dimensions.
+        """Unravel the sample stack into points and weights.
 
-            self = SpawnStack.from_quadrature(nsamples = [2, 2])
-            pts_wts = self.unravel()
+        Calls unpack to recursively unpack a sample_stack and then unravels the list
+        of zetas and dws to create a list of tuples of points and weights.
 
-            where
+        Returns
+        -------
+        list
+            List of tuples containing (points, weights) where points is a tuple of
+            coordinates and weights is the product of weights at those coordinates.
+        """
+        zetas = []
+        dws = []
+        self.unpack(zeta_list=zetas, dw_list=dws)
 
-            pts_wts = [((x1, y1), (wx1, wy1)), ((x1, y2), (wx1, wy2)), ((x2, y1), (wx2, wy1)), ((x2, y2), (wx2, wy2))]
-            """
-            zetas = []
-            dws = []
-            self.unpack(zeta_list=zetas, dw_list=dws)
-
-            dim_list = []
-            for tpl in zetas:
-                dim_list.append(tpl[0])
-            dim = max(dim_list) + 1
-            main_list = []
-            coords = []
-            weights = []
-            last_depth = 0
-            for i, tpl in enumerate(zetas):
-                # When we recurse back up in depth, we need to remove num_to_pop items from coords/weights.
-                if tpl[0] < last_depth:
-                    num_to_pop = last_depth - tpl[0] + 1
-                    for j in range(num_to_pop):
-                        coords.pop()
-                        weights.pop()
-                # Take care of the fact that the above doesn't work for 1D.
-                if (dim == 1) and (len(coords) != 0):
+        dim_list = []
+        for tpl in zetas:
+            dim_list.append(tpl[0])
+        dim = max(dim_list) + 1
+        main_list = []
+        coords = []
+        weights = []
+        last_depth = 0
+        for i, tpl in enumerate(zetas):
+            # When we recurse back up in depth, we need to remove num_to_pop items from coords/weights.
+            if tpl[0] < last_depth:
+                num_to_pop = last_depth - tpl[0] + 1
+                for j in range(num_to_pop):
                     coords.pop()
                     weights.pop()
-                if tpl[0] == 0:
-                    last_depth = tpl[0]
+            # Take care of the fact that the above doesn't work for 1D.
+            if (dim == 1) and (len(coords) != 0):
+                coords.pop()
+                weights.pop()
+            if tpl[0] == 0:
+                last_depth = tpl[0]
+                coords.append(tpl[1])
+                weights.append(dws[i][1])
+            else:
+                last_depth = tpl[0]
+                if len(coords) > tpl[0]:
+                    coords[tpl[0]] = tpl[1]
+                    weights[tpl[0]] = dws[i][1]
+                else:
                     coords.append(tpl[1])
                     weights.append(dws[i][1])
-                else:
-                    last_depth = tpl[0]
-                    if len(coords) > tpl[0]:
-                        coords[tpl[0]] = tpl[1]
-                        weights[tpl[0]] = dws[i][1]
-                    else:
-                        coords.append(tpl[1])
-                        weights.append(dws[i][1])
-                if len(coords) == dim:
-                    main_list.append((tuple(coords), tuple(weights)))
+            if len(coords) == dim:
+                main_list.append((tuple(coords), tuple(weights)))
 
-            # Return product of weights
-            points_weights = [(points, np.prod(weights)) for (points, weights) in main_list]
+        # Return product of weights
+        points_weights = [(points, np.prod(weights)) for (points, weights) in main_list]
 
-            return points_weights
+        return points_weights
 
     @classmethod
     def from_quadrature(
@@ -234,6 +320,26 @@ class SpawnStack:
         mcsamples: int = 1,
         random_state: Any = np.random.RandomState(),
     ) -> "SpawnStack":
+        """Create a SpawnStack from quadrature points.
+
+        Parameters
+        ----------
+        nsamples : Union[List[int], int]
+            Number of samples per dimension or list of samples per dimension.
+        weight : float, optional
+            Base weight for the stack, by default 1.0
+        method : str, optional
+            Quadrature method to use, by default "gl"
+        mcsamples : int, optional
+            Number of Monte Carlo samples per quadrature point, by default 1
+        random_state : Any, optional
+            Random state for generating random numbers, by default np.random.RandomState()
+
+        Returns
+        -------
+        SpawnStack
+            New SpawnStack instance created from quadrature points.
+        """
         if not isinstance(nsamples, list):
             nsamples = [int(nsamples)]
 
@@ -253,25 +359,24 @@ class SpawnStack:
 
 
 class EvenSamplingTrajectory(SurfaceHoppingMD):
-    """
-    Trajectory surface hopping with even sampling of phase space
+    """Trajectory surface hopping with even sampling of phase space.
+
+    This class extends SurfaceHoppingMD to implement even sampling of phase space
+    during trajectory surface hopping simulations.
     """
 
     recognized_options = SurfaceHoppingMD.recognized_options + [ "spawn_stack", "quadrature", "mcsamples" ]
 
     def __init__(self, *args, **options):
-        """
-        Initialize the EvenSamplingTrajectory class.
+        """Initialize the EvenSamplingTrajectory class.
 
         Parameters
         ----------
-        *args :
+        *args
             Positional arguments passed to SurfaceHoppingMD
-        **options : Any
+        **options
             Additional options for the simulation. Recognized options are:
-
             All SurfaceHoppingMD options, plus:
-
             spawn_stack : list or SpawnStack, optional
                 Stack of zeta values or a SpawnStack object for even sampling. Required.
             quadrature : str, optional
@@ -297,6 +402,18 @@ class EvenSamplingTrajectory(SurfaceHoppingMD):
         self.zeta = self.spawn_stack.next_zeta(0.0, self.random_state)
 
     def clone(self, spawn_stack: Optional[Any] = None) -> "EvenSamplingTrajectory":
+        """Create a clone of the current trajectory.
+
+        Parameters
+        ----------
+        spawn_stack : Any, optional
+            New spawn stack to use for the clone, by default None
+
+        Returns
+        -------
+        EvenSamplingTrajectory
+            Cloned trajectory instance.
+        """
         if spawn_stack is None:
             spawn_stack = self.spawn_stack
 
@@ -325,9 +442,17 @@ class EvenSamplingTrajectory(SurfaceHoppingMD):
         return out
 
     def hopper(self, probs: ArrayLike) -> List[Dict[str, Union[int, float]]]:
-        """Given a set of probabilities, determines whether and where to hop
-        :param probs: [nstates] numpy array of individual hopping probabilities
-        :returns: [ (target_state, hop_weight) ]
+        """Determine whether and where to hop based on probabilities.
+
+        Parameters
+        ----------
+        probs : ArrayLike
+            Array of individual hopping probabilities.
+
+        Returns
+        -------
+        List[Dict[str, Union[int, float]]]
+            List of dictionaries containing target state and hop weight information.
         """
         accumulated = self.prob_cum
         probs[self.state] = 0.0  # ensure self-hopping is nonsense
@@ -377,16 +502,21 @@ class EvenSamplingTrajectory(SurfaceHoppingMD):
         return []
 
     def hop_to_it(self, hop_to: List[Dict[str, Any]], electronics: ElectronicT = None) -> None:
-        """hop_to_it for even sampling spawns new trajectories instead of enacting hop
+        """Handle hopping by spawning new trajectories.
 
-         hop_to_it must accomplish:
-           - copy current trajectory
-           - initiate hops on the copied trajectories
-           - make no changes to current trajectory
-           - set next threshold for spawning
+        This method spawns new trajectories instead of enacting hops directly.
+        It must:
+        - Copy current trajectory
+        - Initiate hops on the copied trajectories
+        - Make no changes to current trajectory
+        - Set next threshold for spawning
 
-        :param hop_to: [nspawn] list of states and associated weights on which to hop
-        :param electronics: model class
+        Parameters
+        ----------
+        hop_to : List[Dict[str, Any]]
+            List of states and associated weights on which to hop.
+        electronics : ElectronicT, optional
+            Model class for electronic structure calculations, by default None
         """
         if self.spawn_stack.do_spawn():
             for hop in hop_to:

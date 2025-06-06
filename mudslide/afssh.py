@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Propagating Augmented-FSSH (A-FSSH) trajectories"""
+"""Propagating Augmented-FSSH (A-FSSH) trajectories."""
 
 from typing import Any, Union
 
@@ -14,20 +14,27 @@ from .propagator import Propagator_
 
 
 class AFSSHVVPropagator(Propagator_):
-    """Surface Hopping Velocity Verlet propagator"""
+    """Surface Hopping Velocity Verlet propagator."""
 
     def __init__(self, **options: Any) -> None:
-        """Constructor
+        """Initialize the propagator.
 
-        :param options: option dictionary
+        Parameters
+        ----------
+        **options : Any
+            Option dictionary for configuration.
         """
         super().__init__()
 
     def __call__(self, traj: 'SurfaceHoppingMD', nsteps: int) -> None:
-        """Propagate trajectory using Surface Hopping Velocity Verlet algorithm
+        """Propagate trajectory using Surface Hopping Velocity Verlet algorithm.
 
-        :param traj: trajectory object to propagate
-        :param nsteps: number of steps to propagate
+        Parameters
+        ----------
+        traj : SurfaceHoppingMD
+            Trajectory object to propagate.
+        nsteps : int
+            Number of steps to propagate.
         """
         dt = traj.dt
         # first update nuclear coordinates
@@ -71,19 +78,21 @@ class AFSSHPropagator(Propagator_):
         Parameters
         ----------
         model : Any
-            Model object defining the problem
+            Model object defining the problem.
         prop_options : Any, optional
-            Propagator options, can be a string or dictionary, by default "vv"
+            Propagator options, can be a string or dictionary, by default "vv".
 
         Returns
         -------
         SHPropagator
-            A new propagator instance
+            A new propagator instance.
 
         Raises
         ------
         ValueError
-            If the propagator type is unknown
+            If the propagator type is unknown.
+        Exception
+            If prop_options is not a string or dictionary.
         """
         if is_string(prop_options):
             prop_options = {"type": prop_options}
@@ -97,7 +106,7 @@ class AFSSHPropagator(Propagator_):
             raise ValueError(f"Unrecognized surface hopping propagator type: {proptype}.")
 
 class AugmentedFSSH(SurfaceHoppingMD):
-    """Augmented-FSSH (A-FSSH) dynamics, by Subotnik and coworkers
+    """Augmented-FSSH (A-FSSH) dynamics, by Subotnik and coworkers.
 
     Initial implementation based on original paper:
       Subotnik, Shenvi JCP 134, 024105 (2011); doi: 10.1063/1.3506779
@@ -116,6 +125,18 @@ class AugmentedFSSH(SurfaceHoppingMD):
         self.propagator = AFSSHPropagator(self.model, "vv")
 
     def compute_delF(self, this_electronics):
+        """Compute the difference in forces between states.
+
+        Parameters
+        ----------
+        this_electronics : ElectronicT
+            Current electronic state information.
+
+        Returns
+        -------
+        numpy.ndarray
+            Matrix of force differences between states.
+        """
         delF = np.copy(this_electronics.force_matrix())
         F0 = self._force(this_electronics)
         for i in range(self.model.nstates()):
@@ -123,8 +144,15 @@ class AugmentedFSSH(SurfaceHoppingMD):
         return delF
 
     def advance_delR(self, last_electronics, this_electronics):
-        """Propagate delR using Eq. (29) from Subotnik 2011 JCP"""
+        """Propagate delR using Eq. (29) from Subotnik 2011 JCP.
 
+        Parameters
+        ----------
+        last_electronics : ElectronicT
+            Electronic state information from previous step.
+        this_electronics : ElectronicT
+            Electronic state information from current step.
+        """
         dt = self.dt
         H = self.hamiltonian_propagator(last_electronics, this_electronics)
         delV = np.zeros_like(self.delP)
@@ -154,8 +182,15 @@ class AugmentedFSSH(SurfaceHoppingMD):
             raise Exception("Unrecognized propagate delR method")
 
     def advance_delP(self, last_electronics, this_electronics):
-        """Propagate delP using Eq. (31) from Subotnik JCP 2011"""
+        """Propagate delP using Eq. (31) from Subotnik JCP 2011.
 
+        Parameters
+        ----------
+        last_electronics : ElectronicT
+            Electronic state information from previous step.
+        this_electronics : ElectronicT
+            Electronic state information from current step.
+        """
         dt = self.dt
         H = self.hamiltonian_propagator(last_electronics, this_electronics)
         delF = self.compute_delF(this_electronics)
@@ -195,28 +230,43 @@ class AugmentedFSSH(SurfaceHoppingMD):
         return
 
     def direction_of_rescale(self, source: int, target: int, electronics: ElectronicT=None) -> np.ndarray:
-        """
-        Return direction in which to rescale momentum. In Subotnik JCP 2011,
-        they suggest to use the difference between the momenta on delP
+        """Return direction in which to rescale momentum.
 
-        :param source: active state before hop
-        :param target: active state after hop
-        :param electronics: electronic model information (ignored)
+        In Subotnik JCP 2011, they suggest to use the difference between the momenta on delP.
 
-        :return: unit vector pointing in direction of rescale
+        Parameters
+        ----------
+        source : int
+            Active state before hop.
+        target : int
+            Active state after hop.
+        electronics : ElectronicT, optional
+            Electronic model information (ignored), by default None.
+
+        Returns
+        -------
+        numpy.ndarray
+            Unit vector pointing in direction of rescale.
         """
         out = self.delP[:, source, source] - self.delP[:, target, target]
         assert np.linalg.norm(np.imag(out)) < 1e-8
         return np.real(out)
 
     def gamma_collapse(self, electronics: ElectronicT=None) -> np.ndarray:
-        """
-        Computes the probability of collapse to each electronic state using Eq. (55)
-        in Subotnik JCP 2011.
+        """Compute probability of collapse to each electronic state.
 
-        This formula has some major problems and is tweaked or abandoned in future papers
+        Uses Eq. (55) in Subotnik JCP 2011. This formula has some major problems
+        and is tweaked or abandoned in future papers.
 
-        :param electronics: electronic model information (forces)
+        Parameters
+        ----------
+        electronics : ElectronicT, optional
+            Electronic model information (forces), by default None.
+
+        Returns
+        -------
+        numpy.ndarray
+            Array of collapse probabilities for each state.
         """
         nst = self.model.nstates()
         ndim = self.model.ndim()
@@ -242,10 +292,14 @@ class AugmentedFSSH(SurfaceHoppingMD):
         return 0.5 * out * self.dt
 
     def surface_hopping(self, last_electronics: ElectronicT, this_electronics: ElectronicT) -> None:
-        """Specialized version of surface_hopping that handles collapsing
+        """Specialized version of surface_hopping that handles collapsing.
 
-        :param last_electronics: ElectronicStates from previous step
-        :param this_electronics: ElectronicStates from current step
+        Parameters
+        ----------
+        last_electronics : ElectronicT
+            ElectronicStates from previous step.
+        this_electronics : ElectronicT
+            ElectronicStates from current step.
         """
         SurfaceHoppingMD.surface_hopping(self, last_electronics, this_electronics)
 
@@ -277,7 +331,15 @@ class AugmentedFSSH(SurfaceHoppingMD):
                     }, event_type="collapse")
 
     def hop_update(self, hop_from, hop_to):
-        """Shift delR and delP after hops"""
+        """Shift delR and delP after hops.
+
+        Parameters
+        ----------
+        hop_from : int
+            State index before hop.
+        hop_to : int
+            State index after hop.
+        """
         dRb = self.delR[:, hop_to, hop_to]
         dPb = self.delP[:, hop_to, hop_to]
 

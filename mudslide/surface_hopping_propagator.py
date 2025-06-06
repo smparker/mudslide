@@ -24,7 +24,10 @@ class SHVVPropagator(Propagator_):
     def __init__(self, **options: Any) -> None:
         """Constructor
 
-        :param options: option dictionary
+        Parameters
+        ----------
+        **options : Any
+            Option dictionary for configuration.
         """
         super().__init__()
 

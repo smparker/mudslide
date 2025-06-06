@@ -1,20 +1,30 @@
 # -*- coding: utf-8 -*-
 """Propagators for ODEs from quantum dynamics"""
 
-from __future__ import division
-
+from typing import Callable
 import numpy as np
 
-from typing import Callable
 from .typing import ArrayLike, DtypeLike
 
 def propagate_exponential(rho0: ArrayLike, H: ArrayLike, dt: DtypeLike) -> None:
-    """
+    """Propagate density matrix in place using exponential of Hamiltonian.
+
     Propagates rho0 in place by exponentiating exp(-i H dt).
     H is assumed to be Hermitian, but can be complex.
 
-    :param param0: initial density matrix
-    :param H: effective Hamiltonian for propagation
+    Parameters
+    ----------
+    rho0 : ArrayLike
+        Initial density matrix
+    H : ArrayLike
+        Effective Hamiltonian for propagation
+    dt : DtypeLike
+        Time step for propagation
+
+    Returns
+    -------
+    None
+        The density matrix is modified in place
     """
     diags, coeff = np.linalg.eigh(H)
 
@@ -23,20 +33,37 @@ def propagate_exponential(rho0: ArrayLike, H: ArrayLike, dt: DtypeLike) -> None:
 
 def propagate_interpolated_rk4(rho0: ArrayLike, h0: ArrayLike, tau0: ArrayLike, vel0: ArrayLike,
         h1: ArrayLike, tau1: ArrayLike, vel1: ArrayLike, dt: DtypeLike, nsteps: int) -> None:
-    """
+    """Propagate density matrix using linearly interpolated quantities and RK4.
+
     Propagate density matrix forward by linearly interpolating all quantities
     and using RK4. Note: this is split off so a faster version could hypothetically be
-    implemented
+    implemented.
 
-    :param rho0: input/output density matrix
-    :param h0: Hamiltonian from prior step
-    :param tau0: derivative coupling from prior step
-    :param vel0: velocity from prior step
-    :param h1: Hamiltonian from current step
-    :param tau1: derivative coupling from current step
-    :param vel1: velocity from current step
-    :param dt: time step
-    :param nsteps: number of inner time steps
+    Parameters
+    ----------
+    rho0 : ArrayLike
+        Input/output density matrix
+    h0 : ArrayLike
+        Hamiltonian from prior step
+    tau0 : ArrayLike
+        Derivative coupling from prior step
+    vel0 : ArrayLike
+        Velocity from prior step
+    h1 : ArrayLike
+        Hamiltonian from current step
+    tau1 : ArrayLike
+        Derivative coupling from current step
+    vel1 : ArrayLike
+        Velocity from current step
+    dt : DtypeLike
+        Time step
+    nsteps : int
+        Number of inner time steps
+
+    Returns
+    -------
+    None
+        The density matrix is modified in place
     """
     TV00 = np.einsum("ijx,x->ij", tau0, vel0)
     TV11 = np.einsum("ijx,x->ij", tau1, vel1)
@@ -51,6 +78,20 @@ def propagate_interpolated_rk4(rho0: ArrayLike, h0: ArrayLike, tau0: ArrayLike, 
     W01 = np.linalg.multi_dot([vecs.T, TV01, vecs])
 
     def ydot(rho: ArrayLike, t: DtypeLike) -> ArrayLike:
+        """Calculate time derivative of density matrix.
+
+        Parameters
+        ----------
+        rho : ArrayLike
+            Current density matrix
+        t : DtypeLike
+            Current time point
+
+        Returns
+        -------
+        ArrayLike
+            Time derivative of density matrix
+        """
         assert t >= 0.0 and t <= dt
         w0 = 1.0 - t/dt
         w1 = t/dt
@@ -73,8 +114,25 @@ def propagate_interpolated_rk4(rho0: ArrayLike, h0: ArrayLike, tau0: ArrayLike, 
     rho0[:,:] = np.linalg.multi_dot([vecs, tmprho * phases, vecs.T])
 
 def rk4(y0: ArrayLike, ydot: Callable, t0: DtypeLike, tf: DtypeLike, nsteps: int) -> ArrayLike:
-    """
-    Propagates using 4th-order Runge-Kutta (RK4).
+    """Propagate using 4th-order Runge-Kutta (RK4) method.
+
+    Parameters
+    ----------
+    y0 : ArrayLike
+        Initial state vector
+    ydot : Callable
+        Function that computes the time derivative of y
+    t0 : DtypeLike
+        Initial time
+    tf : DtypeLike
+        Final time
+    nsteps : int
+        Number of integration steps
+
+    Returns
+    -------
+    ArrayLike
+        Final state vector after propagation
     """
     dt = (tf - t0) / nsteps
 

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Util functions"""
+"""Utility functions for the mudslide package."""
 
 import os
 import sys
@@ -8,13 +8,28 @@ import numpy as np
 
 def find_unique_name(name: str, location="", always_enumerate: bool = False,
                      ending: str = "") -> str:
-    """
-    Given an input basename, checks whether a file with the given name already exists.
-    If a file already exists, a suffix is added to make the file unique.
+    """Generate a unique filename by adding a suffix if the file already exists.
 
-    :param name: initial basename
+    Parameters
+    ----------
+    name : str
+        Initial basename for the file.
+    location : str, optional
+        Directory path where the file will be created, by default "".
+    always_enumerate : bool, optional
+        Whether to always add a suffix even if the file doesn't exist, by default False.
+    ending : str, optional
+        File extension to append to the name, by default "".
 
-    :returns: unique basename
+    Returns
+    -------
+    str
+        Unique basename that doesn't conflict with existing files.
+
+    Raises
+    ------
+    FileExistsError
+        If no unique name could be generated from the base name.
     """
     name_yaml = f"{name}{ending}"
     if not always_enumerate and not os.path.exists(os.path.join(location, name_yaml)):
@@ -27,36 +42,55 @@ def find_unique_name(name: str, location="", always_enumerate: bool = False,
     raise FileExistsError(f"No unique name could be made from base {name}.")
 
 def is_string(x) -> bool:
-    """
-    Tell whether the input is a string or some other variable
+    """Check if the input is a string type.
 
-    :returns: True if x is a string
+    Parameters
+    ----------
+    x : any
+        Input variable to check.
+
+    Returns
+    -------
+    bool
+        True if x is a string, False otherwise.
     """
     return isinstance(x, str)
 
 def remove_center_of_mass_motion(velocities: np.ndarray, masses: np.ndarray) -> np.ndarray:
-    """
-    Remove the center of mass motion from
-    a set of coordinates and masses.
+    """Remove the center of mass motion from a set of velocities.
 
-    :param velocities: velocities (n_atoms, 3)
-    :param masses: masses (n_atoms)
+    Parameters
+    ----------
+    velocities : np.ndarray
+        Array of velocities with shape (n_atoms, 3).
+    masses : np.ndarray
+        Array of masses with shape (n_atoms,).
 
-    :returns: coordinates with center of mass motion removed
+    Returns
+    -------
+    np.ndarray
+        Velocities with center of mass motion removed, shape (n_atoms, 3).
     """
     com = np.sum(velocities * masses[:, np.newaxis], axis=0) / np.sum(masses)
     return velocities - com
 
 def remove_angular_momentum(velocities: np.ndarray, masses: np.ndarray,
                             coordinates: np.ndarray) -> np.ndarray:
-    """
-    Remove the angular momentum from a set of coordinates, velocities, and masses.
+    """Remove the angular momentum from a set of coordinates and velocities.
 
-    :param velocities: velocities (n_atoms, 3)
-    :param masses: masses (n_atoms)
-    :param coordinates: coordinates (n_atoms, 3)
+    Parameters
+    ----------
+    velocities : np.ndarray
+        Array of velocities with shape (n_atoms, 3).
+    masses : np.ndarray
+        Array of masses with shape (n_atoms,).
+    coordinates : np.ndarray
+        Array of coordinates with shape (n_atoms, 3).
 
-    :returns: velocities with angular momentum removed
+    Returns
+    -------
+    np.ndarray
+        Velocities with angular momentum removed, shape (n_atoms, 3).
     """
     natom = velocities.shape[0]
     com = np.sum(velocities * masses[:, np.newaxis], axis=0) / np.sum(masses)
@@ -84,12 +118,21 @@ def remove_angular_momentum(velocities: np.ndarray, masses: np.ndarray,
     return corrected_velocities
 
 def check_options(options: dict, recognized: list, strict: bool = True) -> None:
-    """
-    Check whether the options dictionary contains only recognized options.
+    """Check whether the options dictionary contains only recognized options.
 
-    :param options: dictionary of options
-    :param recognized: list of recognized options
-    :param strict: whether to raise an error if an unrecognized option is found
+    Parameters
+    ----------
+    options : dict
+        Dictionary of options to check.
+    recognized : list
+        List of recognized option names.
+    strict : bool, optional
+        Whether to raise an error if an unrecognized option is found, by default True.
+
+    Raises
+    ------
+    ValueError
+        If strict is True and unrecognized options are found.
     """
     problems = [ x for x in options if x not in recognized ]
 

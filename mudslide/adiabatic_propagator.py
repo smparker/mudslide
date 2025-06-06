@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Propagate Adiabatic MD trajectory"""
+"""Propagate Adiabatic MD trajectory.
+
+This module implements various propagators for adiabatic molecular dynamics simulations,
+including Velocity Verlet and Nose-Hoover Chain thermostats.
+"""
 # pylint: disable=too-few-public-methods, too-many-arguments, invalid-name
 
 from typing import Any
@@ -15,6 +19,11 @@ class VVPropagator(Propagator_):
 
     This class implements the Velocity Verlet algorithm for propagating
     classical trajectories in molecular dynamics simulations.
+
+    Parameters
+    ----------
+    **options : Any
+        Additional options for the propagator.
     """
 
     def __init__(self, **options: Any) -> None:
@@ -23,7 +32,7 @@ class VVPropagator(Propagator_):
         Parameters
         ----------
         **options : Any
-            Additional options for the propagator
+            Additional options for the propagator.
         """
         super().__init__()
 
@@ -33,9 +42,9 @@ class VVPropagator(Propagator_):
         Parameters
         ----------
         traj : AdiabaticMD
-            Trajectory object to propagate
+            Trajectory object to propagate.
         nsteps : int
-            Number of steps to propagate
+            Number of steps to propagate.
         """
         dt = traj.dt
         # first update nuclear coordinates
@@ -81,6 +90,21 @@ class NoseHooverChainPropagator(Propagator_):
     Implements the Nose-Hoover Chain thermostat algorithm for constant temperature
     molecular dynamics simulations. Based on the work of Martyna et al. (1996).
 
+    Parameters
+    ----------
+    temperature : np.float64
+        Thermostat temperature.
+    timescale : np.float64, optional
+        Thermostat timescale, by default 1e2 * fs_to_au.
+    ndof : int, optional
+        Number of degrees of freedom, by default 3.
+    nchains : int, optional
+        Number of thermostat chains, by default 3.
+    nys : int, optional
+        Number of Yoshida-Suzuki steps, by default 3.
+    nc : int, optional
+        Number of cycles, by default 1.
+
     References
     ----------
     G. J. Martyna, M. E. Tuckerman, D. J. Tobias, and Michael L. Klein,
@@ -95,17 +119,17 @@ class NoseHooverChainPropagator(Propagator_):
         Parameters
         ----------
         temperature : np.float64
-            Thermostat temperature
+            Thermostat temperature.
         timescale : np.float64, optional
-            Thermostat timescale, by default 1e2 * fs_to_au
+            Thermostat timescale, by default 1e2 * fs_to_au.
         ndof : int, optional
-            Number of degrees of freedom, by default 3
+            Number of degrees of freedom, by default 3.
         nchains : int, optional
-            Number of thermostat chains, by default 3
+            Number of thermostat chains, by default 3.
         nys : int, optional
-            Number of Yoshida-Suzuki steps, by default 3
+            Number of Yoshida-Suzuki steps, by default 3.
         nc : int, optional
-            Number of cycles, by default 1
+            Number of cycles, by default 1.
         """
         self.temperature = temperature
         self.timescale = timescale
@@ -144,8 +168,21 @@ class NoseHooverChainPropagator(Propagator_):
         print(f"  Thermostat mass: {self.nh_mass}")
 
     def nhc_step(self, velocity, mass, dt: float):
-        """
-        Move forward one step in the extended system variables
+        """Move forward one step in the extended system variables.
+
+        Parameters
+        ----------
+        velocity : ndarray
+            Current velocities of the system.
+        mass : ndarray
+            Masses of the particles.
+        dt : float
+            Time step for the integration.
+
+        Returns
+        -------
+        float
+            Scale factor for the velocities.
         """
         # convenience definitions
         G = self.G
@@ -191,10 +228,14 @@ class NoseHooverChainPropagator(Propagator_):
         return scale
 
     def __call__(self, traj: 'AdiabaticMD', nsteps: int) -> None:
-        """Propagate trajectory using Velocity Verlet algorithm with Nose-Hoover thermostat
+        """Propagate trajectory using Velocity Verlet algorithm with Nose-Hoover thermostat.
 
-        :param traj: trajectory object to propagate
-        :param nsteps: number of steps to propagate
+        Parameters
+        ----------
+        traj : AdiabaticMD
+            Trajectory object to propagate.
+        nsteps : int
+            Number of steps to propagate.
         """
         dt = traj.dt
 
@@ -247,6 +288,23 @@ class AdiabaticPropagator:
 
     This class serves as a factory for creating different types of propagators
     used in adiabatic molecular dynamics simulations.
+
+    Parameters
+    ----------
+    model : Any
+        Model object defining the problem.
+    prop_options : Any, optional
+        Propagator options, can be a string or dictionary, by default "vv".
+
+    Returns
+    -------
+    Propagator_
+        A new propagator instance.
+
+    Raises
+    ------
+    ValueError
+        If the propagator type is unknown or if the propagator options are invalid.
     """
     def __new__(cls, model: Any, prop_options: Any = "vv") -> Propagator_:
         """Create a new propagator instance.
@@ -254,19 +312,19 @@ class AdiabaticPropagator:
         Parameters
         ----------
         model : Any
-            Model object defining the problem
+            Model object defining the problem.
         prop_options : Any, optional
-            Propagator options, can be a string or dictionary, by default "vv"
+            Propagator options, can be a string or dictionary, by default "vv".
 
         Returns
         -------
         Propagator_
-            A new propagator instance
+            A new propagator instance.
 
         Raises
         ------
         ValueError
-            If the propagator type is unknown
+            If the propagator type is unknown or if the propagator options are invalid.
         """
         if isinstance(prop_options, str):
             prop_options = { "type": prop_options.lower() }

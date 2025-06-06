@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-"""Propagate Adiabatic MD trajectory"""
+"""Propagate Adiabatic MD trajectory.
+
+This module provides functionality for propagating adiabatic molecular dynamics trajectories,
+similar to ground state molecular dynamics simulations.
+"""
 
 from typing import Dict, Any
 import copy as cp
@@ -13,7 +17,11 @@ from .typing import ElectronicT, ArrayLike, DtypeLike
 from .adiabatic_propagator import AdiabaticPropagator
 
 class AdiabaticMD:
-    """Class to propagate a single adiabatic trajectory, like ground state MD"""
+    """Class to propagate a single adiabatic trajectory, like ground state MD.
+
+    This class handles the propagation of molecular dynamics trajectories in the
+    adiabatic regime, similar to ground state molecular dynamics.
+    """
     recognized_options = [
         "dt", "t0", "trace_every", "remove_com_every", "remove_angular_momentum_every",
         "max_steps", "max_time", "bounds", "propagator", "seed_sequence", "electronics",
@@ -28,23 +36,22 @@ class AdiabaticMD:
                  queue: Any = None,
                  strict_option_check: bool = True,
                  **options: Any):
-        """
-        Initialize the AdiabaticMD class.
+        """Initialize the AdiabaticMD class.
 
         Parameters
         ----------
         model : Any
-            Model object defining problem
+            Model object defining problem.
         x0 : ArrayLike
-            Initial position
+            Initial position.
         v0 : ArrayLike
-            Initial velocity
+            Initial velocity.
         tracer : Any, optional
-            spawn from TraceManager to collect results, by default None
+            Spawn from TraceManager to collect results.
         queue : Any, optional
-            Trajectory queue, by default None
+            Trajectory queue.
         strict_option_check : bool, optional
-            Whether to strictly check options, by default True
+            Whether to strictly check options.
         **options : Any
             Additional options for the simulation. Recognized options are:
 
@@ -127,12 +134,21 @@ class AdiabaticMD:
 
     @classmethod
     def restart(cls, model, log, **options) -> 'AdiabaticMD':
-        """ Restart trajectory from log
+        """Restart trajectory from log.
 
-        :param model: Model object defining problem
-        :param log: Trace object with previous trajectory
-        :param options: option dictionary
-        :return: AdiabaticMD object
+        Parameters
+        ----------
+        model : Any
+            Model object defining problem.
+        log : Trace
+            Trace object with previous trajectory.
+        **options : Any
+            Additional options for the simulation.
+
+        Returns
+        -------
+        AdiabaticMD
+            New AdiabaticMD object initialized from the log.
         """
         last_snap = log[-1]
         penultimate_snap = log[-2]
@@ -162,7 +178,13 @@ class AdiabaticMD:
                    **options)
 
     def update_weight(self, weight: np.float64) -> None:
-        """Update weight held by trajectory and by trace"""
+        """Update weight held by trajectory and by trace.
+
+        Parameters
+        ----------
+        weight : np.float64
+            New weight value to set.
+        """
         self.weight = weight
         self.tracer.weight = weight
 
@@ -170,7 +192,18 @@ class AdiabaticMD:
             self.force_quit = True
 
     def __deepcopy__(self, memo: Any) -> 'AdiabaticMD':
-        """Override deepcopy"""
+        """Override deepcopy.
+
+        Parameters
+        ----------
+        memo : Any
+            Memo dictionary for deepcopy.
+
+        Returns
+        -------
+        AdiabaticMD
+            Deep copy of the current object.
+        """
         cls = self.__class__
         result = cls.__new__(cls)
         memo[id(self)] = result
@@ -180,23 +213,32 @@ class AdiabaticMD:
         return result
 
     def clone(self) -> 'AdiabaticMD':
-        """Clone existing trajectory for spawning
+        """Clone existing trajectory for spawning.
 
-        :return: copy of current object
+        Returns
+        -------
+        AdiabaticMD
+            Copy of current object.
         """
         return cp.deepcopy(self)
 
     def random(self) -> np.float64:
-        """Get random number for hopping decisions
+        """Get random number for hopping decisions.
 
-        :return: uniform random number between 0 and 1
+        Returns
+        -------
+        np.float64
+            Uniform random number between 0 and 1.
         """
         return self.random_state.uniform()
 
     def currently_interacting(self) -> bool:
-        """Determines whether trajectory is currently inside an interaction region
+        """Determine whether trajectory is currently inside an interaction region.
 
-        :return: boolean
+        Returns
+        -------
+        bool
+            True if trajectory is inside interaction region, False otherwise.
         """
         if self.duration["box_bounds"] is None:
             return False
@@ -204,9 +246,12 @@ class AdiabaticMD:
             self.position < self.duration["box_bounds"][1])
 
     def duration_initialize(self, options: Dict[str, Any]) -> None:
-        """Initializes variables related to continue_simulating
+        """Initialize variables related to continue_simulating.
 
-        :param options: dictionary with options
+        Parameters
+        ----------
+        options : Dict[str, Any]
+            Dictionary with options.
         """
 
         duration = {}  # type: Dict[str, Any]
@@ -223,9 +268,12 @@ class AdiabaticMD:
         self.duration = duration
 
     def continue_simulating(self) -> bool:
-        """Decide whether trajectory should keep running
+        """Decide whether trajectory should keep running.
 
-        :return: True if trajectory should keep running, False if it should finish
+        Returns
+        -------
+        bool
+            True if trajectory should keep running, False if it should finish.
         """
         if self.force_quit: # pylint: disable=no-else-return
             return False
@@ -242,18 +290,25 @@ class AdiabaticMD:
             return True
 
     def trace(self, force: bool = False) -> None:
-        """Add results from current time point to tracing function
-        Only adds snapshot if nsteps%trace_every == 0, unless force=True
+        """Add results from current time point to tracing function.
 
-        :param force: force snapshot
+        Only adds snapshot if nsteps%trace_every == 0, unless force=True.
+
+        Parameters
+        ----------
+        force : bool, optional
+            Force snapshot regardless of trace_every interval.
         """
         if force or (self.nsteps % self.trace_every) == 0:
             self.tracer.collect(self.snapshot())
 
     def snapshot(self) -> Dict[str, Any]:
-        """Collect data from run for logging
+        """Collect data from run for logging.
 
-        :return: dictionary with all data from current time step
+        Returns
+        -------
+        Dict[str, Any]
+            Dictionary with all data from current time step.
         """
         out = {
             "time": self.time,
@@ -268,52 +323,78 @@ class AdiabaticMD:
         return out
 
     def kinetic_energy(self) -> np.float64:
-        """Kinetic energy
+        """Calculate kinetic energy.
 
-        :return: kinetic energy
+        Returns
+        -------
+        np.float64
+            Kinetic energy.
         """
         return 0.5 * np.einsum('m,m,m', self.mass, self.velocity, self.velocity)
 
     def potential_energy(self, electronics: ElectronicT = None) -> DtypeLike:
-        """Potential energy
+        """Calculate potential energy.
 
-        :param electronics: ElectronicStates from current step
-        :return: potential energy
+        Parameters
+        ----------
+        electronics : ElectronicT, optional
+            ElectronicStates from current step.
+
+        Returns
+        -------
+        DtypeLike
+            Potential energy.
         """
         if electronics is None:
             electronics = self.electronics
         return electronics.energies[0]
 
     def total_energy(self, electronics: ElectronicT = None) -> DtypeLike:
-        """
-        Kinetic energy + Potential energy
+        """Calculate total energy (kinetic + potential).
 
-        :param electronics: ElectronicStates from current step
-        :return: total energy
+        Parameters
+        ----------
+        electronics : ElectronicT, optional
+            ElectronicStates from current step.
+
+        Returns
+        -------
+        DtypeLike
+            Total energy.
         """
         potential = self.potential_energy(electronics)
         kinetic = self.kinetic_energy()
         return potential + kinetic
 
     def force(self, electronics: ElectronicT = None) -> ArrayLike:
-        """
-        Compute force on active state
+        """Compute force on active state.
 
-        :param electronics: ElectronicStates from current step
+        Parameters
+        ----------
+        electronics : ElectronicT, optional
+            ElectronicStates from current step.
 
-        :return: [ndim] force on active electronic state
+        Returns
+        -------
+        ArrayLike
+            Force on active electronic state.
         """
         if electronics is None:
             electronics = self.electronics
         return electronics.force(0)
 
     def mode_kinetic_energy(self, direction: ArrayLike) -> np.float64:
-        """
-        Kinetic energy along given momentum mode
+        """Calculate kinetic energy along given momentum mode.
 
-        :param direction: [ndim] numpy array defining direction
+        Parameters
+        ----------
+        direction : ArrayLike
+            Array defining direction.
 
-        :return: kinetic energy along specified direction
+        Returns
+        -------
+        np.float64
+            Kinetic energy along specified direction.
         """
         u = direction / np.linalg.norm(direction)
         momentum = self.velocity * self.mass
@@ -321,10 +402,12 @@ class AdiabaticMD:
         return 0.5 * np.einsum('m,m,m', 1.0 / self.mass, component, component)
 
     def simulate(self) -> 'Trace':
-        """
-        Simulate
+        """Run the simulation.
 
-        :return: Trace of trajectory
+        Returns
+        -------
+        Trace
+            Trace of trajectory.
         """
 
         if not self.continue_simulating():
