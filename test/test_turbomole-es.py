@@ -81,7 +81,7 @@ class TestTMModel(unittest.TestCase):
                        traj_gen,
                        trajectory_type=EvenSamplingTrajectory,
                        samples=samples,
-                       max_time = max_time,
+                       max_time=max_time,
                        nprocs=nprocs,
                        dt=dt,
                        t0=t0,

@@ -317,6 +317,9 @@ class EvenSamplingTrajectory(SurfaceHoppingMD):
             seed_sequence=self.seed_sequence.spawn(1)[0],
             electronics=self.electronics,
             duration=self.duration,
+            max_steps=self.max_steps,
+            max_time=self.max_time,
+            hopping_method=self.hopping_method,
             spawn_stack=spawn_stack,
         )
         return out
