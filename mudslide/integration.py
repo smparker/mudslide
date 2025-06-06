@@ -101,8 +101,8 @@ def simpson(n: int, a: float = -1.0, b: float = 1.0) -> Tuple[ArrayLike, ArrayLi
     assert b > a and n > 1
 
     if n % 2 != 1:
-        raise RuntimeError("Simpson's rule must be defined with an odd "
-        "number of points (even number of intervals)")
+        raise ValueError(
+                "Simpson's rule must be defined with an odd number of points")
 
     ninterval = n - 1
 
@@ -137,4 +137,5 @@ def quadrature(n: int, a: float = -1.0, b: float = 1.0,
         return trapezoid(n, a, b)
     if method in ["simpson"]:
         return simpson(n, a, b)
-    raise RuntimeError("Unrecognized quadrature choice")
+    else:
+        raise ValueError("Unrecognized quadrature choice")

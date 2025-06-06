@@ -17,16 +17,66 @@ class ElectronicT(Protocol):
 
 
 class DiabaticModelT(Protocol):
-    ndim_: int
-    nstates_: int
+    """Protocol defining the interface for diabatic models.
+
+    This protocol defines the required attributes and methods that a class
+    must implement to be considered a valid diabatic model.
+
+    Attributes
+    ----------
+    _ndof : int
+        Number of classical degrees of freedom
+    _nstates : int
+        Number of electronic states
+    """
+
+    _ndof: int
+    _nstates: int
 
     def __init__(self, representation: str, reference: Any, *args: Any, **kwargs: Any):
+        """Initialize the diabatic model.
+
+        Parameters
+        ----------
+        representation : str
+            The representation to use ("adiabatic" or "diabatic")
+        reference : Any
+            The reference electronic state
+        *args : Any
+            Additional positional arguments
+        **kwargs : Any
+            Additional keyword arguments
+        """
         pass
 
     def V(self, x: ArrayLike) -> ArrayLike:
+        """Compute the diabatic potential energy matrix.
+
+        Parameters
+        ----------
+        x : ArrayLike
+            Position at which to compute the potential
+
+        Returns
+        -------
+        ArrayLike
+            Potential energy matrix of shape (nstates, nstates)
+        """
         pass
 
     def dV(self, x: ArrayLike) -> ArrayLike:
+        """Compute the gradient of the diabatic potential energy matrix.
+
+        Parameters
+        ----------
+        x : ArrayLike
+            Position at which to compute the gradient
+
+        Returns
+        -------
+        ArrayLike
+            Gradient of potential energy matrix of shape (nstates, nstates, ndof)
+        """
         pass
 
 
@@ -38,7 +88,7 @@ class ModelT(Protocol):
     def nstates(self) -> int:
         pass
 
-    def ndim(self) -> int:
+    def ndof(self) -> int:
         pass
 
     def compute(self, x: ArrayLike, couplings: Any = None, gradients: Any = None, reference: Any = None) -> None:

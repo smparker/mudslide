@@ -1,5 +1,6 @@
-event_log: traj-0-events.yaml
-log_pitch: 512
+event_logs: {}
+hop_log: traj-0-hops.yaml
+log_pitch: 8
 logfiles:
 - traj-0-log_0.yaml
 name: traj-0

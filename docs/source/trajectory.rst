@@ -4,22 +4,22 @@ Trajectory Methods
 The classes documented here are responsible for running
 molecular dynamics simulations with different algorithms.
 
-.. autoclass:: mudslide.TrajectorySH
+.. autoclass:: mudslide.SurfaceHoppingMD
    :members:
+   :undoc-members:
    :show-inheritance:
-   :inherited-members:
 
 .. autoclass:: mudslide.Ehrenfest
    :members:
+   :undoc-members:
    :show-inheritance:
-   :inherited-members:
 
-.. autoclass:: mudslide.TrajectoryCum
+.. autoclass:: mudslide.AugmentedFSSH
    :members:
+   :undoc-members:
    :show-inheritance:
-   :inherited-members:
 
 .. autoclass:: mudslide.EvenSamplingTrajectory
    :members:
+   :undoc-members:
    :show-inheritance:
-   :inherited-members:

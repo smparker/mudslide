@@ -8,13 +8,12 @@ import numpy as np
 import pickle
 import sys
 
-from .trajectory_sh import TrajectorySH
-from .cumulative_sh import TrajectoryCum
+from .surface_hopping_md import SurfaceHoppingMD
 from .even_sampling import EvenSamplingTrajectory
 from .ehrenfest import Ehrenfest
 from .afssh import AugmentedFSSH
 from .batch import TrajGenConst, TrajGenNormal, BatchedTraj
-from .tracer import InMemoryTrace, YAMLTrace, TraceManager
+from .tracer import TraceManager
 from .models import scattering_models as models
 
 import argparse as ap
@@ -23,8 +22,8 @@ from typing import Any
 
 # Add a method into this dictionary to register it with argparse
 methods = {
-    "fssh": TrajectorySH,
-    "cumulative-sh": TrajectoryCum,
+    "fssh": lambda *args, **kwargs: SurfaceHoppingMD(*args, hopping_method="instantaneous", **kwargs),
+    "cumulative-sh": lambda *args, **kwargs: SurfaceHoppingMD(*args, hopping_method="cumulative", **kwargs),
     "ehrenfest": Ehrenfest,
     "afssh": AugmentedFSSH,
     "even-sampling": EvenSamplingTrajectory
@@ -139,43 +138,43 @@ def main(argv=None, file=sys.stdout) -> None:
 
     trajectory_type = methods[args.method]
 
-    trace_type = {"memory": InMemoryTrace, "yaml": YAMLTrace}[args.log]
+    trace_type = args.log
     trace_options = {}
-    if args.log == "yaml":
-        trace_options["location"] = args.logdir
+    if trace_type == "yaml":
+        trace_options.update({"location": args.logdir})
 
     all_results = []
 
     if (args.output == "averaged" or args.output == "pickle"):
         print("# momentum ", end='', file=file)
-        for ist in range(model.nstates()):
+        for ist in range(model.nstates):
             for d in ["reflected", "transmitted"]:
                 print("%d_%s" % (ist, d), end=' ', file=file)
         print(file=file)
 
     for k in kpoints:
+        v = k / model.mass
         traj_gen: Any = None
         if args.ksampling == "none":
-            traj_gen = TrajGenConst(args.position, k, 0, seed=args.seed)
+            traj_gen = TrajGenConst(args.position, v, 0, seed=args.seed)
         elif args.ksampling == "normal":
-            traj_gen = TrajGenNormal(args.position, k, 0, sigma=args.normal / k, seed=args.seed)
+            traj_gen = TrajGenNormal(args.position, v, 0, sigma=args.normal / v, seed=args.seed)
 
         dt = (args.dt / k) if args.scale_dt else args.dt
 
         fssh = BatchedTraj(model,
                            traj_gen,
                            trajectory_type=trajectory_type,
-                           momentum=k,
-                           position=args.position,
                            samples=args.samples,
                            nprocs=args.nprocs,
                            dt=dt,
-                           bounds=[-abs(args.bounds), abs(args.bounds)],
-                           tracemanager=TraceManager(TraceType=trace_type, trace_kwargs=trace_options),
+                           bounds=[ -abs(args.bounds), abs(args.bounds) ],
+                           tracemanager=TraceManager(trace_type, trace_kwargs=trace_options),
                            trace_every=args.every,
                            spawn_stack=args.sample_stack,
                            electronic_integration=args.electronic,
-                           hopping_probability=args.probability)
+                           hopping_probability=args.probability,
+                           strict_option_check=False)
         results = fssh.compute()
         outcomes = results.outcomes
 
@@ -183,7 +182,7 @@ def main(argv=None, file=sys.stdout) -> None:
             results.traces[0].print(file=file)
         elif (args.output == "swarm"):
             maxsteps = max([len(t) for t in results.traces])
-            outfiles = ["state_%d.trace" % i for i in range(model.nstates())]
+            outfiles = ["state_%d.trace" % i for i in range(model.nstates)]
             fils = [open(o, "w") for o in outfiles]
             for i in range(maxsteps):
                 nswarm = [0 for x in fils]
@@ -193,7 +192,7 @@ def main(argv=None, file=sys.stdout) -> None:
                         nswarm[iact] += 1
                         print("{position:12.6f}".format(**t[i]), file=fils[iact])
 
-                for ist in range(model.nstates()):
+                for ist in range(model.nstates):
                     if nswarm[ist] == 0:
                         print("%12.6f" % -9999999, file=fils[ist])
                     print(file=fils[ist])

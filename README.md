@@ -7,9 +7,10 @@ dimensional potentials.
 ## Contents
 * `mudslide` package that contains
   - implementation of all surface hopping methods
-    - `TrajectorySH` - FSSH
-    - `TrajectoryCum` - FSSH with a cumulative point of view
+    - `SurfaceHoppingMD` - Standard FSSH implementation
     - `Ehrenfest` - Ehrenfest dynamics
+    - `AugmentedFSSH` - Augmented FSSH implementation
+    - `EvenSamplingTrajectory` - FSSH with even sampling of phase space
   - collection of 1D models
     - `TullySimpleAvoidedCrossing`
     - `TullyDualAvoidedCrossing`
@@ -63,7 +64,7 @@ provided. For example:
     # Generates trajectories always with starting position -5, starting momentum 10.0, on ground state
     traj_gen = mudslide.TrajGenConst(-5.0, 10.0, 0)
 
-    simulator = mudslide.BatchedTraj(simple_model, traj_gen, mudslide.TrajectorySH, samples = 4, bounds=[[-4],[4]])
+    simulator = mudslide.BatchedTraj(simple_model, traj_gen, mudslide.SurfaceHoppingMD, samples = 4, bounds=[[-4],[4]])
     results = simulator.compute()
     outcomes = results.outcomes
 
@@ -98,7 +99,7 @@ model classes. To interface with mudslide, a model class should derive from `mud
 and should implement
 * a `compute()` function that computes energies, forces, and derivative couplings
 * an `nstates()` function that returns the number of electronic states in the model
-* an `ndim()` function that returns the number of classical (vibrational) degrees of freedom in the model
+* an `ndof()` function that returns the number of classical (vibrational) degrees of freedom in the model
  
 ### compute() function
 The `compute()` function needs to have the following signature:

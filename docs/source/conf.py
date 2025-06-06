@@ -31,7 +31,20 @@ master_doc = 'index'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = [ 'sphinx.ext.autodoc', 'sphinxcontrib.bibtex' ]
+extensions = [ 'sphinx.ext.autodoc',
+               'sphinx.ext.napoleon',
+               'sphinxcontrib.bibtex' ]
+
+autodoc_default_options = {
+    'members': True,
+    'member-order': 'bysource',  # or 'alphabetical' or 'groupwise'
+    'special-members': '__init__',
+    'undoc-members': True,
+    'exclude-members': '__weakref__'
+}
+
+# Show both class and __init__ docstrings
+autoclass_content = 'both'  # or 'class' or 'init'
 
 add_module_names = False
 toc_object_entries_show_parents = "hide"

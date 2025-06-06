@@ -1,97 +1,157 @@
 # -*- coding: utf-8 -*-
-"""Code for running batches of trajectories"""
+"""Code for running batches of trajectories."""
 
-from __future__ import print_function, division
+from typing import Any, Iterator, Tuple
+import logging
 import queue
 import sys
-import logging
 
 import numpy as np
 
+from .constants import boltzmann
 from .exceptions import StillInteracting
 from .tracer import TraceManager
-from .constants import boltzmann
-
-from typing import Any, Iterator, Tuple
 from .typing import ModelT, TrajGenT, ArrayLike
 
 logger = logging.getLogger("mudslide")
 
 
 class TrajGenConst:
-    """Canned class whose call function acts as a generator for static initial conditions
+    """Generator for static initial conditions.
 
-    :param position: initial position
-    :param momentum: initial momentum
-    :param initial_state: initial state specification should be either an integer or "ground"
-    :param seed: entropy seed for random generator (unused)
+    Parameters
+    ----------
+    position : ArrayLike
+        Initial position.
+    velocity : ArrayLike
+        Initial velocity.
+    initial_state : Any
+        Initial state specification, should be either an integer or "ground".
+    seed : Any, optional
+        Entropy seed for random generator (unused), by default None.
+
+    Yields
+    ------
+    Iterator
+        Generator yielding tuples of (position, velocity, initial_state, params).
     """
 
-    def __init__(self, position: ArrayLike, momentum: ArrayLike, initial_state: Any, seed: Any = None):
+    def __init__(self, position: ArrayLike, velocity: ArrayLike, initial_state: Any, seed: Any = None):
         self.position = position
-        self.momentum = momentum
+        self.velocity = velocity
         self.initial_state = initial_state
         self.seed_sequence = np.random.SeedSequence(seed)
 
     def __call__(self, nsamples: int) -> Iterator:
-        """Generate nsamples initial conditions
+        """Generate initial conditions.
 
-        :param nsamples: number of initial conditions to generate
+        Parameters
+        ----------
+        nsamples : int
+            Number of initial conditions to generate.
+
+        Yields
+        ------
+        Iterator
+            Generator yielding tuples of (position, velocity, initial_state, params).
         """
         seedseqs = self.seed_sequence.spawn(nsamples)
         for i in range(nsamples):
-            yield (self.position, self.momentum, self.initial_state, {"seed_sequence": seedseqs[i]})
+            yield (self.position, self.velocity, self.initial_state, {"seed_sequence": seedseqs[i]})
 
 
 class TrajGenNormal:
-    """Canned class whose call function acts as a generator for normally distributed initial conditions"""
+    """Generator for normally distributed initial conditions.
+
+    Parameters
+    ----------
+    position : ArrayLike
+        Center of normal distribution for position.
+    velocity : ArrayLike
+        Center of normal distribution for velocity.
+    initial_state : Any
+        Initial state designation.
+    sigma : ArrayLike
+        Standard deviation of distribution.
+    seed : Any, optional
+        Initial seed to give to trajectory, by default None.
+    seed_traj : Any, optional
+        Seed for trajectory generation, by default None.
+    """
 
     def __init__(self,
                  position: ArrayLike,
-                 momentum: ArrayLike,
+                 velocity: ArrayLike,
                  initial_state: Any,
                  sigma: ArrayLike,
                  seed: Any = None,
                  seed_traj: Any = None):
-        """
-        :param position: center of normal distribution for position
-        :param momentum: center of normal distribution for momentum
-        :param initial_state: initial state designation
-        :param sigma: standard deviation of distribution
-        :param seed: initial seed to give to trajectory
-        """
         self.position = position
         self.position_deviation = 0.5 * sigma
-        self.momentum = momentum
-        self.momentum_deviation = 1.0 / sigma
+        self.velocity = velocity
+        self.velocity_deviation = 1.0 / sigma
         self.initial_state = initial_state
         self.seed_sequence = np.random.SeedSequence(seed)
         self.random_state = np.random.default_rng(seed_traj)
 
-    def kskip(self, ktest: float) -> bool:
-        """Whether to skip given momentum
-        :param ktest: momentum
+    def vskip(self, vtest: float) -> bool:
+        """Determine whether to skip given velocity.
 
-        :returns: True/False
+        Parameters
+        ----------
+        vtest : float
+            Velocity to test.
+
+        Returns
+        -------
+        bool
+            True if velocity should be skipped, False otherwise.
         """
-        return np.any(ktest < 0.0)
+        return np.any(vtest < 0.0)
 
     def __call__(self, nsamples: int) -> Iterator:
-        """Generate nsamples initial conditions
-        :param nsamples: number of initial conditions requested
+        """Generate initial conditions.
+
+        Parameters
+        ----------
+        nsamples : int
+            Number of initial conditions requested.
+
+        Yields
+        ------
+        Iterator
+            Generator yielding tuples of (position, velocity, initial_state, params).
         """
         seedseqs = self.seed_sequence.spawn(nsamples)
         for i in range(nsamples):
             x = self.random_state.normal(self.position, self.position_deviation)
-            k = self.random_state.normal(self.momentum, self.momentum_deviation)
+            v = self.random_state.normal(self.velocity, self.velocity_deviation)
 
-            if self.kskip(k):
+            if self.vskip(v):
                 continue
-            yield (x, k, self.initial_state, {"seed_sequence": seedseqs[i]})
+            yield (x, v, self.initial_state, {"seed_sequence": seedseqs[i]})
 
 
 class TrajGenBoltzmann:
-    """Generate momenta randomly according to the Boltzmann distribution"""
+    """Generate velocities randomly according to the Boltzmann distribution.
+
+    Parameters
+    ----------
+    position : ArrayLike
+        Initial positions.
+    mass : ArrayLike
+        Array of particle masses.
+    temperature : float
+        Initial temperature to determine velocities.
+    initial_state : Any
+        Initial state designation.
+    scale : bool, optional
+        Whether to scale velocities, by default True.
+    seed : Any, optional
+        Initial seed to give trajectory, by default None.
+    velocity_seed : Any, optional
+        Initial seed for velocity random generator, by default None.
+    """
 
     def __init__(self,
                  position: ArrayLike,
@@ -100,14 +160,7 @@ class TrajGenBoltzmann:
                  initial_state: Any,
                  scale: bool = True,
                  seed: Any = None,
-                 momentum_seed: Any = None):
-        """
-        :param position: initial positions
-        :param mass: array of particle masses
-        :param temperature: initial temperature to determine momenta
-        :param seed: initial seed to give trajectory
-        :param momentum_seed: initial seed for momentum random generator
-        """
+                 velocity_seed: Any = None):
         assert position.shape == mass.shape
 
         self.position = position
@@ -116,53 +169,71 @@ class TrajGenBoltzmann:
         self.initial_state = initial_state
         self.scale = scale
         self.seed_sequence = np.random.SeedSequence(seed)
-        self.random_state = np.random.default_rng(momentum_seed)
+        self.random_state = np.random.default_rng(velocity_seed)
         self.kt = boltzmann * self.temperature
         self.sigma = np.sqrt(self.kt * self.mass)
 
     def __call__(self, nsamples: int) -> Iterator:
-        """Generate nsamples initial conditions
-        :param nsamples: number of initial conditions requested
+        """Generate initial conditions.
+
+        Parameters
+        ----------
+        nsamples : int
+            Number of initial conditions requested.
+
+        Yields
+        ------
+        Iterator
+            Generator yielding tuples of (position, velocity, initial_state, params).
         """
         seedseqs = self.seed_sequence.spawn(nsamples)
         for i in range(nsamples):
             x = self.position
             p = self.random_state.normal(0.0, self.sigma)
+            v = p / self.mass
+
             if self.scale:
-                avg_KE = 0.5 * np.dot(p**2, np.reciprocal(self.mass)) / x.size
+                avg_KE = 0.5 * np.dot(v**2, self.mass) / x.size
                 kbT2 = 0.5 * self.kt
                 scal = np.sqrt(kbT2 / avg_KE)
-                p *= scal
+                v *= scal
 
-            yield (x, p, self.initial_state, {"seed_sequence": seedseqs[i]})
+            yield (x, v, self.initial_state, {"seed_sequence": seedseqs[i]})
 
 
 class BatchedTraj:
-    """Class to manage many TrajectorySH trajectories
+    """Class to manage many SurfaceHoppingMD trajectories.
 
-    Requires a model object which is a class that has functions V(x), dV(x), nstates(), and ndim()
-    that return the Hamiltonian at position x, gradient of the Hamiltonian at position x
+    Requires a model object which is a class that has functions V(x), dV(x), nstates, and ndof
+    that return the Hamiltonian at position x, gradient of the Hamiltonian at position x,
     number of electronic states, and dimension of nuclear space, respectively.
+
+    Parameters
+    ----------
+    model : ModelT
+        Object used to describe the model system.
+    traj_gen : TrajGenT
+        Generator object to generate initial conditions.
+    trajectory_type : Any
+        Surface hopping trajectory class.
+    tracemanager : Any, optional
+        Object to collect results, by default None.
+    **inp : Any
+        Additional input options.
+
+    Notes
+    -----
+    Accepted keyword arguments and their defaults:
+    | key                |   default                  |
+    ---------------------|----------------------------|
+    | t0                 | 0.0                        |
+    | nprocs             | 1                          |
+    | seed               | None (date)                |
     """
 
-    def __init__(self, model: ModelT, traj_gen: TrajGenT, trajectory_type: Any, tracemanager: Any = None, **inp: Any):
-        """Constructor requires model and options input as kwargs
-        :param model: object used to describe the model system
-        :param traj_gen: generator object to generate initial conditions
-        :param trajectory_type: surface hopping trajectory class
-        :param tracemanager: object to collect results
-        :param inp: input options
+    batch_only_options = [ "samples", "nprocs" ]
 
-         Accepted keyword arguments and their defaults:
-         | key                |   default                  |
-         ---------------------|----------------------------|
-         | initial_time       | 0.0                        |
-         | samples            | 2000                       |
-         | dt                 | 20.0  ~ 0.5 fs             |
-         | nprocs             | 1                          |
-         | outcome_type       | "state"                    |
-         | seed               | None (date)                |
-        """
+    def __init__(self, model: ModelT, traj_gen: TrajGenT, trajectory_type: Any, tracemanager: Any = None, **inp: Any):
         self.model = model
         if tracemanager is None:
             self.tracemanager = TraceManager()
@@ -170,31 +241,29 @@ class BatchedTraj:
             self.tracemanager = tracemanager
         self.trajectory = trajectory_type
         self.traj_gen = traj_gen
-        self.options = {}
-
-        # time parameters
-        self.options["initial_time"] = inp.get("initial_time", 0.0)
+        self.batch_options = {}
 
         # statistical parameters
-        self.options["samples"] = inp.get("samples", 2000)
-        self.options["dt"] = inp.get("dt", 20.0)  # default to roughly half a femtosecond
+        self.batch_options["samples"]       = inp.get("samples", 2000)
+        self.batch_options["nprocs"]        = inp.get("nprocs", 1)
 
-        self.options["nprocs"] = inp.get("nprocs", 1)
-        self.options["outcome_type"] = inp.get("outcome_type", "state")
-
-        # everything else just gets copied over
+        # other options get copied over
+        self.traj_options = {}
         for x in inp:
-            if x not in self.options:
-                self.options[x] = inp[x]
+            if x not in self.batch_only_options:
+                self.traj_options[x] = inp[x]
 
     def compute(self) -> TraceManager:
-        """Run batch of trajectories and return aggregate results
+        """Run batch of trajectories and return aggregate results.
 
-        :returns: TraceManager containing the results
+        Returns
+        -------
+        TraceManager
+            Object containing the results.
         """
         # for now, define four possible outcomes of the simulation
-        nsamples = int(self.options["samples"])
-        nprocs = self.options["nprocs"]
+        nsamples = self.batch_options["samples"]
+        nprocs = self.batch_options["nprocs"]
 
         if nprocs > 1:
             logger.warning('nprocs {} specified, but parallelism is not currently handled'.format(nprocs))
@@ -208,12 +277,12 @@ class BatchedTraj:
         #for p in procs:
         #    p.start()
 
-        for x0, p0, initial, params in self.traj_gen(nsamples):
-            traj_input = self.options
+        for x0, v0, initial, params in self.traj_gen(nsamples):
+            traj_input = self.traj_options
             traj_input.update(params)
             traj = self.trajectory(self.model,
                                    x0,
-                                   p0,
+                                   v0,
                                    initial,
                                    self.tracemanager.spawn_tracer(),
                                    queue=traj_queue,
@@ -238,10 +307,14 @@ class BatchedTraj:
 
 
 def traj_runner(traj_queue: Any, results_queue: Any) -> None:
-    """Runner for computing jobs from queue
+    """Runner for computing jobs from queue.
 
-    :param traj_queue: queue containing trajectories with a `simulate()` function
-    :param results_queue: queue to store results of each call to `simulate()`
+    Parameters
+    ----------
+    traj_queue : Any
+        Queue containing trajectories with a `simulate()` function.
+    results_queue : Any
+        Queue to store results of each call to `simulate()`.
     """
     while True:
         traj = traj_queue.get()

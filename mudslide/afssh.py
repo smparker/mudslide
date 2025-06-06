@@ -1,57 +1,158 @@
 # -*- coding: utf-8 -*-
-"""Propagating Augmented-FSSH (A-FSSH) trajectories"""
+"""Propagating Augmented-FSSH (A-FSSH) trajectories."""
+
+from typing import Any, Union
 
 import numpy as np
 
+from .typing import ArrayLike, DtypeLike, ElectronicT
+from .util import is_string
 from .math import poisson_prob_scale
 from .propagation import rk4
-from .trajectory_sh import TrajectorySH
+from .surface_hopping_md import SurfaceHoppingMD
+from .propagator import Propagator_
 
-from typing import Any, Union
-from .typing import ArrayLike, DtypeLike, ElectronicT
 
-class AugmentedFSSH(TrajectorySH):
-    """Augmented-FSSH (A-FSSH) dynamics, by Subotnik and coworkers
+class AFSSHVVPropagator(Propagator_):
+    """Surface Hopping Velocity Verlet propagator."""
+
+    def __init__(self, **options: Any) -> None:
+        """Initialize the propagator.
+
+        Parameters
+        ----------
+        **options : Any
+            Option dictionary for configuration.
+        """
+        super().__init__()
+
+    def __call__(self, traj: 'SurfaceHoppingMD', nsteps: int) -> None:
+        """Propagate trajectory using Surface Hopping Velocity Verlet algorithm.
+
+        Parameters
+        ----------
+        traj : SurfaceHoppingMD
+            Trajectory object to propagate.
+        nsteps : int
+            Number of steps to propagate.
+        """
+        dt = traj.dt
+        # first update nuclear coordinates
+        for _ in range(nsteps):
+            # Advance position using Velocity Verlet
+            acceleration = traj._force(traj.electronics) / traj.mass
+            traj.last_position = traj.position
+            traj.position += traj.velocity * dt + 0.5 * acceleration * dt * dt
+
+            traj.advance_delR(traj.last_electronics, traj.electronics)
+
+            # calculate electronics at new position
+            traj.last_electronics, traj.electronics = traj.electronics, traj.model.update(
+                traj.position, electronics=traj.electronics)
+
+            # Update velocity using Velocity Verlet
+            last_acceleration = traj._force(traj.last_electronics) / traj.mass
+            this_acceleration = traj._force(traj.electronics) / traj.mass
+            traj.last_velocity = traj.velocity
+            traj.velocity += 0.5 * (last_acceleration + this_acceleration) * dt
+
+            traj.advance_delP(traj.last_electronics, traj.electronics)
+
+            # now propagate the electronic wavefunction to the new time
+            traj.propagate_electronics(traj.last_electronics, traj.electronics, dt)
+            traj.surface_hopping(traj.last_electronics, traj.electronics)
+
+            traj.time += dt
+            traj.nsteps += 1
+
+class AFSSHPropagator(Propagator_):
+    """Surface Hopping propagator factory.
+
+    This class serves as a factory for creating different types of propagators
+    used in adiabatic FSSH molecular dynamics simulations.
+    """
+
+    def __new__(cls, model: Any, prop_options: Any = "vv") -> 'SHPropagator':
+        """Create a new surface hopping propagator instance.
+
+        Parameters
+        ----------
+        model : Any
+            Model object defining the problem.
+        prop_options : Any, optional
+            Propagator options, can be a string or dictionary, by default "vv".
+
+        Returns
+        -------
+        SHPropagator
+            A new propagator instance.
+
+        Raises
+        ------
+        ValueError
+            If the propagator type is unknown.
+        Exception
+            If prop_options is not a string or dictionary.
+        """
+        if is_string(prop_options):
+            prop_options = {"type": prop_options}
+        elif not isinstance(prop_options, dict):
+            raise Exception("prop_options must be a string or a dictionary")
+
+        proptype = prop_options.get("type", "vv")
+        if proptype.lower() == "vv":
+            return AFSSHVVPropagator(**prop_options)
+        else:
+            raise ValueError(f"Unrecognized surface hopping propagator type: {proptype}.")
+
+class AugmentedFSSH(SurfaceHoppingMD):
+    """Augmented-FSSH (A-FSSH) dynamics, by Subotnik and coworkers.
 
     Initial implementation based on original paper:
       Subotnik, Shenvi JCP 134, 024105 (2011); doi: 10.1063/1.3506779
     """
     def __init__(self, *args: Any, **options: Any):
-        TrajectorySH.__init__(self, *args, **options)
+        options['hopping_method'] = 'instantaneous' # force instantaneous hopping
+        SurfaceHoppingMD.__init__(self, *args, **options)
 
         self.augmented_integration = options.get("augmented_integration", self.electronic_integration).lower()
 
-        self.delR = np.zeros([self.model.ndim(), self.model.nstates(), self.model.nstates()],
+        self.delR = np.zeros([self.model.ndof, self.model.nstates, self.model.nstates],
                 dtype=np.complex128)
-        self.delP = np.zeros([self.model.ndim(), self.model.nstates(), self.model.nstates()],
+        self.delP = np.zeros([self.model.ndof, self.model.nstates, self.model.nstates],
                 dtype=np.complex128)
 
-    def advance_position(self, last_electronics: Union[ElectronicT,None],
-            this_electronics: ElectronicT) -> None:
-        """Move classical position and delR"""
-        # Use base class propagation
-        TrajectorySH.advance_position(self, last_electronics, this_electronics)
-
-        self.advance_delR(last_electronics, this_electronics)
-
-    def advance_velocity(self, last_electronics: Union[ElectronicT,None],
-            this_electronics: ElectronicT) -> None:
-        """Move classical velocity and delP"""
-        # Use base class propagation
-        TrajectorySH.advance_velocity(self, last_electronics, this_electronics)
-
-        self.advance_delP(last_electronics, this_electronics)
+        self.propagator = AFSSHPropagator(self.model, "vv")
 
     def compute_delF(self, this_electronics):
-        delF = np.copy(this_electronics.force_matrix())
+        """Compute the difference in forces between states.
+
+        Parameters
+        ----------
+        this_electronics : ElectronicT
+            Current electronic state information.
+
+        Returns
+        -------
+        numpy.ndarray
+            Matrix of force differences between states.
+        """
+        delF = np.copy(this_electronics.force_matrix)
         F0 = self._force(this_electronics)
-        for i in range(self.model.nstates()):
+        for i in range(self.model.nstates):
             delF[i,i,:] -= F0
         return delF
 
     def advance_delR(self, last_electronics, this_electronics):
-        """Propagate delR using Eq. (29) from Subotnik 2011 JCP"""
+        """Propagate delR using Eq. (29) from Subotnik 2011 JCP.
 
+        Parameters
+        ----------
+        last_electronics : ElectronicT
+            Electronic state information from previous step.
+        this_electronics : ElectronicT
+            Electronic state information from current step.
+        """
         dt = self.dt
         H = self.hamiltonian_propagator(last_electronics, this_electronics)
         delV = np.zeros_like(self.delP)
@@ -81,8 +182,15 @@ class AugmentedFSSH(TrajectorySH):
             raise Exception("Unrecognized propagate delR method")
 
     def advance_delP(self, last_electronics, this_electronics):
-        """Propagate delP using Eq. (31) from Subotnik JCP 2011"""
+        """Propagate delP using Eq. (31) from Subotnik JCP 2011.
 
+        Parameters
+        ----------
+        last_electronics : ElectronicT
+            Electronic state information from previous step.
+        this_electronics : ElectronicT
+            Electronic state information from current step.
+        """
         dt = self.dt
         H = self.hamiltonian_propagator(last_electronics, this_electronics)
         delF = self.compute_delF(this_electronics)
@@ -122,35 +230,50 @@ class AugmentedFSSH(TrajectorySH):
         return
 
     def direction_of_rescale(self, source: int, target: int, electronics: ElectronicT=None) -> np.ndarray:
-        """
-        Return direction in which to rescale momentum. In Subotnik JCP 2011,
-        they suggest to use the difference between the momenta on delP
+        """Return direction in which to rescale momentum.
 
-        :param source: active state before hop
-        :param target: active state after hop
-        :param electronics: electronic model information (ignored)
+        In Subotnik JCP 2011, they suggest to use the difference between the momenta on delP.
 
-        :return: unit vector pointing in direction of rescale
+        Parameters
+        ----------
+        source : int
+            Active state before hop.
+        target : int
+            Active state after hop.
+        electronics : ElectronicT, optional
+            Electronic model information (ignored), by default None.
+
+        Returns
+        -------
+        numpy.ndarray
+            Unit vector pointing in direction of rescale.
         """
         out = self.delP[:, source, source] - self.delP[:, target, target]
         assert np.linalg.norm(np.imag(out)) < 1e-8
         return np.real(out)
 
     def gamma_collapse(self, electronics: ElectronicT=None) -> np.ndarray:
-        """
-        Computes the probability of collapse to each electronic state using Eq. (55)
-        in Subotnik JCP 2011.
+        """Compute probability of collapse to each electronic state.
 
-        This formula has some major problems and is tweaked or abandoned in future papers
+        Uses Eq. (55) in Subotnik JCP 2011. This formula has some major problems
+        and is tweaked or abandoned in future papers.
 
-        :param electronics: electronic model information (forces)
+        Parameters
+        ----------
+        electronics : ElectronicT, optional
+            Electronic model information (forces), by default None.
+
+        Returns
+        -------
+        numpy.ndarray
+            Array of collapse probabilities for each state.
         """
-        nst = self.model.nstates()
-        ndim = self.model.ndim()
+        nst = self.model.nstates
+        ndof = self.model.ndof
         out = np.zeros(nst, dtype=np.float64)
 
         def shifted_diagonal(X, k: int) -> np.ndarray:
-            out = np.zeros([nst, ndim])
+            out = np.zeros([nst, ndof])
             for i in range(nst):
                 out[i,:] = np.real(X[:,k,k] - X[:,i,i])
             return out
@@ -158,7 +281,7 @@ class AugmentedFSSH(TrajectorySH):
         ddR = shifted_diagonal(self.delR, self.state)
         ddP = shifted_diagonal(self.delP, self.state)
         ddP = np.where(np.abs(ddP) == 0.0, 1e-10, ddP)
-        ddF = shifted_diagonal(np.einsum("pqx->xpq", electronics.force_matrix()), self.state)
+        ddF = shifted_diagonal(np.einsum("pqx->xpq", electronics.force_matrix), self.state)
         ddR = ddR * np.sign(ddR/ddP)
 
         for i in range(nst):
@@ -169,24 +292,28 @@ class AugmentedFSSH(TrajectorySH):
         return 0.5 * out * self.dt
 
     def surface_hopping(self, last_electronics: ElectronicT, this_electronics: ElectronicT) -> None:
-        """Specialized version of surface_hopping that handles collapsing
+        """Specialized version of surface_hopping that handles collapsing.
 
-        :param last_electronics: ElectronicStates from previous step
-        :param this_electronics: ElectronicStates from current step
+        Parameters
+        ----------
+        last_electronics : ElectronicT
+            ElectronicStates from previous step.
+        this_electronics : ElectronicT
+            ElectronicStates from current step.
         """
-        TrajectorySH.surface_hopping(self, last_electronics, this_electronics)
+        SurfaceHoppingMD.surface_hopping(self, last_electronics, this_electronics)
 
         gamma = self.gamma_collapse(this_electronics)
 
         eta = np.zeros_like(gamma)
-        for i in range(self.model.nstates()):
+        for i in range(self.model.nstates):
             if i == self.state:
                 continue
             e = self.random()
             eta[i] = e
 
             if e < gamma[i]:
-                assert self.model.nstates() == 2
+                assert self.model.nstates == 2
 
                 # reset the density matrix
                 self.rho[:,:] = 0.0
@@ -196,18 +323,26 @@ class AugmentedFSSH(TrajectorySH):
                 self.delR[:,:,:] = 0.0
                 self.delP[:,:,:] = 0.0
 
-                self.tracer.record_event("collapse", {
+                self.tracer.record_event({
                     "time" : self.time,
                     "removed" : i,
                     "gamma" : gamma[i],
                     "eta" : eta
-                    })
+                    }, event_type="collapse")
 
     def hop_update(self, hop_from, hop_to):
-        """Shift delR and delP after hops"""
+        """Shift delR and delP after hops.
+
+        Parameters
+        ----------
+        hop_from : int
+            State index before hop.
+        hop_to : int
+            State index after hop.
+        """
         dRb = self.delR[:, hop_to, hop_to]
         dPb = self.delP[:, hop_to, hop_to]
 
-        for i in range(self.model.nstates()):
+        for i in range(self.model.nstates):
             self.delR[:,i,i] -= dRb
             self.delP[:,i,i] -= dPb

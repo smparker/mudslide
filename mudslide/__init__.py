@@ -7,9 +7,9 @@ nonadiabatic molecular dynamics.
 
 from .version import __version__
 
-from .trajectory_sh import *
+from .surface_hopping_md import *
+from .adiabatic_propagator import *
 from .adiabatic_md import *
-from .cumulative_sh import *
 from .even_sampling import *
 from .ehrenfest import *
 from .afssh import *
@@ -18,6 +18,7 @@ from .tracer import *
 
 from . import models
 from . import math
+from . import io
 
 # modules for CLI
 from . import collect

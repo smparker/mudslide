@@ -23,15 +23,15 @@ class QMMM(ElectronicModel_):
         # initialize position with mm_model
         self._position = np.copy(mm_model._position)
 
-        self._ndim_qm = qm_model.ndim()
-        self._ndim_mm = mm_model.ndim() - self._ndim_qm
-        self._qm_atoms = list(range(self._ndim_qm//3))
+        self._ndof_qm = qm_model.ndof
+        self._ndof_mm = mm_model.ndof - self._ndof_qm
+        self._qm_atoms = list(range(self._ndof_qm//3))
         self._nqm = len(self._qm_atoms)
 
         # update position for qm atoms, just in case they are different
-        self._position[:self._ndim_qm] = qm_model._position
+        self._position[:self._ndof_qm] = qm_model._position
 
-        super().__init__(nstates=qm_model.nstates(), ndim=mm_model.ndim())
+        super().__init__(nstates=qm_model.nstates, ndof=mm_model.ndof)
 
         if not self.check_qm_and_mm_regions(self._qm_atoms):
             raise ValueError("QM atoms must have the same elements in the QM and MM models.")
@@ -43,7 +43,7 @@ class QMMM(ElectronicModel_):
         and the MM model.
         """
         qm_elements = self._qm_model._elements
-        qm_elements_in_mm = [ self._mm_model._elements[i] for i in qm_atoms ]
+        qm_elements_in_mm = [ self._mm_model.atom_types[i] for i in qm_atoms ]
         return qm_elements == qm_elements_in_mm
 
     def remove_qm_interactions(self, qm_atoms):
@@ -105,27 +105,27 @@ class QMMM(ElectronicModel_):
     def compute(self, X: ArrayLike, couplings: Any=None, gradients: Any=None, reference: Any=None) -> None:
         """Computes QM/MM energy by calling OpenMM and Turbomole and stitching together the results"""
         self._position = X
-        qmxyz = X[:self._ndim_qm]
+        qmxyz = X[:self._ndof_qm]
 
         self._mm_model.compute(X)
 
-        only_mm_xyz = X[self._ndim_qm:]
+        only_mm_xyz = X[self._ndof_qm:]
         only_mm_charges = self._mm_model._charges[self._nqm:]
         self._qm_model.control.add_point_charges(only_mm_xyz.reshape(-1,3), only_mm_charges)
         self._qm_model.compute(qmxyz)
 
-        self._hamiltonian = self._mm_model.hamiltonian() + self._qm_model.hamiltonian()
+        self._hamiltonian = self._mm_model.hamiltonian + self._qm_model.hamiltonian
 
         mmforce = self._mm_model._force
         qmforce = self._qm_model._force
-        self._force = np.zeros([self.nstates(), self.ndim()])
+        self._force = np.zeros([self.nstates, self.ndof])
 
         self._force[:,:] = mmforce
-        self._force[:,:self._ndim_qm] += qmforce
+        self._force[:,:self._ndof_qm] += qmforce
         self._forces_available = self._qm_model._forces_available
 
         a, b, qm_on_mm_force = self._qm_model.control.read_point_charge_gradients()
-        self._force[:,self._ndim_qm:] -= qm_on_mm_force.reshape(1,-1)
+        self._force[:,self._ndof_qm:] -= qm_on_mm_force.reshape(1,-1)
 
         def clone(self):
             """Return a copy of the QMMM object"""

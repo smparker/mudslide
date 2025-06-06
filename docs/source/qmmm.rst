@@ -59,13 +59,14 @@ them to make a ``QMMM`` object.
     momenta = mudslide.math.boltzmann_velocities(qmmm._mass, 300) # generate boltzmann momenta
 
     log = mudslide.YAMLTrace() # log trajectory using YAML files
-    traj = mudslide.TrajectoryCum(qmmm, # run using turbomole model
+    traj = mudslide.SurfaceHoppingMD(qmmm, # run using turbomole model
                                  positions, # start at position from coord
                                  momenta, # use boltzmann momenta
                                  1, # start on 1st excited state
                                  tracer=log, # use yaml log
                                  dt=20, # 20 a.u. time step
                                  max_time=80, # run for 80 a.u.
+                                 hopping_method="cumulative", # use cumulative hopping
                                  )
     results = traj.simulate()
 

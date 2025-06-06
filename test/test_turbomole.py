@@ -7,7 +7,6 @@ import os
 import shutil
 import unittest
 import pytest
-import sys
 from pathlib import Path
 import mudslide
 import yaml
@@ -64,7 +63,7 @@ class TestTMGround(_TestTM):
         Eref = -78.40037210973
         Fref = np.loadtxt("force.ref.txt")
 
-        assert np.isclose(model.hamiltonian()[0,0], Eref)
+        assert np.isclose(model.hamiltonian[0,0], Eref)
         assert np.allclose(model.force(0), Fref)
 
 class TestTMGroundPC(_TestTM):
@@ -83,7 +82,7 @@ class TestTMGroundPC(_TestTM):
         Eref = -78.63405047062
         Fref = np.loadtxt("force.ref.txt")
 
-        assert np.isclose(model.hamiltonian()[0,0], Eref)
+        assert np.isclose(model.hamiltonian[0,0], Eref)
         assert np.allclose(model.force(0), Fref)
 
         xyzpc1, q1, dpc = model.control.read_point_charge_gradients()
@@ -112,9 +111,12 @@ class TestTMExDynamics(_TestTM):
                -2.269965412856570000,  0.495551832268249000,  1.487150300486560000]
         # yapf: enable
 
+        velocities = np.array(mom) / model.mass
+
         log = mudslide.YAMLTrace(base_name="TMtrace", location=self.rundir, log_pitch=8)
-        traj = mudslide.TrajectorySH(model, positions, mom, 3, tracer=log, dt=20, max_time=81, t0=1,
-                                     seed_sequence=57892)
+        traj = mudslide.SurfaceHoppingMD(model, positions, velocities, 3, tracer=log, dt=20, max_time=81, t0=1,
+                                     seed_sequence=57892,
+                                     hopping_method="instantaneous")
         results = traj.simulate()
 
         main_log = results.main_log
@@ -138,7 +140,7 @@ class TestTMExDynamics(_TestTM):
         for t in ref_times:
             np.testing.assert_almost_equal(refs[t]["density_matrix"], results[t]["density_matrix"], decimal=8)
             np.testing.assert_almost_equal(refs[t]["position"], results[t]["position"], decimal=8)
-            np.testing.assert_almost_equal(refs[t]["momentum"], results[t]["momentum"], decimal=8)
+            np.testing.assert_almost_equal(refs[t]["velocity"], results[t]["velocity"], decimal=8)
 
         for t in ref_times:
             for s1 in states:

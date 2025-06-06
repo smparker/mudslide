@@ -6,18 +6,16 @@ import numpy as np
 import os
 import shutil
 import unittest
-import sys
 from pathlib import Path
 import mudslide
 import yaml
 import queue
 from mudslide.even_sampling import SpawnStack
 from mudslide.even_sampling import EvenSamplingTrajectory
-from mudslide.tracer import InMemoryTrace, YAMLTrace, TraceManager
+from mudslide.tracer import TraceManager
 from mudslide.batch import TrajGenConst, TrajGenNormal, BatchedTraj
 
 from mudslide.models import TMModel, turbomole_is_installed
-from mudslide.tracer import YAMLTrace
 
 testdir = os.path.dirname(__file__)
 _refdir = os.path.join(testdir, "ref")
@@ -50,7 +48,7 @@ class TestTMModel(unittest.TestCase):
 
     def test_get_gs_ex_properties(self):
         """test for gs_ex_properties function"""
-        tm_model = TMModel(states=[0, 1, 2, 3], expert=True) 
+        tm_model = TMModel(states=[0, 1, 2, 3], expert=True)
 
         # yapf: disable
         mom = [ 5.583286976987380000, -2.713959745507320000,  0.392059702162967000,
@@ -60,6 +58,7 @@ class TestTMModel(unittest.TestCase):
                 2.145175145340160000,  0.594918215579156000,  1.075977514428970000,
                -2.269965412856570000,  0.495551832268249000,  1.487150300486560000]
         # yapf: enable
+        velocities = mom / tm_model.mass
         positions = tm_model._position
         mass = tm_model.mass
         q = queue.Queue()
@@ -70,26 +69,22 @@ class TestTMModel(unittest.TestCase):
         sample_stack.sample_stack[0]["zeta"]=0.003
         samples = 1
         nprocs = 1
-        trace_type = YAMLTrace
-        trace_options = {}
+        trace_type = "yaml"
         electronic_integration = 'exp'
-        trace_options["location"] = ""
-        trace_options["base_name"] = "TMtrace"
+        trace_options = {"location": "", "base_name": "TMtrace"}
         every = 1
         model=tm_model
-        traj_gen = TrajGenConst(positions, mom, 3, dt)
+        traj_gen = TrajGenConst(positions, velocities, 3, dt)
 
         fssh = mudslide.BatchedTraj(model,
                        traj_gen,
                        trajectory_type=EvenSamplingTrajectory,
-                       mom=mom,
-                       positions=positions,
                        samples=samples,
-                       max_time = max_time,
+                       max_time=max_time,
                        nprocs=nprocs,
                        dt=dt,
                        t0=t0,
-                       tracemanager=TraceManager(TraceType=trace_type, trace_kwargs=trace_options),
+                       tracemanager=TraceManager(trace_type=trace_type),
                        trace_every=every,
                        spawn_stack=sample_stack,
                        electronic_integration=electronic_integration)
@@ -114,7 +109,7 @@ class TestTMModel(unittest.TestCase):
         for t in ref_times:
             np.testing.assert_almost_equal(refs[t]["density_matrix"], results[1][t]["density_matrix"], decimal=8)
             np.testing.assert_almost_equal(refs[t]["position"], results[1][t]["position"], decimal=8)
-            np.testing.assert_almost_equal(refs[t]["momentum"], results[1][t]["momentum"], decimal=8)
+            np.testing.assert_almost_equal(refs[t]["velocity"], results[1][t]["velocity"], decimal=8)
 
         for t in ref_times:
             for s1 in states:

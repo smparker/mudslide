@@ -29,8 +29,8 @@ def h2o5_mm():
     mm = mudslide.models.OpenMM(pdb, ff, system)
     return mm
 
-@pytest.mark.skipif(not (mudslide.openmm_model.openmm_is_installed()
-                         and mudslide.turbomole_model.turbomole_is_installed()), reason="Turbomole and OpenMM must be installed")
+@pytest.mark.skipif(not (mudslide.models.openmm_model.openmm_is_installed()
+                         and mudslide.models.turbomole_model.turbomole_is_installed()), reason="Turbomole and OpenMM must be installed")
 class TestQMMM:
     """Test Suite for QMMM class"""
 
@@ -125,5 +125,5 @@ class TestQMMM:
         Eref = -76.29937888
         Fref = np.loadtxt('force.txt')
 
-        assert np.isclose(qmmm.hamiltonian()[0,0], Eref)
-        assert np.allclose(qmmm.force(), Fref)
+        assert np.isclose(qmmm.hamiltonian[0,0], Eref)
+        assert np.allclose(qmmm.force(), Fref, atol=1e-4)

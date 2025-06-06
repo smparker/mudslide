@@ -34,11 +34,10 @@ def run():
     ]
 
     positions = tm_model.X
-#    nstates = tm_model.nstates()
     mass = tm_model.mass
+    velocities = np.array(mom) / mass
     q = queue.Queue()
     dt = 20
-#    nt = 
     max_time=41
     t0 = 1
     sample_stack = SpawnStack.from_quadrature(nsamples=[2, 2, 2])
@@ -50,10 +49,9 @@ def run():
     electronic_integration = 'exp'
     trace_options["location"] = ""
     every = 1
-#    hopping_probability = 'tully'
     model=tm_model
 
-    traj_gen = TrajGenConst(positions, mom, 3, dt)
+    traj_gen = TrajGenConst(positions, velocities, 3, dt)
 
     fssh = mudslide.BatchedTraj(model,
                    traj_gen,
