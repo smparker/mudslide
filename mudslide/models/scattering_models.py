@@ -638,7 +638,6 @@ class SubotnikModelZ(DiabaticModel_):
 
     def V(self, X: ArrayLike) -> ArrayLike:
         N = self.nstates
-        m = np.arange(0, N)
 
         v = 0.1 / np.sqrt(N)
         m1 = np.arange(0, N//2) + 1

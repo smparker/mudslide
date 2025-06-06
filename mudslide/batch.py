@@ -127,7 +127,7 @@ class TrajGenNormal:
             x = self.random_state.normal(self.position, self.position_deviation)
             v = self.random_state.normal(self.velocity, self.velocity_deviation)
 
-            if (self.vskip(v)):
+            if self.vskip(v):
                 continue
             yield (x, v, self.initial_state, {"seed_sequence": seedseqs[i]})
 

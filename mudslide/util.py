@@ -32,9 +32,12 @@ def find_unique_name(name: str, location="", always_enumerate: bool = False,
         If no unique name could be generated from the base name.
     """
     name_yaml = f"{name}{ending}"
+    name_yaml = f"{name}{ending}"
     if not always_enumerate and not os.path.exists(os.path.join(location, name_yaml)):
         return name
     for i in range(sys.maxsize):
+        out = f"{name}-{i:d}"
+        out_yaml = f"{out}{ending}"
         out = f"{name}-{i:d}"
         out_yaml = f"{out}{ending}"
         if not os.path.exists(os.path.join(location, out_yaml)):

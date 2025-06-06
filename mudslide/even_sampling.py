@@ -155,10 +155,7 @@ class SpawnStack:
             samp = self.last_stack
             if "spawn_size" in samp:
                 return samp["spawn_size"]
-            else:
-                return 1
-        else:
-            return 1
+        return 1
 
     def append_layer(self, zetas: list, dws: list, stack=None, node=None, nodes=None, adj_matrix=None):
         """Append a layer to all leaves in the sample stack tree.

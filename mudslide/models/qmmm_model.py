@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """QM/MM model using turbomole and OpenMM"""
 
-import os
-
 import numpy as np
 
 try:
@@ -65,8 +63,8 @@ class QMMM(ElectronicModel_):
                         force.setBondParameters(n, a, b, r, k*0.000)
                         num_bond_removed += 1
                     if (a in qm_atoms) != (b in qm_atoms):
-                        raise ValueError(f"Bonded interactions between QM and MM regions not allowed."
-                            "Atoms {a:d} and {b:d} are bonded across regions.")
+                        raise ValueError("Bonded interactions between QM and MM regions not allowed."
+                            f"Atoms {a:d} and {b:d} are bonded across regions.")
             elif isinstance(force, openmm.HarmonicAngleForce):
                 for n in range(force.getNumAngles()):
                     a, b, c, t, k = force.getAngleParameters(n)
@@ -75,8 +73,8 @@ class QMMM(ElectronicModel_):
                         force.setAngleParameters(n, a, b, c, t, k*0.000)
                         num_angl_removed += 1
                     elif any(in_qm):
-                        raise ValueError(f"Bonded interactions between QM and MM regions not allowed."
-                            "Atoms {a:d}, {b:d}, and {c:d} are bonded across regions.")
+                        raise ValueError("Bonded interactions between QM and MM regions not allowed."
+                            f"Atoms {a:d}, {b:d}, and {c:d} are bonded across regions.")
             elif isinstance(force, openmm.PeriodicTorsionForce):
                 for n in range(force.getNumTorsions()):
                     a, b, c, d, mult, phi, k = force.getTorsionParameters(n)
@@ -85,8 +83,8 @@ class QMMM(ElectronicModel_):
                         force.setTorsionParameters(n, a, b, c, d, mult, phi, k*0.000)
                         num_tors_removed  += 1
                     elif any(in_qm):
-                        raise ValueError(f"Bonded interactions between QM and MM regions not allowed."
-                            "Atoms {a:d}, {b:d}, {c:d}, and {d:d} are bonded across regions.")
+                        raise ValueError("Bonded interactions between QM and MM regions not allowed."
+                            f"Atoms {a:d}, {b:d}, {c:d}, and {d:d} are bonded across regions.")
             elif isinstance(force, openmm.NonbondedForce):
                 for n in range(force.getNumParticles()):
                     chg, sig, eps = force.getParticleParameters(n)
@@ -100,7 +98,7 @@ class QMMM(ElectronicModel_):
                     for j in range(i):
                         force.addException(i, j, 0, 1, 0, replace=True)
             elif isinstance(force, openmm.CMMotionRemover):
-                raise ValueError(f"Cannot use CMMotionRemover in QM/MM model. Turn it off by setting removeCMMotion=False when preparing the System().")
+                raise ValueError("Cannot use CMMotionRemover in QM/MM model. Turn it off by setting removeCMMotion=False when preparing the System().")
             else:
                 raise ValueError(f"Force {force.__class__.__name__} not supported in QM/MM model.")
 

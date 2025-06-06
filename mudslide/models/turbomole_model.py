@@ -113,8 +113,11 @@ class TurboControl:
         if newline:
             lines = "\\n" + lines
         adg_command = f"adg {dg} {lines}"
-        _ = subprocess.run(adg_command.split(), capture_output=True, text=True, cwd=self.workdir,
+        result = subprocess.run(adg_command.split(), capture_output=True, text=True, cwd=self.workdir,
                            check=True)
+        # check that the command ran successfully
+        if "abnormal" in result.stderr:
+            raise RuntimeError(f"Call to adg ended abnormally: {result.stderr}")
 
     def cpc(self, dest):
         """Copy the control file and other files to a new directory"""
@@ -304,6 +307,7 @@ class TMModel(ElectronicModel_):
         if not self.expert:
             self.apply_suggested_parameters()
 
+
     def apply_suggested_parameters(self):
         """ Apply suggested parameters for Turbomole to work well with NAMD
 
@@ -349,6 +353,7 @@ class TMModel(ElectronicModel_):
             if regex.match(line) is not None:
                 coordline = i
                 break
+
         # Reached end of file without finding $coord.
         if line == "":
             raise ValueError(f"$coord entry not found in file: {coord_path}!")

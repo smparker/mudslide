@@ -92,6 +92,7 @@ class AdiabaticMD:
         self.mass = model.mass
         self.position = np.array(x0, dtype=np.float64).reshape(model.ndof)
         self.velocity = np.array(v0, dtype=np.float64).reshape(model.ndof)
+        self.last_position = np.zeros_like(self.position, dtype=np.float64)
         self.last_velocity = np.zeros_like(self.velocity, dtype=np.float64)
         if "last_velocity" in options:
             self.last_velocity[:] = options["last_velocity"]

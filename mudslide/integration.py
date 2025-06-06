@@ -123,18 +123,19 @@ def quadrature(n: int, a: float = -1.0, b: float = 1.0,
     """
     Returns a quadrature rule for the specified method and bounds
     """
-    if method.lower() == "cc" or method.lower() == "clenshaw-curtis": # pylint: disable=no-else-return
+    method = method.lower()
+    if method in ["cc", "clenshaw-curtis"]:
         return clenshaw_curtis(n, a, b)
-    elif method.lower() == "gl" or method.lower() == "gauss-legendre":
+    if method in ["gl", "gauss-legendre"]:
         points, weights = np.polynomial.legendre.leggauss(n)
         points = points * 0.5 * (b - a) + 0.5 * (a + b)
         weights *= 0.5
         return points, weights
-    elif method.lower() == "midpoint" or method.lower() == "mp":
+    if method in ["midpoint", "mp"]:
         return midpoint(n, a, b)
-    elif method.lower() == "trapezoid":
+    if method in ["trapezoid"]:
         return trapezoid(n, a, b)
-    elif method.lower() == "simpson":
+    if method in ["simpson"]:
         return simpson(n, a, b)
     else:
         raise ValueError("Unrecognized quadrature choice")

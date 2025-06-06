@@ -8,7 +8,7 @@ import yaml
 from mudslide.models import ElectronicModel_
 
 from typing import Any, List
-from mudslide.typing import ArrayLike, DtypeLike
+from mudslide.typing import ArrayLike
 
 
 class HarmonicModel(ElectronicModel_):

@@ -2,6 +2,7 @@
 """ OpenMM interface for mudslide """
 
 from typing import Any
+from mudslide.typing import ArrayLike
 
 import numpy as np
 

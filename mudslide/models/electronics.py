@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 """Handle storage and computation of electronic degrees of freedom"""
 
-from __future__ import division
-
 import copy as cp
+from typing import Tuple, Any
 
 import numpy as np
 

@@ -1,4 +1,7 @@
-#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+Periodic Table of Elements
+"""
 
 DEBUG = False
 

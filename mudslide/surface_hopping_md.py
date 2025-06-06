@@ -781,9 +781,25 @@ class SurfaceHoppingMD:
             self.state = hop_to
             self.rescale_component(rescale_vector, -delV)
             self.hop_update(hop_from, hop_to)
-            self.tracer.hop(self.time, hop_from, hop_to, float(hop_dict["zeta"]), float(hop_dict["prob"]))
+            self.tracer.record_event(
+                event_dict={
+                    "hop_from": int(hop_from),
+                    "hop_to": int(hop_to),
+                    "zeta": float(hop_dict["zeta"]), 
+                    "prob": float(hop_dict["prob"])
+                },
+                event_type="hop"
+            )
         else:
-            self.tracer.frustrated_hop(self.time, hop_from, hop_to, float(hop_dict["zeta"]), float(hop_dict["prob"]))
+            self.tracer.record_event(
+                event_dict={
+                    "hop_from": int(hop_from),
+                    "hop_to": int(hop_to), 
+                    "zeta": float(hop_dict["zeta"]),
+                    "prob": float(hop_dict["prob"])
+                },
+                event_type="frustrated_hop"
+            )
 
     def simulate(self) -> 'Trace':
         """
