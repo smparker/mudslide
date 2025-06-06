@@ -24,14 +24,14 @@ class DiabaticModelT(Protocol):
 
     Attributes
     ----------
-    ndim_ : int
+    _ndof : int
         Number of classical degrees of freedom
-    nstates_ : int
+    _nstates : int
         Number of electronic states
     """
 
-    ndim_: int
-    nstates_: int
+    _ndof: int
+    _nstates: int
 
     def __init__(self, representation: str, reference: Any, *args: Any, **kwargs: Any):
         """Initialize the diabatic model.
@@ -75,7 +75,7 @@ class DiabaticModelT(Protocol):
         Returns
         -------
         ArrayLike
-            Gradient of potential energy matrix of shape (nstates, nstates, ndim)
+            Gradient of potential energy matrix of shape (nstates, nstates, ndof)
         """
         pass
 
@@ -88,7 +88,7 @@ class ModelT(Protocol):
     def nstates(self) -> int:
         pass
 
-    def ndim(self) -> int:
+    def ndof(self) -> int:
         pass
 
     def compute(self, x: ArrayLike, couplings: Any = None, gradients: Any = None, reference: Any = None) -> None:

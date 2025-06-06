@@ -6,7 +6,7 @@ including Velocity Verlet and Nose-Hoover Chain thermostats.
 """
 # pylint: disable=too-few-public-methods, too-many-arguments, invalid-name
 
-from typing import Any
+from typing import Any, Dict
 
 import numpy as np
 
@@ -329,7 +329,7 @@ class AdiabaticPropagator:
         if isinstance(prop_options, str):
             prop_options = { "type": prop_options.lower() }
 
-        prop_options["ndof"] = model.ndim()
+        prop_options["ndof"] = model.ndof()
 
         if isinstance(prop_options, dict):
             prop_type = prop_options.pop("type", "vv")

@@ -15,7 +15,7 @@ class HarmonicModel(ElectronicModel_):
     r"""Adiabatic model for ground state dynamics
 
     """
-    ndim_: int = 1
+    _ndof: int = 1
     nstates_: int = 1
     reference: Any = None
 
@@ -39,12 +39,12 @@ class HarmonicModel(ElectronicModel_):
         self.E0 = E0
         self.H0 = np.array(H0)
 
-        self.mass = np.array(mass, dtype=np.float64).reshape(self.ndim_)
+        self.mass = np.array(mass, dtype=np.float64).reshape(self._ndof)
 
-        if self.H0.shape != (self.ndim_, self.ndim_):
+        if self.H0.shape != (self._ndof, self._ndof):
             raise ValueError("Incorrect shape of Hessian")
 
-        if self.mass.shape != (self.ndim_,):
+        if self.mass.shape != (self._ndof,):
             raise ValueError("Incorrect shape of mass")
 
     def compute(self, X: ArrayLike, gradients: Any = None, couplings: Any = None, reference: Any = None) -> None:
@@ -65,7 +65,7 @@ class HarmonicModel(ElectronicModel_):
 
         self.energies = np.array([energy])
         self._hamiltonian = np.array([energy])
-        self._force = -grad.reshape([1, self.ndim_])
+        self._force = -grad.reshape([1, self._ndof])
         self._forces_available = [True]
 
     @classmethod

@@ -14,17 +14,17 @@ import yaml
 testdir = os.path.dirname(__file__)
 _refdir = os.path.join(testdir, "ref", "scattering_models")
 
-def get_ref_data(model_name, nstates, ndim):
+def get_ref_data(model_name, nstates, ndof):
     H_ref = np.loadtxt(os.path.join(_refdir, model_name, "H.txt"))
     force_ref = np.loadtxt(os.path.join(_refdir, model_name, "force.txt"))
-    dc_ref = np.loadtxt(os.path.join(_refdir, model_name, "dc.txt")).reshape([nstates, nstates, ndim])
+    dc_ref = np.loadtxt(os.path.join(_refdir, model_name, "dc.txt")).reshape([nstates, nstates, ndof])
 
     return H_ref, force_ref, dc_ref
 
 def test_subotnik_model_w():
     model = mudslide.models.SubotnikModelW()
 
-    assert model.ndim() == 1
+    assert model.ndof() == 1
     assert model.nstates() == 8
 
     X = np.zeros([1])
@@ -36,7 +36,7 @@ def test_subotnik_model_w():
     force = model.force()
     dc = model._derivative_coupling
 
-    H_ref, force_ref, dc_ref = get_ref_data('model_w', model.nstates(), model.ndim())
+    H_ref, force_ref, dc_ref = get_ref_data('model_w', model.nstates(), model.ndof())
 
     assert np.allclose(H, H_ref)
     assert np.allclose(force, force_ref)
@@ -45,7 +45,7 @@ def test_subotnik_model_w():
 def test_subotnik_model_z():
     model = mudslide.models.SubotnikModelZ()
 
-    assert model.ndim() == 1
+    assert model.ndof() == 1
     assert model.nstates() == 8
 
     X = np.zeros([1])
@@ -57,7 +57,7 @@ def test_subotnik_model_z():
     force = model.force()
     dc = model._derivative_coupling
 
-    H_ref, force_ref, dc_ref = get_ref_data('model_z', model.nstates(), model.ndim())
+    H_ref, force_ref, dc_ref = get_ref_data('model_z', model.nstates(), model.ndof())
 
     assert np.allclose(H, H_ref)
     assert np.allclose(force, force_ref)

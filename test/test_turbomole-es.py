@@ -6,7 +6,6 @@ import numpy as np
 import os
 import shutil
 import unittest
-import sys
 from pathlib import Path
 import mudslide
 import yaml

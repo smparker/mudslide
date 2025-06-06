@@ -121,9 +121,9 @@ class SurfaceHoppingMD:
         self.queue: Any = queue
 
         # initial conditions
-        self.position = np.array(x0, dtype=np.float64).reshape(model.ndim())
+        self.position = np.array(x0, dtype=np.float64).reshape(model.ndof())
         self.last_position = np.zeros_like(self.position, dtype=np.float64)
-        self.velocity = np.array(v0, dtype=np.float64).reshape(model.ndim())
+        self.velocity = np.array(v0, dtype=np.float64).reshape(model.ndof())
         self.last_velocity = np.zeros_like(self.velocity, dtype=np.float64)
         if "last_velocity" in options:
             self.last_velocity[:] = options["last_velocity"]
@@ -393,7 +393,7 @@ class SurfaceHoppingMD:
             "velocity": self.velocity.tolist(),
             "potential": float(self.potential_energy()),
             "kinetic": float(self.kinetic_energy()),
-            "temperature": float(2 * self.kinetic_energy() / ( boltzmann * self.model.ndim())),
+            "temperature": float(2 * self.kinetic_energy() / ( boltzmann * self.model.ndof())),
             "energy": float(self.total_energy()),
             "density_matrix": self.rho.view(dtype=np.float64).tolist(),
             "active": int(self.state),

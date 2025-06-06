@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test simple short trajectories for adiabatic MD"""
 
+import sys
 import json
 
 import numpy as np

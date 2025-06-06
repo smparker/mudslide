@@ -15,7 +15,6 @@ from mudslide.typing import ArrayLike
 from mudslide.typing import ElectronicT
 
 
-
 class ElectronicModel_:
     """Base class for handling electronic structure part of dynamics.
 
@@ -30,7 +29,7 @@ class ElectronicModel_:
         The reference electronic state. Can be None.
     nstates_ : int
         The number of electronic states.
-    ndim_ : int
+    _ndof : int
         The number of classical degrees of freedom.
     _ndims : int
         The number of dimensions for each particle in the system.
@@ -50,7 +49,7 @@ class ElectronicModel_:
         The derivative coupling matrix.
     """
     def __init__(self, representation: str = "adiabatic", reference: Any = None,
-                 nstates: int = 0, ndims: int = 1, nparticles: int = 1, ndim: int = None,
+                 nstates: int = 0, ndims: int = 1, nparticles: int = 1, ndof: int = None,
                  atom_types: List[str] = None):
         """Initialize the electronic model.
 
@@ -66,18 +65,18 @@ class ElectronicModel_:
             Number of dimensions per particle, by default 1
         nparticles : int, optional
             Number of particles, by default 1
-        ndim : int, optional
+        ndof : int, optional
             Total number of classical degrees of freedom, by default None
         atom_types : List[str], optional
             List of atom types, by default None
         """
         self._ndims = ndims
         self._nparticles = nparticles
-        if ndim is None:
-            self.ndim_ = ndims * nparticles
+        if ndof is None:
+            self._ndof = ndims * nparticles
         else:
-            self.ndim_ = ndim
-            self._ndims = ndim
+            self._ndof = ndof
+            self._ndims = ndof
             self._nparticles = 1
         self.nstates_ = nstates
 
@@ -93,7 +92,7 @@ class ElectronicModel_:
 
         self.atom_types: List[str] = atom_types
 
-    def ndim(self) -> int:
+    def ndof(self) -> int:
         """Get the number of classical degrees of freedom.
 
         Returns
@@ -101,7 +100,7 @@ class ElectronicModel_:
         int
             Number of classical degrees of freedom
         """
-        return self.ndim_
+        return self._ndof
 
     @property
     def nparticles(self) -> int:
@@ -193,8 +192,8 @@ class ElectronicModel_:
         Central function for model objects. After the compute function exists, the following
         data must be provided:
           - self._hamiltonian -> n x n array containing electronic hamiltonian
-          - self.force -> n x ndim array containing the force on each diagonal
-          - self._derivative_coupling -> n x n x ndim array containing derivative couplings
+          - self.force -> n x ndof array containing the force on each diagonal
+          - self._derivative_coupling -> n x n x ndof array containing derivative couplings
 
         The couplings and gradients options are currently unimplemented, but are
         intended to allow specification of which couplings and gradients are needed
@@ -238,7 +237,7 @@ class ElectronicModel_:
         """Return a dictionary representation of the model"""
         out = {
             "nstates": self.nstates(),
-            "ndim": self.ndim(),
+            "ndof": self.ndof(),
             "position": self._position.tolist(),
             "hamiltonian": self._hamiltonian.tolist(),
             "force": self._force.tolist()
@@ -259,11 +258,11 @@ class DiabaticModel_(ElectronicModel_):
     - def V(self, X: ArrayLike) -> ArrayLike
       V(x) should return an ndarray of shape (nstates, nstates)
     - def dV(self, X: ArrayLike) -> ArrayLike
-      dV(x) should return an ndarray of shape (nstates, nstates, ndim)
+      dV(x) should return an ndarray of shape (nstates, nstates, ndof)
     """
 
     def __init__(self, representation: str = "adiabatic", reference: Any = None,
-                 nstates:int = 0, ndim: int = 0):
+                 nstates:int = 0, ndof: int = 0):
         """Initialize the diabatic model.
 
         Parameters
@@ -274,11 +273,11 @@ class DiabaticModel_(ElectronicModel_):
             The reference electronic state, by default None
         nstates : int, optional
             Number of electronic states, by default 0
-        ndim : int, optional
+        ndof : int, optional
             Number of classical degrees of freedom, by default 0
         """
         ElectronicModel_.__init__(self, representation=representation, reference=reference,
-                                  nstates=nstates, ndim=ndim)
+                                  nstates=nstates, ndof=ndof)
 
     def compute(self, X: ArrayLike, couplings: Any = None, gradients: Any = None, reference: Any = None) -> None:
         """Compute electronic properties at position X.
@@ -332,11 +331,11 @@ class DiabaticModel_(ElectronicModel_):
     def _compute_force(self, dV: ArrayLike, coeff: ArrayLike) -> ArrayLike:
         r""":math:`-\langle \phi_{\mbox{state}} | \nabla H | \phi_{\mbox{state}} \rangle`"""
         nst = self.nstates()
-        ndim = self.ndim()
+        ndof = self.ndof()
 
         half = np.einsum("xij,jp->ipx", dV, coeff)
 
-        out = np.zeros([nst, ndim], dtype=np.float64)
+        out = np.zeros([nst, ndof], dtype=np.float64)
         for ist in range(self.nstates()):
             out[ist, :] += -np.einsum("i,ix->x", coeff[:, ist], half[:, ist, :])
         return out
@@ -349,7 +348,7 @@ class DiabaticModel_(ElectronicModel_):
     def _compute_derivative_coupling(self, coeff: ArrayLike, dV: ArrayLike, energies: ArrayLike) -> ArrayLike:
         r"""returns :math:`\phi_{i} | \nabla_\alpha \phi_{j} = d^\alpha_{ij}`"""
         if self._representation == "diabatic":
-            return np.zeros([self.nstates(), self.nstates(), self.ndim()], dtype=np.float64)
+            return np.zeros([self.nstates(), self.nstates(), self.ndof()], dtype=np.float64)
 
         out = np.einsum("ip,xij,jq->pqx", coeff, dV, coeff)
 
@@ -380,7 +379,7 @@ class AdiabaticModel_(ElectronicModel_):
     """
 
     def __init__(self, representation: str = "adiabatic", reference: Any = None,
-                 nstates:int = 0, ndim: int = 0):
+                 nstates:int = 0, ndof: int = 0):
         """Initialize the adiabatic model.
 
         Parameters
@@ -391,7 +390,7 @@ class AdiabaticModel_(ElectronicModel_):
             The reference electronic state, by default None
         nstates : int, optional
             Number of electronic states, by default 0
-        ndim : int, optional
+        ndof : int, optional
             Number of classical degrees of freedom, by default 0
 
         Raises
@@ -402,7 +401,7 @@ class AdiabaticModel_(ElectronicModel_):
         if representation == "diabatic":
             raise Exception('Adiabatic models can only be run in adiabatic mode')
         ElectronicModel_.__init__(self, representation=representation, reference=reference,
-                                  nstates=nstates, ndim=ndim)
+                                  nstates=nstates, ndof=ndof)
 
     def nstates(self) -> int:
         """Get the number of electronic states.
@@ -414,7 +413,7 @@ class AdiabaticModel_(ElectronicModel_):
         """
         return self.nstates_
 
-    def ndim(self) -> int:
+    def ndof(self) -> int:
         """Get the number of classical degrees of freedom.
 
         Returns
@@ -422,7 +421,7 @@ class AdiabaticModel_(ElectronicModel_):
         int
             Number of classical degrees of freedom
         """
-        return self.ndim_
+        return self._ndof
 
     def compute(self, X: ArrayLike, couplings: Any = None, gradients: Any = None, reference: Any = None) -> None:
         """Compute electronic properties at position X.
@@ -507,11 +506,11 @@ class AdiabaticModel_(ElectronicModel_):
     def _compute_force(self, dV: ArrayLike, coeff: ArrayLike) -> ArrayLike:
         r""":math:`-\langle \phi_{\mbox{state}} | \nabla H | \phi_{\mbox{state}} \rangle`"""
         nst = self.nstates()
-        ndim = self.ndim()
+        ndof = self.ndof()
 
         half = np.einsum("xij,jp->ipx", dV, coeff)
 
-        out = np.zeros([nst, ndim], dtype=np.float64)
+        out = np.zeros([nst, ndof], dtype=np.float64)
         for ist in range(self.nstates()):
             out[ist, :] += -np.einsum("i,ix->x", coeff[:, ist], half[:, ist, :])
         return out
@@ -524,7 +523,7 @@ class AdiabaticModel_(ElectronicModel_):
     def _compute_derivative_coupling(self, coeff: ArrayLike, dV: ArrayLike, energies: ArrayLike) -> ArrayLike:
         r"""returns :math:`\phi_{i} | \nabla_\alpha \phi_{j} = d^\alpha_{ij}`"""
         if self._representation == "diabatic":
-            return np.zeros([self.nstates(), self.nstates(), self.ndim()], dtype=np.float64)
+            return np.zeros([self.nstates(), self.nstates(), self.ndof()], dtype=np.float64)
 
         out = np.einsum("ip,xij,jq->pqx", coeff, dV, coeff)
 

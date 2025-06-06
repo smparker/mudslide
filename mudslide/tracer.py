@@ -1,13 +1,20 @@
 # -*- coding: utf-8 -*-
 """Collect results from single trajectories"""
 
-    import os
-    import yaml
+import sys
+import os
+import yaml
+from typing import Any, Dict, Iterator, List
+import shutil
+import copy as cp
 
-    from typing import Any, Dict, Iterator
-    from .typing import ArrayLike
-    from .util import find_unique_name
-    from .version import __version__
+import numpy as np
+
+from .constants import fs_to_au
+from .typing import ArrayLike
+from .util import find_unique_name, is_string
+from .math import RollingAverage
+from .version import __version__
 
 
 class Trace_:
@@ -188,14 +195,14 @@ class Trace_:
     def outcome(self) -> ArrayLike:
         """Classifies end of simulation: 2*state + [0 for left, 1 for right]"""
         last_snapshot = self[-1]
-        ndim = len(last_snapshot["position"])
+        ndof = len(last_snapshot["position"])
         nst = len(last_snapshot["density_matrix"])
         position = last_snapshot["position"][0]
         active = last_snapshot["active"]
 
         out = np.zeros([nst, 2], dtype=np.float64)
 
-        if ndim != 1:
+        if ndof != 1:
             return out
 
         lr = 0 if position < 0.0 else 1
@@ -206,8 +213,8 @@ class Trace_:
 
     def write_trajectory(self, filename: str) -> None:
         """Writes trajectory to an xyz file"""
-        ndim = self[-1]["position"].shape[0]
-        natoms = ndim // 3
+        ndof = self[-1]["position"].shape[0]
+        natoms = ndof // 3
         with open(filename, "w") as f: # TODO needs to be fixed for more general cases. How to get the element?
             for i, snap in enumerate(self):
                 print(f"{natoms:d}", file=f)

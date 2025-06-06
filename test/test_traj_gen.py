@@ -3,7 +3,6 @@
 """Unit testing for mudslide"""
 
 import unittest
-import sys
 import re
 
 import mudslide

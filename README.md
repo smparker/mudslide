@@ -99,7 +99,7 @@ model classes. To interface with mudslide, a model class should derive from `mud
 and should implement
 * a `compute()` function that computes energies, forces, and derivative couplings
 * an `nstates()` function that returns the number of electronic states in the model
-* an `ndim()` function that returns the number of classical (vibrational) degrees of freedom in the model
+* an `ndof()` function that returns the number of classical (vibrational) degrees of freedom in the model
  
 ### compute() function
 The `compute()` function needs to have the following signature:

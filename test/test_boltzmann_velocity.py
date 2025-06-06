@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """Unit testing for boltzmann function"""
 
+import sys
 import numpy as np
 import unittest
 from mudslide.math import boltzmann_velocities

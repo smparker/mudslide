@@ -9,6 +9,7 @@ import sys
 import numpy as np
 
 from .models import scattering_models as models
+from .typing import ArrayLike
 
 def add_surface_parser(subparsers: Any) -> None:
     """ Should accept a subparser object from argparse, add new subcommand, and then add arguments
@@ -78,11 +79,11 @@ def surface_main(model: str, scan_range: List[float], n: int, scan_dimension: in
     xr = np.linspace(start, end, samples, dtype=np.float64)
 
     nstates = model.nstates()
-    ndim = model.ndim()
+    ndof = model.ndof()
 
-    if len(x0) != ndim:
+    if len(x0) != ndof:
         print("Must provide reference vector of same length as the model problem")
-        raise Exception("Expected reference vector of length {}, but received {}".format(ndim, len(x0)))
+        raise Exception("Expected reference vector of length {}, but received {}".format(ndof, len(x0)))
 
     xx = np.array(x0)
     xx[scan_dimension] = start
@@ -91,12 +92,12 @@ def surface_main(model: str, scan_range: List[float], n: int, scan_dimension: in
     elec = model.update(xx)
 
     def headprinter() -> str:
-        xn = ["x{:d}".format(i) for i in range(ndim)]
+        xn = ["x{:d}".format(i) for i in range(ndof)]
         diabats = ["V_%1d" % i for i in range(nstates)]
         energies = ["E_%1d" % i for i in range(nstates)]
         dc = ["d_%1d%1d" % (j, i) for i in range(nstates) for j in range(i)]
         if model == "vibronic":
-            forces = ["dE_%1d" % i for i in range(ndim * 2)]
+            forces = ["dE_%1d" % i for i in range(ndof * 2)]
         else:
             forces = ["dE_%1d" % i for i in range(nstates)]
 
@@ -105,11 +106,11 @@ def surface_main(model: str, scan_range: List[float], n: int, scan_dimension: in
 
     def lineprinter(x: ArrayLike, model: Any, estates: Any) -> str:
         V = model.V(x)
-        ndim = estates.ndim()
+        ndof = estates.ndof()
         diabats = [V[i, i] for i in range(nstates)]  # type: List[float]
         energies = [estates.hamiltonian()[i, i] for i in range(nstates)]  # type: List[float]
         dc = [estates._derivative_coupling[j, i, 0] for i in range(nstates) for j in range(i)]  # type: List[float]
-        forces = [float(-estates.force(i)[j]) for i in range(nstates) for j in range(ndim)]  # type: List[float]
+        forces = [float(-estates.force(i)[j]) for i in range(nstates) for j in range(ndof)]  # type: List[float]
         plist = list(x.flatten()) + diabats + energies + dc + forces  # type: List[float]
 
         return " ".join(["{:16.10f}".format(x) for x in plist])

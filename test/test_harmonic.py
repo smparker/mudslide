@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Tests for the harmonic model"""
 
+import sys
 import json
 
 import numpy as np

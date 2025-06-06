@@ -186,12 +186,12 @@ class TurboControl:
         hessian = []
         hess = self.sdg("hessian", show_body=True)
         hess_list = hess.rstrip().split("\n")
-        ndim = 0
+        ndof = 0
         for h in hess_list:
             h_list = h.split()
-            ndim = max(ndim, int(h_list[0]))
+            ndof = max(ndof, int(h_list[0]))
             hessian.extend([float(val) for val in h_list[2:]])
-        H = np.array(hessian, dtype=np.float64).reshape(ndim, ndim)
+        H = np.array(hessian, dtype=np.float64).reshape(ndof, ndof)
         return H
 
     def add_point_charges(self, coords: ArrayLike, charges: ArrayLike):
@@ -337,7 +337,7 @@ class TMModel(ElectronicModel_):
 
         :param X: numpy array of shape (n_atoms * 3) with coordinates in Bohr
         """
-        X = X.reshape((self.ndim() // 3, 3))
+        X = X.reshape((self.ndof() // 3, 3))
         coord_path = self.control.where_is_dg("coord", absolute_path=True)
 
         with open(coord_path, "r", encoding='utf-8') as f:
@@ -369,7 +369,7 @@ class TMModel(ElectronicModel_):
     def call_turbomole(self, outname="turbo.out") -> None:
         """Call Turbomole to run the calculation"""
         # which forces are actually found?
-        self._force = np.zeros((self.nstates(), self.ndim()))
+        self._force = np.zeros((self.nstates(), self.ndof()))
         self._forces_available = np.zeros(self.nstates(), dtype=bool)
 
         with open(outname, "w", encoding='utf-8') as f:
@@ -400,22 +400,20 @@ class TMModel(ElectronicModel_):
 
             # egrad couplings
             parsed_nac_coupling = data_dict["egrad"]["coupling"]
-            self._derivative_coupling = np.zeros((self.nstates(), self.nstates(), self.ndim()))
+            self._derivative_coupling = np.zeros((self.nstates(), self.nstates(), self.ndof()))
             self._derivative_couplings_available = np.zeros((self.nstates(), self.nstates()),
                                                             dtype=bool)
             for dct in parsed_nac_coupling:
                 i = dct["bra_state"]
                 j = dct["ket_state"]
 
-                ddr = np.array(dct["d/dR"]).reshape(self.ndim(), order="F")
+                ddr = np.array(dct["d/dR"]).reshape(self.ndof(), order="F")
                 self._derivative_coupling[i, j, :] = ddr
                 self._derivative_coupling[j, i, :] = -(self._derivative_coupling[i, j, :])
                 self._derivative_couplings_available[i, j] = True
                 self._derivative_couplings_available[j, i] = True
 
             # egrad updates to gradients
-            # temporary:
-            print(data_dict["egrad"]["gradient"])
             for i in range(len(data_dict["egrad"]["gradient"])):
                 dE = np.array(data_dict["egrad"]["gradient"][i]["gradients"])
                 self._force[i+1,:] = -dE.flatten()

@@ -117,9 +117,9 @@ class AugmentedFSSH(SurfaceHoppingMD):
 
         self.augmented_integration = options.get("augmented_integration", self.electronic_integration).lower()
 
-        self.delR = np.zeros([self.model.ndim(), self.model.nstates(), self.model.nstates()],
+        self.delR = np.zeros([self.model.ndof(), self.model.nstates(), self.model.nstates()],
                 dtype=np.complex128)
-        self.delP = np.zeros([self.model.ndim(), self.model.nstates(), self.model.nstates()],
+        self.delP = np.zeros([self.model.ndof(), self.model.nstates(), self.model.nstates()],
                 dtype=np.complex128)
 
         self.propagator = AFSSHPropagator(self.model, "vv")
@@ -269,11 +269,11 @@ class AugmentedFSSH(SurfaceHoppingMD):
             Array of collapse probabilities for each state.
         """
         nst = self.model.nstates()
-        ndim = self.model.ndim()
+        ndof = self.model.ndof()
         out = np.zeros(nst, dtype=np.float64)
 
         def shifted_diagonal(X, k: int) -> np.ndarray:
-            out = np.zeros([nst, ndim])
+            out = np.zeros([nst, ndof])
             for i in range(nst):
                 out[i,:] = np.real(X[:,k,k] - X[:,i,i])
             return out

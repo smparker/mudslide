@@ -36,13 +36,12 @@ class OpenMM(ElectronicModel_):
         """Initialize OpenMM interface"""
         super().__init__(representation="adiabatic",
                          nstates=1,
-                         ndim=pdb.topology.getNumAtoms() * 3)
+                         nparticles=pdb.topology.getNumAtoms(),
+                         ndims=3)
 
         self._pdb = pdb
         self._ff = ff
         self._system = system
-
-        self._natoms = pdb.topology.getNumAtoms()
 
         # check if there are constraints
         num_constraints = self._system.getNumConstraints()
@@ -64,7 +63,7 @@ class OpenMM(ElectronicModel_):
             nonbonded = [ f for f in self._system.getForces()
                     if isinstance(f, openmm.NonbondedForce) ][0]
             self._charges = np.array([ nonbonded.getParticleParameters(i)[0].value_in_unit(
-                openmm.unit.elementary_charge) for i in range(self._natoms)])
+                openmm.unit.elementary_charge) for i in range(self.nparticles)])
         except IndexError as exc:
             raise ValueError("Can't find charges from OpenMM,"
                 " probably because mudslide only understands Amber-like forces") from exc

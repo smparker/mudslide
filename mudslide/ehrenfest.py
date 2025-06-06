@@ -69,7 +69,7 @@ class Ehrenfest(SurfaceHoppingMD):
         if electronics is None:
             electronics = self.electronics
 
-        out = np.zeros([electronics.ndim()])
+        out = np.zeros([electronics.ndof()])
         for i in range(electronics.nstates()):
             out += np.real(self.rho[i,i]) * electronics.force(i)
         return out
