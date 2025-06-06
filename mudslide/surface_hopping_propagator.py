@@ -16,7 +16,7 @@ from .propagator import Propagator_
 
 class SHVVPropagator(Propagator_):
     """Velocity Verlet propagator for surface hopping dynamics.
-    
+
     This class implements the Velocity Verlet algorithm for propagating
     classical trajectories in surface hopping molecular dynamics simulations.
     """
@@ -30,7 +30,7 @@ class SHVVPropagator(Propagator_):
 
     def __call__(self, traj: 'SurfaceHoppingMD', nsteps: int) -> None:
         """Propagate trajectory using Velocity Verlet algorithm.
-        
+
         Parameters
         ----------
         traj : SurfaceHoppingMD
@@ -65,26 +65,26 @@ class SHVVPropagator(Propagator_):
 
 class SHPropagator(Propagator_):
     """Surface Hopping propagator factory.
-    
+
     This class serves as a factory for creating different types of propagators
     used in surface hopping molecular dynamics simulations.
     """
 
     def __new__(cls, model: Any, prop_options: Any = "vv") -> 'SHPropagator':
         """Create a new surface hopping propagator instance.
-        
+
         Parameters
         ----------
         model : Any
             Model object defining the problem
         prop_options : Any, optional
             Propagator options, can be a string or dictionary, by default "vv"
-            
+
         Returns
         -------
         SHPropagator
             A new propagator instance
-            
+
         Raises
         ------
         ValueError

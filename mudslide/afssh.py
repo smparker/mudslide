@@ -60,26 +60,26 @@ class AFSSHVVPropagator(Propagator_):
 
 class AFSSHPropagator(Propagator_):
     """Surface Hopping propagator factory.
-    
+
     This class serves as a factory for creating different types of propagators
     used in adiabatic FSSH molecular dynamics simulations.
     """
 
     def __new__(cls, model: Any, prop_options: Any = "vv") -> 'SHPropagator':
         """Create a new surface hopping propagator instance.
-        
+
         Parameters
         ----------
         model : Any
             Model object defining the problem
         prop_options : Any, optional
             Propagator options, can be a string or dictionary, by default "vv"
-            
+
         Returns
         -------
         SHPropagator
             A new propagator instance
-            
+
         Raises
         ------
         ValueError
@@ -112,8 +112,8 @@ class AugmentedFSSH(SurfaceHoppingMD):
                 dtype=np.complex128)
         self.delP = np.zeros([self.model.ndim(), self.model.nstates(), self.model.nstates()],
                 dtype=np.complex128)
-        
-        self.propagator = AFSSHPropagator(self.model, "vv")  
+
+        self.propagator = AFSSHPropagator(self.model, "vv")
 
     def compute_delF(self, this_electronics):
         delF = np.copy(this_electronics.force_matrix())

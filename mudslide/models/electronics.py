@@ -16,9 +16,9 @@ from mudslide.typing import ElectronicT
 
 
 
-class ElectronicModel_(object):
+class ElectronicModel_:
     """Base class for handling electronic structure part of dynamics.
-    
+
     The electronic model is a base class for handling the electronic
     structure part of the dynamics.
 
@@ -53,7 +53,7 @@ class ElectronicModel_(object):
                  nstates: int = 0, ndims: int = 1, nparticles: int = 1, ndim: int = None,
                  atom_types: List[str] = None):
         """Initialize the electronic model.
-        
+
         Parameters
         ----------
         representation : str, optional
@@ -95,7 +95,7 @@ class ElectronicModel_(object):
 
     def ndim(self) -> int:
         """Get the number of classical degrees of freedom.
-        
+
         Returns
         -------
         int
@@ -106,7 +106,7 @@ class ElectronicModel_(object):
     @property
     def nparticles(self) -> int:
         """Get the number of particles.
-        
+
         Returns
         -------
         int
@@ -117,7 +117,7 @@ class ElectronicModel_(object):
     @property
     def ndims(self) -> int:
         """Get the number of dimensions per particle.
-        
+
         Returns
         -------
         int
@@ -128,7 +128,7 @@ class ElectronicModel_(object):
     @property
     def dimensionality(self) -> Tuple[int, int]:
         """Get the number of particles and dimensions.
-        
+
         Returns
         -------
         Tuple[int, int]
@@ -138,7 +138,7 @@ class ElectronicModel_(object):
 
     def nstates(self) -> int:
         """Get the number of electronic states.
-        
+
         Returns
         -------
         int
@@ -148,7 +148,7 @@ class ElectronicModel_(object):
 
     def hamiltonian(self) -> ArrayLike:
         """Get the electronic Hamiltonian.
-        
+
         Returns
         -------
         ArrayLike
@@ -253,9 +253,9 @@ class ElectronicModel_(object):
 
 class DiabaticModel_(ElectronicModel_):
     """Base class to handle model problems given in simple diabatic forms.
-    
+
     To derive from DiabaticModel_, the following functions must be implemented:
-    
+
     - def V(self, X: ArrayLike) -> ArrayLike
       V(x) should return an ndarray of shape (nstates, nstates)
     - def dV(self, X: ArrayLike) -> ArrayLike
@@ -265,7 +265,7 @@ class DiabaticModel_(ElectronicModel_):
     def __init__(self, representation: str = "adiabatic", reference: Any = None,
                  nstates:int = 0, ndim: int = 0):
         """Initialize the diabatic model.
-        
+
         Parameters
         ----------
         representation : str, optional
@@ -282,7 +282,7 @@ class DiabaticModel_(ElectronicModel_):
 
     def compute(self, X: ArrayLike, couplings: Any = None, gradients: Any = None, reference: Any = None) -> None:
         """Compute electronic properties at position X.
-        
+
         Parameters
         ----------
         X : ArrayLike
@@ -374,7 +374,7 @@ class DiabaticModel_(ElectronicModel_):
 
 class AdiabaticModel_(ElectronicModel_):
     """Base class to handle model problems that have an auxiliary electronic problem.
-    
+
     This class handles model problems that have an auxiliary electronic problem admitting
     many electronic states that are truncated to just a few. Sort of a truncated DiabaticModel_.
     """
@@ -382,7 +382,7 @@ class AdiabaticModel_(ElectronicModel_):
     def __init__(self, representation: str = "adiabatic", reference: Any = None,
                  nstates:int = 0, ndim: int = 0):
         """Initialize the adiabatic model.
-        
+
         Parameters
         ----------
         representation : str, optional
@@ -393,7 +393,7 @@ class AdiabaticModel_(ElectronicModel_):
             Number of electronic states, by default 0
         ndim : int, optional
             Number of classical degrees of freedom, by default 0
-            
+
         Raises
         ------
         Exception
@@ -406,7 +406,7 @@ class AdiabaticModel_(ElectronicModel_):
 
     def nstates(self) -> int:
         """Get the number of electronic states.
-        
+
         Returns
         -------
         int
@@ -416,7 +416,7 @@ class AdiabaticModel_(ElectronicModel_):
 
     def ndim(self) -> int:
         """Get the number of classical degrees of freedom.
-        
+
         Returns
         -------
         int
@@ -426,7 +426,7 @@ class AdiabaticModel_(ElectronicModel_):
 
     def compute(self, X: ArrayLike, couplings: Any = None, gradients: Any = None, reference: Any = None) -> None:
         """Compute electronic properties at position X.
-        
+
         Parameters
         ----------
         X : ArrayLike
@@ -453,7 +453,7 @@ class AdiabaticModel_(ElectronicModel_):
 
     def update(self, X: ArrayLike, electronics: Any = None, couplings: Any = None, gradients: Any = None) -> 'AdiabaticModel_':
         """Update the model with new position and electronic information.
-        
+
         Parameters
         ----------
         X : ArrayLike
@@ -464,7 +464,7 @@ class AdiabaticModel_(ElectronicModel_):
             Coupling information, by default None
         gradients : Any, optional
             Gradient information, by default None
-            
+
         Returns
         -------
         AdiabaticModel_

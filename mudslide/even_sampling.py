@@ -14,7 +14,7 @@ from typing import Optional, List, Any, Dict, Union
 from .typing import ArrayLike, ElectronicT
 from itertools import count
 
-class SpawnStack(object):
+class SpawnStack:
     """Data structure to inform how new traces are spawned and weighted"""
 
     def __init__(self, sample_stack: List, weight: float = 1.0):
@@ -174,18 +174,18 @@ class SpawnStack(object):
             Calls unpack to recursively unpack a sample_stack and then
             unravels the list of zetas and dws to create a list of tuples of
             tuples of points and weights. This works for arbitary dimensions.
-    
+
             self = SpawnStack.from_quadrature(nsamples = [2, 2])
             pts_wts = self.unravel()
-    
+
             where
-    
+
             pts_wts = [((x1, y1), (wx1, wy1)), ((x1, y2), (wx1, wy2)), ((x2, y1), (wx2, wy1)), ((x2, y2), (wx2, wy2))]
             """
             zetas = []
             dws = []
             self.unpack(zeta_list=zetas, dw_list=dws)
-    
+
             dim_list = []
             for tpl in zetas:
                 dim_list.append(tpl[0])
@@ -219,7 +219,7 @@ class SpawnStack(object):
                         weights.append(dws[i][1])
                 if len(coords) == dim:
                     main_list.append((tuple(coords), tuple(weights)))
-    
+
             # Return product of weights
             points_weights = [(points, np.prod(weights)) for (points, weights) in main_list]
 
@@ -309,8 +309,8 @@ class EvenSamplingTrajectory(SurfaceHoppingMD):
             queue=self.queue,
             last_velocity=self.last_velocity,
             state0=self.state,
-            t0=self.time, 
-            previous_steps=self.nsteps, 
+            t0=self.time,
+            previous_steps=self.nsteps,
             trace_every=self.trace_every,
             dt=self.dt,
             outcome_type=self.outcome_type,
@@ -390,7 +390,7 @@ class EvenSamplingTrajectory(SurfaceHoppingMD):
                 stack = hop["stack"]
                 spawn = self.clone(stack)
                 SurfaceHoppingMD.hop_to_it(spawn, [hop], electronics=spawn.electronics)
-                spawn.time+= spawn.dt 
+                spawn.time+= spawn.dt
                 spawn.nsteps += 1
 
                 # trigger hop

@@ -12,14 +12,14 @@ from .util import remove_center_of_mass_motion, remove_angular_momentum
 
 class VVPropagator(Propagator_):
     """Velocity Verlet propagator.
-    
+
     This class implements the Velocity Verlet algorithm for propagating
     classical trajectories in molecular dynamics simulations.
     """
 
     def __init__(self, **options: Any) -> None:
         """Initialize the Velocity Verlet propagator.
-        
+
         Parameters
         ----------
         **options : Any
@@ -29,7 +29,7 @@ class VVPropagator(Propagator_):
 
     def __call__(self, traj: 'AdiabaticMD', nsteps: int) -> None:
         """Propagate trajectory using Velocity Verlet algorithm.
-        
+
         Parameters
         ----------
         traj : AdiabaticMD
@@ -77,10 +77,10 @@ class VVPropagator(Propagator_):
 
 class NoseHooverChainPropagator(Propagator_):
     """Nose-Hoover Chain thermostat propagator.
-    
+
     Implements the Nose-Hoover Chain thermostat algorithm for constant temperature
     molecular dynamics simulations. Based on the work of Martyna et al. (1996).
-    
+
     References
     ----------
     G. J. Martyna, M. E. Tuckerman, D. J. Tobias, and Michael L. Klein,
@@ -91,7 +91,7 @@ class NoseHooverChainPropagator(Propagator_):
     def __init__(self, temperature: np.float64, timescale: np.float64 = 1e2 * fs_to_au,
                  ndof: int = 3, nchains: int = 3, nys: int = 3, nc: int = 1):
         """Initialize the Nose-Hoover Chain thermostat.
-        
+
         Parameters
         ----------
         temperature : np.float64
@@ -244,25 +244,25 @@ class NoseHooverChainPropagator(Propagator_):
 
 class AdiabaticPropagator:
     """Factory class for creating propagator objects.
-    
+
     This class serves as a factory for creating different types of propagators
     used in adiabatic molecular dynamics simulations.
     """
     def __new__(cls, model: Any, prop_options: Any = "vv") -> Propagator_:
         """Create a new propagator instance.
-        
+
         Parameters
         ----------
         model : Any
             Model object defining the problem
         prop_options : Any, optional
             Propagator options, can be a string or dictionary, by default "vv"
-            
+
         Returns
         -------
         Propagator_
             A new propagator instance
-            
+
         Raises
         ------
         ValueError

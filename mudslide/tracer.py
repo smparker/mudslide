@@ -22,7 +22,7 @@ import yaml
 
 class Trace_:
     """Base class for collecting and storing trajectory data.
-    
+
     This class provides the interface for collecting and storing data from
     molecular dynamics trajectories. It can store snapshots of the system
     state and record events like surface hops.
@@ -30,7 +30,7 @@ class Trace_:
 
     def __init__(self, weight: float = 1.0):
         """Initialize the trace object.
-        
+
         Parameters
         ----------
         weight : float, optional
@@ -40,7 +40,7 @@ class Trace_:
 
     def collect(self, snapshot: Any) -> None:
         """Add a single snapshot to the trace.
-        
+
         Parameters
         ----------
         snapshot : Any
@@ -50,7 +50,7 @@ class Trace_:
 
     def record_event(self, event_dict: Dict, event_type: str = "hop") -> None:
         """Add a single event to the log.
-        
+
         Parameters
         ----------
         event_dict : Dict
@@ -62,7 +62,7 @@ class Trace_:
 
     def __iter__(self) -> Iterator:
         """Get an iterator over all snapshots.
-        
+
         Returns
         -------
         Iterator
@@ -72,12 +72,12 @@ class Trace_:
 
     def __getitem__(self, i: int) -> Any:
         """Get a particular snapshot by index.
-        
+
         Parameters
         ----------
         i : int
             Index of snapshot to retrieve
-            
+
         Returns
         -------
         Any
@@ -87,7 +87,7 @@ class Trace_:
 
     def __len__(self) -> int:
         """Get the number of snapshots in the trace.
-        
+
         Returns
         -------
         int
@@ -97,7 +97,7 @@ class Trace_:
 
     def frustrated_hop(self, time: float, hop_from: int, hop_to: int, zeta: float, prob: float) -> None:
         """Record a frustrated hop event.
-        
+
         Parameters
         ----------
         time : float
@@ -116,12 +116,12 @@ class Trace_:
 
     def form_data(self, snap_dict: Dict) -> Dict:
         """Convert snapshot dictionary to appropriate data types.
-        
+
         Parameters
         ----------
         snap_dict : Dict
             Dictionary containing snapshot data
-            
+
         Returns
         -------
         Dict
@@ -142,7 +142,7 @@ class Trace_:
 
     def clone(self) -> 'Trace_':
         """Create a deep copy of the trace.
-        
+
         Returns
         -------
         Trace_
@@ -401,7 +401,7 @@ class YAMLTrace(Trace_):
 
         # Copy hop log
         shutil.copy(os.path.join(self.location, self.hop_log), os.path.join(self.location, out.hop_log))
-        
+
         # Copy all event logs
         out.event_logs = {}
         for event_type, log_file in self.event_logs.items():
@@ -476,7 +476,7 @@ def Trace(trace_type, *args, **kwargs):
     raise Exception("Unrecognized Trace option")
 
 
-class TraceManager(object):
+class TraceManager:
     """Manage the collection of observables from a set of trajectories"""
     def __init__(self, trace_type="default", trace_args=[], trace_kwargs={}) -> None:
         self.trace_type = trace_type

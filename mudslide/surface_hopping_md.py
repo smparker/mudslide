@@ -17,7 +17,7 @@ from .surface_hopping_propagator import SHPropagator
 
 class SurfaceHoppingMD:
     """Class to propagate a single FSSH trajectory.
-    
+
     This class implements the Fewest Switches Surface Hopping (FSSH) algorithm
     for nonadiabatic molecular dynamics simulations. It handles the propagation
     of both nuclear and electronic degrees of freedom, including surface hopping
@@ -46,7 +46,7 @@ class SurfaceHoppingMD:
                  strict_option_check: bool = True,
                  **options: Any):
         """Initialize the SurfaceHoppingMD class.
-        
+
         Parameters
         ----------
         model : Any
@@ -63,7 +63,7 @@ class SurfaceHoppingMD:
             Trajectory queue, by default None
         strict_option_check : bool, optional
             Whether to strictly check options, by default True
-        
+
         Other Parameters
         ----------------
         propagator : str or dict, optional
@@ -107,7 +107,7 @@ class SurfaceHoppingMD:
         state0 : int, optional
             Initial electronic state (used if rho0 is a matrix). Required if rho0 is not scalar.
         hopping_method : str, optional
-            Hopping method: 'cumulative' or 'instantaneous'. Default is 'cumulative'.
+            Hopping method: 'cumulative', 'cumulative_integrated', or 'instantaneous'. Default is 'cumulative'.
         """
         check_options(options, self.recognized_options, strict=strict_option_check)
 
@@ -134,7 +134,7 @@ class SurfaceHoppingMD:
         else:
             try:
                 self.rho = np.copy(rho0)
-                self.state = int(options["state0"]) 
+                self.state = int(options["state0"])
             except KeyError:
                 raise KeyError("state0 option required when rho0 is a density matrix")
             except (ValueError, TypeError):
@@ -181,19 +181,30 @@ class SurfaceHoppingMD:
         self.zeta = 0.0
 
         # Add hopping method option
-        self.hopping_method = options.get("hopping_method", "cumulative")
-        allowed_methods = ["instantaneous", "cumulative"]
+        hopping_method = options.get("hopping_method", "cumulative")
+        # allow shortened aliases
+        aliases = {
+            "i": "instantaneous",
+            "c": "cumulative",
+            "ci": "cumulative_integrated"
+        }
+        self.hopping_method = hopping_method
+        if self.hopping_method in aliases:
+            self.hopping_method = aliases[hopping_method]
+        allowed_methods = ["instantaneous", "cumulative", "cumulative_integrated"]
         if self.hopping_method not in allowed_methods:
             raise ValueError(f"hopping_method should be one of {allowed_methods}")
-        
-        if self.hopping_method == "cumulative":
+
+        if self.hopping_method in ["cumulative", "cumulative_integrated"]:
             self.prob_cum = np.longdouble(0.0)
             self.zeta = self.draw_new_zeta()
+            if self.hopping_method == "cumulative_integrated":
+                self.zeta = -np.log(1.0 - self.zeta)
 
     @classmethod
     def restart(cls, model, log, **options) -> 'SurfaceHoppingMD':
         """Restart a simulation from a previous trajectory log.
-        
+
         Parameters
         ----------
         model : Any
@@ -202,7 +213,7 @@ class SurfaceHoppingMD:
             Previous trajectory log
         **options : Any
             Additional options for the simulation
-            
+
         Returns
         -------
         SurfaceHoppingMD
@@ -241,7 +252,7 @@ class SurfaceHoppingMD:
 
     def update_weight(self, weight: float) -> None:
         """Update weight held by trajectory and by trace.
-        
+
         Parameters
         ----------
         weight : float
@@ -255,12 +266,12 @@ class SurfaceHoppingMD:
 
     def __deepcopy__(self, memo: Any) -> 'SurfaceHoppingMD':
         """Override deepcopy.
-        
+
         Parameters
         ----------
         memo : Any
             Memo dictionary for deepcopy
-            
+
         Returns
         -------
         SurfaceHoppingMD
@@ -276,7 +287,7 @@ class SurfaceHoppingMD:
 
     def clone(self) -> 'SurfaceHoppingMD':
         """Clone existing trajectory for spawning.
-        
+
         Returns
         -------
         SurfaceHoppingMD
@@ -286,7 +297,7 @@ class SurfaceHoppingMD:
 
     def random(self) -> np.float64:
         """Get random number for hopping decisions.
-        
+
         Returns
         -------
         np.float64
@@ -296,7 +307,7 @@ class SurfaceHoppingMD:
 
     def currently_interacting(self) -> bool:
         """Determine whether trajectory is currently inside an interaction region.
-        
+
         Returns
         -------
         bool
@@ -309,7 +320,7 @@ class SurfaceHoppingMD:
 
     def duration_initialize(self, options: Dict[str, Any]) -> None:
         """Initialize variables related to continue_simulating.
-        
+
         Parameters
         ----------
         options : Dict[str, Any]
@@ -330,7 +341,7 @@ class SurfaceHoppingMD:
 
     def continue_simulating(self) -> bool:
         """Decide whether trajectory should keep running.
-        
+
         Returns
         -------
         bool
@@ -352,9 +363,9 @@ class SurfaceHoppingMD:
 
     def trace(self, force: bool = False) -> None:
         """Add results from current time point to tracing function.
-        
+
         Only adds snapshot if nsteps%trace_every == 0, unless force=True.
-        
+
         Parameters
         ----------
         force : bool, optional
@@ -366,7 +377,7 @@ class SurfaceHoppingMD:
 
     def snapshot(self) -> Dict[str, Any]:
         """Collect data from run for logging.
-        
+
         Returns
         -------
         Dict[str, Any]
@@ -386,13 +397,13 @@ class SurfaceHoppingMD:
             "hopping": float(self.hopping),
             "zeta": float(self.zeta)
         }
-        if self.hopping_method == "cumulative":
+        if self.hopping_method in ["cumulative", "cumulative_integrated"]:
             out["prob_cum"] = float(self.prob_cum)
         return out
 
     def kinetic_energy(self) -> np.float64:
         """Calculate kinetic energy.
-        
+
         Returns
         -------
         np.float64
@@ -402,12 +413,12 @@ class SurfaceHoppingMD:
 
     def potential_energy(self, electronics: ElectronicT = None) -> DtypeLike:
         """Calculate potential energy.
-        
+
         Parameters
         ----------
         electronics : ElectronicT, optional
             ElectronicStates from current step, by default None
-            
+
         Returns
         -------
         DtypeLike
@@ -419,12 +430,12 @@ class SurfaceHoppingMD:
 
     def total_energy(self, electronics: ElectronicT = None) -> DtypeLike:
         """Calculate total energy (kinetic + potential).
-        
+
         Parameters
         ----------
         electronics : ElectronicT, optional
             ElectronicStates from current step, by default None
-            
+
         Returns
         -------
         DtypeLike
@@ -436,12 +447,12 @@ class SurfaceHoppingMD:
 
     def _force(self, electronics: ElectronicT = None) -> ArrayLike:
         """Compute force on active state.
-        
+
         Parameters
         ----------
         electronics : ElectronicT, optional
             ElectronicStates from current step, by default None
-            
+
         Returns
         -------
         ArrayLike
@@ -453,14 +464,14 @@ class SurfaceHoppingMD:
 
     def NAC_matrix(self, electronics: ElectronicT = None, velocity: ArrayLike = None) -> ArrayLike:
         """Calculate nonadiabatic coupling matrix.
-        
+
         Parameters
         ----------
         electronics : ElectronicT, optional
             ElectronicStates from current step, by default None
         velocity : ArrayLike, optional
             Velocity used to compute NAC, by default None
-            
+
         Returns
         -------
         ArrayLike
@@ -473,12 +484,12 @@ class SurfaceHoppingMD:
 
     def mode_kinetic_energy(self, direction: ArrayLike) -> np.float64:
         """Calculate kinetic energy along given momentum mode.
-        
+
         Parameters
         ----------
         direction : ArrayLike
             Numpy array defining direction
-            
+
         Returns
         -------
         np.float64
@@ -491,10 +502,10 @@ class SurfaceHoppingMD:
 
     def draw_new_zeta(self) -> float:
         """Get a new zeta value for hopping.
-        
+
         First checks the input list of zeta values in self.zeta_list.
         If no value is found in zeta_list, then a random number is pulled.
-        
+
         Returns
         -------
         float
@@ -507,14 +518,14 @@ class SurfaceHoppingMD:
 
     def hop_allowed(self, direction: ArrayLike, dE: float) -> bool:
         """Determine if a hop with given rescale direction and energy change is allowed.
-        
+
         Parameters
         ----------
         direction : ArrayLike
             Momentum unit vector
         dE : float
             Change in energy such that Enew = Eold + dE
-            
+
         Returns
         -------
         bool
@@ -688,10 +699,16 @@ class SurfaceHoppingMD:
             probs = gkndt * poisson_prob_scale(np.sum(gkndt))
         self.hopping = np.sum(probs).item()  # store total hopping probability
 
-        if self.hopping_method == "cumulative":
+        if self.hopping_method in ["cumulative", "cumulative_integrated"]:
             accumulated = np.longdouble(self.prob_cum)
             gkdt = np.sum(gkndt)
-            accumulated += (accumulated - 1.0) * np.expm1(-gkdt)
+            if self.hopping_method == "cumulative":
+                accumulated += (accumulated - 1.0) * np.expm1(-gkdt)
+            elif self.hopping_method == "cumulative_integrated":
+                accumulated += gkdt
+            else:
+                raise ValueError(f"Unrecognized hopping method: {self.hopping_method}")
+
             if accumulated > self.zeta:  # then hop
                 # where to hop
                 hop_choice = gkndt / gkdt
@@ -701,6 +718,8 @@ class SurfaceHoppingMD:
                 # reset probabilities and random
                 self.prob_cum = 0.0
                 self.zeta = self.draw_new_zeta()
+                if self.hopping_method == "cumulative_integrated":
+                    self.zeta = -np.log(1.0 - self.zeta)
 
                 return [{"target": target, "weight": 1.0, "zeta": zeta, "prob": accumulated}]
 

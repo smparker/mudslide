@@ -18,10 +18,10 @@ class ElectronicT(Protocol):
 
 class DiabaticModelT(Protocol):
     """Protocol defining the interface for diabatic models.
-    
+
     This protocol defines the required attributes and methods that a class
     must implement to be considered a valid diabatic model.
-    
+
     Attributes
     ----------
     ndim_ : int
@@ -35,7 +35,7 @@ class DiabaticModelT(Protocol):
 
     def __init__(self, representation: str, reference: Any, *args: Any, **kwargs: Any):
         """Initialize the diabatic model.
-        
+
         Parameters
         ----------
         representation : str
@@ -51,12 +51,12 @@ class DiabaticModelT(Protocol):
 
     def V(self, x: ArrayLike) -> ArrayLike:
         """Compute the diabatic potential energy matrix.
-        
+
         Parameters
         ----------
         x : ArrayLike
             Position at which to compute the potential
-            
+
         Returns
         -------
         ArrayLike
@@ -66,12 +66,12 @@ class DiabaticModelT(Protocol):
 
     def dV(self, x: ArrayLike) -> ArrayLike:
         """Compute the gradient of the diabatic potential energy matrix.
-        
+
         Parameters
         ----------
         x : ArrayLike
             Position at which to compute the gradient
-            
+
         Returns
         -------
         ArrayLike
