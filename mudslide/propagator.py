@@ -10,8 +10,6 @@ class Propagator_:
     This class serves as the base class for all propagators in the system.
     It defines the interface that all propagator implementations must follow.
     """
-    def __init__(self):
-        pass
 
     def __call__(self, traj: Any, nsteps: int) -> None:
         """Propagate a trajectory for a specified number of steps.

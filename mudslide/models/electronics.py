@@ -158,19 +158,19 @@ class ElectronicModel_:
     def force(self, state: int=0) -> ArrayLike:
         """Return the force on a given state"""
         if not self._forces_available[state]:
-            raise Exception("Force on state %d not available" % state)
+            raise ValueError("Force on state %d not available" % state)
         return self._force[state,:]
 
     def derivative_coupling(self, state1: int, state2: int) -> ArrayLike:
         """Return the derivative coupling between two states"""
         if not self._derivative_couplings_available[state1, state2]:
-            raise Exception("Derivative coupling between states %d and %d not available" % (state1, state2))
+            raise ValueError("Derivative coupling between states %d and %d not available" % (state1, state2))
         return self._derivative_coupling[state1, state2, :]
 
     def derivative_coupling_tensor(self) -> ArrayLike:
         """Return the derivative coupling tensor"""
         if not np.all(self._derivative_couplings_available):
-            raise Exception("All derivative couplings not available")
+            raise ValueError("All derivative couplings not available")
         return self._derivative_coupling
 
     def NAC_matrix(self, velocity: ArrayLike) -> ArrayLike:
@@ -178,13 +178,13 @@ class ElectronicModel_:
         for a given velocity vector
         """
         if not np.all(self._derivative_couplings_available):
-            raise Exception("NAC_matrix needs all derivative couplings")
+            raise ValueError("NAC_matrix needs all derivative couplings")
         return np.einsum("ijk,k->ij", self._derivative_coupling, velocity)
 
     def force_matrix(self) -> ArrayLike:
         """Return the force matrix"""
         if not np.all(self._forces_available):
-            raise Exception("Force matrix needs all forces")
+            raise ValueError("Force matrix needs all forces")
         return self._force_matrix
 
     def compute(self, X: ArrayLike, couplings: Any = None, gradients: Any = None, reference: Any = None) -> None:
@@ -402,26 +402,6 @@ class AdiabaticModel_(ElectronicModel_):
             raise Exception('Adiabatic models can only be run in adiabatic mode')
         ElectronicModel_.__init__(self, representation=representation, reference=reference,
                                   nstates=nstates, ndof=ndof)
-
-    def nstates(self) -> int:
-        """Get the number of electronic states.
-
-        Returns
-        -------
-        int
-            Number of electronic states
-        """
-        return self.nstates_
-
-    def ndof(self) -> int:
-        """Get the number of classical degrees of freedom.
-
-        Returns
-        -------
-        int
-            Number of classical degrees of freedom
-        """
-        return self._ndof
 
     def compute(self, X: ArrayLike, couplings: Any = None, gradients: Any = None, reference: Any = None) -> None:
         """Compute electronic properties at position X.

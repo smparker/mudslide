@@ -15,9 +15,6 @@ class HarmonicModel(ElectronicModel_):
     r"""Adiabatic model for ground state dynamics
 
     """
-    _ndof: int = 1
-    nstates_: int = 1
-    reference: Any = None
 
     def __init__(self, x0: ArrayLike, E0: float, H0: ArrayLike, mass: ArrayLike,
                  atom_types: List[str] = None, ndims: int = 1, nparticles: int = 1):

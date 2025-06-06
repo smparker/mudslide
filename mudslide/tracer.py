@@ -7,6 +7,7 @@ import yaml
 from typing import Any, Dict, Iterator, List
 import shutil
 import copy as cp
+from abc import ABC, abstractmethod
 
 import numpy as np
 
@@ -17,7 +18,7 @@ from .math import RollingAverage
 from .version import __version__
 
 
-class Trace_:
+class Trace_(ABC):
     """Base class for collecting and storing trajectory data.
 
     This class provides the interface for collecting and storing data from
@@ -35,6 +36,7 @@ class Trace_:
         """
         self.weight: float = weight
 
+    @abstractmethod
     def collect(self, snapshot: Any) -> None:
         """Add a single snapshot to the trace.
 
@@ -43,8 +45,9 @@ class Trace_:
         snapshot : Any
             Snapshot data to add to the trace
         """
-        return
+        pass
 
+    @abstractmethod
     def record_event(self, event_dict: Dict, event_type: str = "hop") -> None:
         """Add a single event to the log.
 
@@ -55,8 +58,9 @@ class Trace_:
         event_type : str, optional
             Type of event, by default "hop"
         """
-        return
+        pass
 
+    @abstractmethod
     def __iter__(self) -> Iterator:
         """Get an iterator over all snapshots.
 
@@ -67,6 +71,7 @@ class Trace_:
         """
         pass
 
+    @abstractmethod
     def __getitem__(self, i: int) -> Any:
         """Get a particular snapshot by index.
 
@@ -82,6 +87,7 @@ class Trace_:
         """
         pass
 
+    @abstractmethod
     def __len__(self) -> int:
         """Get the number of snapshots in the trace.
 
@@ -90,7 +96,7 @@ class Trace_:
         int
             Number of snapshots
         """
-        return 0
+        pass
 
     def frustrated_hop(self, time: float, hop_from: int, hop_to: int, zeta: float, prob: float) -> None:
         """Record a frustrated hop event.
