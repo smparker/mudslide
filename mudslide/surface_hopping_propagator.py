@@ -5,8 +5,9 @@ from typing import List, Dict, Union, Any
 import copy as cp
 
 import numpy as np
+from numpy.typing import ArrayLike
 
-from .typing import ElectronicT, ArrayLike, DtypeLike
+from .typing import ElectronicT
 
 from .util import is_string
 from .propagation import propagate_exponential, propagate_interpolated_rk4

@@ -10,9 +10,9 @@ import copy as cp
 from abc import ABC, abstractmethod
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 from .constants import fs_to_au
-from .typing import ArrayLike
 from .util import find_unique_name, is_string
 from .math import RollingAverage
 from .version import __version__

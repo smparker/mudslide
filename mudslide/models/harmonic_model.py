@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 """Harmonic model"""
 
+from typing import Any, List
 import json
-import numpy as np
 import yaml
 
-from mudslide.models import ElectronicModel_
+import numpy as np
+from numpy.typing import ArrayLike
 
-from typing import Any, List
-from mudslide.typing import ArrayLike
-
+from .electronics import ElectronicModel_
 
 class HarmonicModel(ElectronicModel_):
     r"""Adiabatic model for ground state dynamics

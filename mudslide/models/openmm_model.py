@@ -2,14 +2,13 @@
 """ OpenMM interface for mudslide """
 
 from typing import Any
-from mudslide.typing import ArrayLike
 
 import numpy as np
+from numpy.typing import ArrayLike
 
-from mudslide.typing import ArrayLike
-from mudslide.models import ElectronicModel_
-from mudslide.constants import bohr_to_angstrom, amu_to_au, Hartree_to_kJmol
-from mudslide.periodic_table import masses
+from .electronics import ElectronicModel_
+from ..constants import bohr_to_angstrom, amu_to_au, Hartree_to_kJmol
+from ..periodic_table import masses
 
 try:
     # Suppress OpenMM warnings

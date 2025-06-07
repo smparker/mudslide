@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 """QM/MM model using turbomole and OpenMM"""
 
+from typing import Any
+
 import numpy as np
+from numpy.typing import ArrayLike
 
 try:
     import openmm
@@ -10,9 +13,7 @@ try:
 except ImportError:
     OPENMM_INSTALLED = False
 
-from mudslide.models import ElectronicModel_
-from mudslide.typing import ArrayLike
-from typing import Any
+from .electronics import ElectronicModel_
 
 class QMMM(ElectronicModel_):
     """A QM/MM model"""

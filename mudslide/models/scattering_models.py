@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 """Implementations of the one-dimensional two-state models Tully demonstrated FSSH on in Tully, J.C. <I>J. Chem. Phys.</I> 1990 <B>93</B> 1061."""
 
-import numpy as np
 import math
+from typing import Any
+
+import numpy as np
+from numpy.typing import ArrayLike
 from scipy.special import erf
 
-from mudslide.models.electronics import DiabaticModel_, AdiabaticModel_
-
-from typing import Any
-from mudslide.typing import ArrayLike, DtypeLike
-from mudslide.constants import eVtoHartree
+from .electronics import DiabaticModel_, AdiabaticModel_
+from ..constants import eVtoHartree
 
 # Here are some helper functions that pad the model problems with fake electronic states.
 # Useful for debugging, so keeping it around
@@ -444,11 +444,11 @@ class ShinMetiu(AdiabaticModel_):
         box_left, box_right = -0.5 * box, 0.5 * box
         self.rr = np.linspace(box_left + 1e-12, box_right - 1e-12, nel, endpoint=True, dtype=np.float64)
 
-    def soft_coulomb(self, r12: ArrayLike, gamma: DtypeLike) -> ArrayLike:
+    def soft_coulomb(self, r12: ArrayLike, gamma: np.floating) -> ArrayLike:
         abs_r12 = np.abs(r12)
         return erf(abs_r12 / gamma) / abs_r12
 
-    def d_soft_coulomb(self, r12: ArrayLike, gamma: DtypeLike) -> ArrayLike:
+    def d_soft_coulomb(self, r12: ArrayLike, gamma: np.floating) -> ArrayLike:
         abs_r12 = np.abs(r12)
         two_over_root_pi = 2.0 / np.sqrt(np.pi)
         out = r12 * erf(abs_r12/gamma) / (abs_r12**3) \

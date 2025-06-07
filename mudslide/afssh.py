@@ -4,8 +4,9 @@
 from typing import Any, Union
 
 import numpy as np
+from numpy.typing import ArrayLike
 
-from .typing import ArrayLike, DtypeLike, ElectronicT
+from .typing import ElectronicT
 from .util import is_string
 from .math import poisson_prob_scale
 from .propagation import rk4
@@ -168,7 +169,7 @@ class AugmentedFSSH(SurfaceHoppingMD):
             Rt = (RR + delV * dt) * expiht
             self.delR = np.einsum("pi,xij,qj->xpq", co, Rt, co.conj())
         elif self.augmented_integration == "rk4":
-            def ydot(RR: ArrayLike, t: DtypeLike) -> ArrayLike:
+            def ydot(RR: ArrayLike, t: np.floating) -> ArrayLike:
                 assert t >= 0.0 and t <= dt
                 HR = np.einsum("pr,xrq->xpq", H, RR)
                 RH = np.einsum("xpr,rq->xpq", RR, H)
@@ -215,7 +216,7 @@ class AugmentedFSSH(SurfaceHoppingMD):
         elif self.augmented_integration == "rk4":
             dFrho_comm = np.einsum("prx,rq->xpq", delF, self.rho) + np.einsum("pr,rqx->xpq", self.rho, delF)
             dFrho_comm *= 0.5
-            def ydot(PP: ArrayLike, t: DtypeLike) -> ArrayLike:
+            def ydot(PP: ArrayLike, t: np.floating) -> ArrayLike:
                 assert t >= 0.0 and t <= dt
                 HP = np.einsum("pr,xrq->xpq", H, PP)
                 PH = np.einsum("xpr,rq->xpq", PP, H)

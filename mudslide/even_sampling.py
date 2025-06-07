@@ -8,10 +8,11 @@ from itertools import count
 from typing import Optional, List, Any, Dict, Union
 import copy as cp
 import numpy as np
+from numpy.typing import ArrayLike
 
 from .integration import quadrature
 from .surface_hopping_md import SurfaceHoppingMD
-from .typing import ArrayLike, ElectronicT
+from .typing import ElectronicT
 
 class SpawnStack:
     """Data structure to inform how new traces are spawned and weighted.

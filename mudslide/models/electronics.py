@@ -2,17 +2,12 @@
 """Handle storage and computation of electronic degrees of freedom"""
 
 import copy as cp
-from typing import Tuple, Any
-
-import numpy as np
-
-import math
-
 from typing import Tuple, Any, List
 
-from mudslide.typing import ArrayLike
-from mudslide.typing import ElectronicT
+import numpy as np
+from numpy.typing import ArrayLike
 
+import math
 
 class ElectronicModel_:
     """Base class for handling electronic structure part of dynamics.
@@ -36,15 +31,15 @@ class ElectronicModel_:
         The number of particles in the system.
     atom_types : List[str]
         The types of atoms in the system.
-    _position : ArrayLike
+    _position : "ArrayLike"
         The position of the system.
-    _hamiltonian : ArrayLike
+    _hamiltonian : "ArrayLike"
         The electronic Hamiltonian.
-    _force : ArrayLike
+    _force : "ArrayLike"
         The force on the system.
-    _forces_available : ArrayLike
+    _forces_available : "ArrayLike"
         A boolean array indicating which forces are available.
-    _derivative_coupling : ArrayLike
+    _derivative_coupling : "ArrayLike"
         The derivative coupling matrix.
     """
     def __init__(self, representation: str = "adiabatic", reference: Any = None,
@@ -80,14 +75,14 @@ class ElectronicModel_:
         self._nstates = nstates
 
         self._representation = representation
-        self._position: ArrayLike
+        self._position: "ArrayLike"
         self._reference = reference
 
-        self._hamiltonian: ArrayLike
-        self._force: ArrayLike
-        self._forces_available: ArrayLike = np.zeros(self.nstates, dtype=bool)
-        self._derivative_coupling: ArrayLike
-        self._derivative_couplings_available: ArrayLike = np.zeros((self.nstates, self.nstates), dtype=bool)
+        self._hamiltonian: "ArrayLike"
+        self._force: "ArrayLike"
+        self._forces_available: "ArrayLike" = np.zeros(self.nstates, dtype=bool)
+        self._derivative_coupling: "ArrayLike"
+        self._derivative_couplings_available: "ArrayLike" = np.zeros((self.nstates, self.nstates), dtype=bool)
 
         self.atom_types: List[str] = atom_types
 
@@ -147,7 +142,7 @@ class ElectronicModel_:
         return self._nstates
 
     @property
-    def hamiltonian(self) -> ArrayLike:
+    def hamiltonian(self) -> "ArrayLike":
         """Get the electronic Hamiltonian.
 
         Returns
@@ -157,26 +152,26 @@ class ElectronicModel_:
         """
         return self._hamiltonian
 
-    def force(self, state: int=0) -> ArrayLike:
+    def force(self, state: int=0) -> "ArrayLike":
         """Return the force on a given state"""
         if not self._forces_available[state]:
             raise ValueError("Force on state %d not available" % state)
         return self._force[state,:]
 
-    def derivative_coupling(self, state1: int, state2: int) -> ArrayLike:
+    def derivative_coupling(self, state1: int, state2: int) -> "ArrayLike":
         """Return the derivative coupling between two states"""
         if not self._derivative_couplings_available[state1, state2]:
             raise ValueError("Derivative coupling between states %d and %d not available" % (state1, state2))
         return self._derivative_coupling[state1, state2, :]
 
     @property
-    def derivative_coupling_tensor(self) -> ArrayLike:
+    def derivative_coupling_tensor(self) -> "ArrayLike":
         """Return the derivative coupling tensor"""
         if not np.all(self._derivative_couplings_available):
             raise ValueError("All derivative couplings not available")
         return self._derivative_coupling
 
-    def NAC_matrix(self, velocity: ArrayLike) -> ArrayLike:
+    def NAC_matrix(self, velocity: "ArrayLike") -> "ArrayLike":
         """Return the non-adiabatic coupling matrix
         for a given velocity vector
         """
@@ -185,13 +180,13 @@ class ElectronicModel_:
         return np.einsum("ijk,k->ij", self._derivative_coupling, velocity)
 
     @property
-    def force_matrix(self) -> ArrayLike:
+    def force_matrix(self) -> "ArrayLike":
         """Return the force matrix"""
         if not np.all(self._forces_available):
             raise ValueError("Force matrix needs all forces")
         return self._force_matrix
 
-    def compute(self, X: ArrayLike, couplings: Any = None, gradients: Any = None, reference: Any = None) -> None:
+    def compute(self, X: "ArrayLike", couplings: Any = None, gradients: Any = None, reference: Any = None) -> None:
         """
         Central function for model objects. After the compute function exists, the following
         data must be provided:
@@ -208,7 +203,7 @@ class ElectronicModel_:
         """
         raise NotImplementedError("ElectronicModels need a compute function")
 
-    def update(self, X: ArrayLike, electronics: Any = None, couplings: Any = None, gradients: Any = None) -> 'ElectronicModel_':
+    def update(self, X: "ArrayLike", electronics: Any = None, couplings: Any = None, gradients: Any = None) -> 'ElectronicModel_':
         """
         Convenience function that copies the present object, updates the position,
         calls compute, and then returns the new object

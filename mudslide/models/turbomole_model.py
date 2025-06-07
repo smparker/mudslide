@@ -12,14 +12,14 @@ from pathlib import Path
 from typing import Any, Dict
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 import turboparse
 
-from mudslide.typing import ArrayLike
-from mudslide.util import find_unique_name
-from mudslide.constants import amu_to_au
-from mudslide.periodic_table import masses
-from mudslide.models.electronics import ElectronicModel_
+from ..util import find_unique_name
+from ..constants import amu_to_au
+from ..periodic_table import masses
+from .electronics import ElectronicModel_
 
 
 def turbomole_is_installed():

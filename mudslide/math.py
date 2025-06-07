@@ -4,21 +4,21 @@
 from collections import deque
 import warnings
 import numpy as np
+from numpy.typing import ArrayLike
 
 from .util import remove_center_of_mass_motion
 
-from .typing import ArrayLike
 from .constants import boltzmann
 
 
 def poisson_prob_scale(x: ArrayLike):
     """Compute (1 - exp(-x))/x for scaling Poisson probabilities.
-    
+
     Parameters
     ----------
     x : ArrayLike
         Input array of values.
-    
+
     Returns
     -------
     ArrayLike
@@ -36,7 +36,7 @@ def poisson_prob_scale(x: ArrayLike):
 def boltzmann_velocities(mass, temperature, remove_translation=True,
                          scale=True, seed=None):
     """Generate random velocities according to the Boltzmann distribution.
-    
+
     Parameters
     ----------
     mass : ArrayLike
@@ -51,7 +51,7 @@ def boltzmann_velocities(mass, temperature, remove_translation=True,
         Default is True.
     seed : int or None, optional
         Random seed for reproducibility. Default is None.
-    
+
     Returns
     -------
     ArrayLike
@@ -88,17 +88,17 @@ def boltzmann_velocities(mass, temperature, remove_translation=True,
 
 class RollingAverage:
     """Compute a rolling average of a series of values.
-    
+
     This class maintains a fixed-size window of values and computes their
     average. When the window is full, adding a new value automatically
     removes the oldest value.
-    
+
     Parameters
     ----------
     window_size : int, optional
         The number of values to include in the rolling average.
         Default is 50.
-    
+
     Attributes
     ----------
     window_size : int
@@ -108,10 +108,10 @@ class RollingAverage:
     sum : float
         The current sum of all values in the window.
     """
-    
+
     def __init__(self, window_size=50):
         """Initialize the RollingAverage calculator.
-        
+
         Parameters
         ----------
         window_size : int, optional
@@ -124,9 +124,9 @@ class RollingAverage:
 
     def insert(self, value):
         """Add a new value to the rolling average.
-        
+
         If the window is full, the oldest value is automatically removed.
-        
+
         Parameters
         ----------
         value : float
@@ -142,7 +142,7 @@ class RollingAverage:
 
     def get_average(self):
         """Calculate and return the current rolling average.
-        
+
         Returns
         -------
         float
@@ -154,7 +154,7 @@ class RollingAverage:
 
     def __len__(self):
         """Return the current number of values in the window.
-        
+
         Returns
         -------
         int

@@ -5,8 +5,7 @@ from typing import List, Dict, Union, Any
 import copy as cp
 
 import numpy as np
-
-from .typing import ElectronicT, ArrayLike, DtypeLike
+from numpy.typing import ArrayLike
 
 from .util import check_options
 from .constants import boltzmann, fs_to_au
@@ -14,6 +13,7 @@ from .propagation import propagate_exponential, propagate_interpolated_rk4
 from .tracer import Trace
 from .math import poisson_prob_scale
 from .surface_hopping_propagator import SHPropagator
+from .models import ElectronicModel_
 
 class SurfaceHoppingMD:
     """Class to propagate a single FSSH trajectory.
@@ -41,7 +41,7 @@ class SurfaceHoppingMD:
                  model: Any,
                  x0: ArrayLike,
                  v0: ArrayLike,
-                 rho0: Union[ArrayLike, int],
+                 rho0: Union[ArrayLike, int, str],
                  tracer: Any = "default",
                  queue: Any = None,
                  strict_option_check: bool = True,
@@ -56,7 +56,7 @@ class SurfaceHoppingMD:
             Initial position
         v0 : ArrayLike
             Initial velocity
-        rho0 : ArrayLike or int
+        rho0 : ArrayLike, int, or str
             Initial density matrix or state index. If an integer, populates a single state.
             If a matrix, populates a density matrix (requires state0 for active state).
         tracer : Any, optional
@@ -415,46 +415,46 @@ class SurfaceHoppingMD:
         """
         return 0.5 * np.sum(self.mass * self.velocity**2)
 
-    def potential_energy(self, electronics: ElectronicT = None) -> DtypeLike:
+    def potential_energy(self, electronics: 'ElectronicModel_' = None) -> np.floating:
         """Calculate potential energy.
 
         Parameters
         ----------
-        electronics : ElectronicT, optional
+        electronics : 'ElectronicModel_', optional
             ElectronicStates from current step, by default None
 
         Returns
         -------
-        DtypeLike
+        np.floating
             Potential energy
         """
         if electronics is None:
             electronics = self.electronics
         return electronics.hamiltonian[self.state, self.state]
 
-    def total_energy(self, electronics: ElectronicT = None) -> DtypeLike:
+    def total_energy(self, electronics: 'ElectronicModel_' = None) -> np.floating:
         """Calculate total energy (kinetic + potential).
 
         Parameters
         ----------
-        electronics : ElectronicT, optional
+        electronics : 'ElectronicModel_', optional
             ElectronicStates from current step, by default None
 
         Returns
         -------
-        DtypeLike
+        np.floating
             Total energy
         """
         potential = self.potential_energy(electronics)
         kinetic = self.kinetic_energy()
         return potential + kinetic
 
-    def _force(self, electronics: ElectronicT = None) -> ArrayLike:
+    def _force(self, electronics: 'ElectronicModel_' = None) -> ArrayLike:
         """Compute force on active state.
 
         Parameters
         ----------
-        electronics : ElectronicT, optional
+        electronics : 'ElectronicModel_', optional
             ElectronicStates from current step, by default None
 
         Returns
@@ -466,12 +466,12 @@ class SurfaceHoppingMD:
             electronics = self.electronics
         return electronics.force(self.state)
 
-    def NAC_matrix(self, electronics: ElectronicT = None, velocity: ArrayLike = None) -> ArrayLike:
+    def NAC_matrix(self, electronics: 'ElectronicModel_' = None, velocity: ArrayLike = None) -> ArrayLike:
         """Calculate nonadiabatic coupling matrix.
 
         Parameters
         ----------
-        electronics : ElectronicT, optional
+        electronics : 'ElectronicModel_', optional
             ElectronicStates from current step, by default None
         velocity : ArrayLike, optional
             Velocity used to compute NAC, by default None
@@ -543,7 +543,7 @@ class SurfaceHoppingMD:
         c = -2.0 * dE
         return b * b > 4.0 * a * c
 
-    def direction_of_rescale(self, source: int, target: int, electronics: ElectronicT = None) -> np.ndarray:
+    def direction_of_rescale(self, source: int, target: int, electronics: 'ElectronicModel_' = None) -> np.ndarray:
         """
         Return direction in which to rescale momentum.
 
@@ -553,7 +553,7 @@ class SurfaceHoppingMD:
             Active state before hop
         target : int
             Active state after hop
-        electronics : ElectronicT, optional
+        electronics : 'ElectronicModel_', optional
             Electronic model information (used to pull derivative coupling), by default None
 
         Returns
@@ -565,7 +565,7 @@ class SurfaceHoppingMD:
         out = elec_states.derivative_coupling(source, target)
         return np.copy(out)
 
-    def rescale_component(self, direction: ArrayLike, reduction: DtypeLike) -> None:
+    def rescale_component(self, direction: ArrayLike, reduction: np.floating) -> None:
         """
         Update velocity by rescaling the *momentum* in the specified direction and amount.
 
@@ -573,7 +573,7 @@ class SurfaceHoppingMD:
         ----------
         direction : ArrayLike
             The direction of the *momentum* to rescale
-        reduction : DtypeLike
+        reduction : np.floating
             How much kinetic energy should be damped
         """
         # normalize
@@ -587,17 +587,17 @@ class SurfaceHoppingMD:
         self.velocity += scal * M_inv * u
 
     def hamiltonian_propagator(self,
-                               last_electronics: ElectronicT,
-                               this_electronics: ElectronicT,
+                               last_electronics: 'ElectronicModel_',
+                               this_electronics: 'ElectronicModel_',
                                velo: ArrayLike = None) -> np.ndarray:
         """
         Compute the Hamiltonian used to propagate the electronic wavefunction.
 
         Parameters
         ----------
-        last_electronics : ElectronicT
+        last_electronics : 'ElectronicModel_'
             ElectronicStates at previous time step
-        this_electronics : ElectronicT
+        this_electronics : 'ElectronicModel_'
             ElectronicStates at current time step
         velo : ArrayLike, optional
             Velocity at midpoint between current and previous time steps, by default None
@@ -619,8 +619,8 @@ class SurfaceHoppingMD:
             velo)
         return H - 1j * TV
 
-    def propagate_electronics(self, last_electronics: ElectronicT, this_electronics: ElectronicT,
-                              dt: DtypeLike) -> None:
+    def propagate_electronics(self, last_electronics: 'ElectronicModel_', this_electronics: 'ElectronicModel_',
+                              dt: np.floating) -> None:
         """
         Propagate density matrix from t to t+dt.
 
@@ -629,11 +629,11 @@ class SurfaceHoppingMD:
 
         Parameters
         ----------
-        last_electronics : ElectronicT
+        last_electronics : 'ElectronicModel_'
             ElectronicStates at t
-        this_electronics : ElectronicT
+        this_electronics : 'ElectronicModel_'
             ElectronicStates at t+dt
-        dt : DtypeLike
+        dt : np.floating
             Time step
         """
         if self.electronic_integration == "exp":
@@ -656,15 +656,15 @@ class SurfaceHoppingMD:
                 "Must be one of ['exp', 'linear-rk4']"
             )
 
-    def surface_hopping(self, last_electronics: ElectronicT, this_electronics: ElectronicT):
+    def surface_hopping(self, last_electronics: 'ElectronicModel_', this_electronics: 'ElectronicModel_'):
         """
         Compute probability of hopping, generate random number, and perform hops.
 
         Parameters
         ----------
-        last_electronics : ElectronicT
+        last_electronics : 'ElectronicModel_'
             ElectronicStates at previous time step
-        this_electronics : ElectronicT
+        this_electronics : 'ElectronicModel_'
             ElectronicStates at current time step
         """
         H = self.hamiltonian_propagator(last_electronics, this_electronics)
@@ -757,7 +757,7 @@ class SurfaceHoppingMD:
         """
         return
 
-    def hop_to_it(self, hop_targets: List[Dict[str, Union[float,int]]], electronics: ElectronicT = None) -> None:
+    def hop_to_it(self, hop_targets: List[Dict[str, Union[float,int]]], electronics: 'ElectronicModel_' = None) -> None:
         """
         Hop from the current active state to the given state, including rescaling the momentum.
 
@@ -765,7 +765,7 @@ class SurfaceHoppingMD:
         ----------
         hop_targets : List[Dict[str, Union[float, int]]]
             List of (target, weight) pairs
-        electronics : ElectronicT, optional
+        electronics : 'ElectronicModel_', optional
             ElectronicStates for current step, by default None
         """
         hop_dict = hop_targets[0]

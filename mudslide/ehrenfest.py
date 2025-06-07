@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 """Propagating Ehrenfest trajectories"""
 
+from typing import Any
+
 import numpy as np
+from numpy.typing import ArrayLike
 
 from .surface_hopping_md import SurfaceHoppingMD
-
-from typing import Any
-from .typing import ArrayLike, DtypeLike, ElectronicT
+from .typing import ElectronicT
 
 
 class Ehrenfest(SurfaceHoppingMD):
@@ -30,7 +31,7 @@ class Ehrenfest(SurfaceHoppingMD):
         """
         SurfaceHoppingMD.__init__(self, *args, **kwargs)
 
-    def potential_energy(self, electronics: ElectronicT = None) -> DtypeLike:
+    def potential_energy(self, electronics: ElectronicT = None) -> np.floating:
         """Calculate Ehrenfest potential energy.
 
         The potential energy is computed as the trace of the product of the
@@ -43,7 +44,7 @@ class Ehrenfest(SurfaceHoppingMD):
 
         Returns
         -------
-        DtypeLike
+        np.floating
             Potential energy
         """
         if electronics is None:

@@ -3,10 +3,10 @@
 
 from typing import Callable
 import numpy as np
+from numpy.typing import ArrayLike
 
-from .typing import ArrayLike, DtypeLike
 
-def propagate_exponential(rho0: ArrayLike, H: ArrayLike, dt: DtypeLike) -> None:
+def propagate_exponential(rho0: ArrayLike, H: ArrayLike, dt: np.floating) -> None:
     """Propagate density matrix in place using exponential of Hamiltonian.
 
     Propagates rho0 in place by exponentiating exp(-i H dt).
@@ -18,7 +18,7 @@ def propagate_exponential(rho0: ArrayLike, H: ArrayLike, dt: DtypeLike) -> None:
         Initial density matrix
     H : ArrayLike
         Effective Hamiltonian for propagation
-    dt : DtypeLike
+    dt : np.floating
         Time step for propagation
 
     Returns
@@ -32,7 +32,7 @@ def propagate_exponential(rho0: ArrayLike, H: ArrayLike, dt: DtypeLike) -> None:
     np.dot(U, np.dot(rho0, U.T.conj()), out=rho0)
 
 def propagate_interpolated_rk4(rho0: ArrayLike, h0: ArrayLike, tau0: ArrayLike, vel0: ArrayLike,
-        h1: ArrayLike, tau1: ArrayLike, vel1: ArrayLike, dt: DtypeLike, nsteps: int) -> None:
+        h1: ArrayLike, tau1: ArrayLike, vel1: ArrayLike, dt: np.floating, nsteps: int) -> None:
     """Propagate density matrix using linearly interpolated quantities and RK4.
 
     Propagate density matrix forward by linearly interpolating all quantities
@@ -55,7 +55,7 @@ def propagate_interpolated_rk4(rho0: ArrayLike, h0: ArrayLike, tau0: ArrayLike, 
         Derivative coupling from current step
     vel1 : ArrayLike
         Velocity from current step
-    dt : DtypeLike
+    dt : np.floating
         Time step
     nsteps : int
         Number of inner time steps
@@ -77,14 +77,14 @@ def propagate_interpolated_rk4(rho0: ArrayLike, h0: ArrayLike, tau0: ArrayLike, 
     W11 = np.linalg.multi_dot([vecs.T, TV11, vecs])
     W01 = np.linalg.multi_dot([vecs.T, TV01, vecs])
 
-    def ydot(rho: ArrayLike, t: DtypeLike) -> ArrayLike:
+    def ydot(rho: ArrayLike, t: np.floating) -> ArrayLike:
         """Calculate time derivative of density matrix.
 
         Parameters
         ----------
         rho : ArrayLike
             Current density matrix
-        t : DtypeLike
+        t : np.floating
             Current time point
 
         Returns
@@ -113,7 +113,7 @@ def propagate_interpolated_rk4(rho0: ArrayLike, h0: ArrayLike, tau0: ArrayLike, 
 
     rho0[:,:] = np.linalg.multi_dot([vecs, tmprho * phases, vecs.T])
 
-def rk4(y0: ArrayLike, ydot: Callable, t0: DtypeLike, tf: DtypeLike, nsteps: int) -> ArrayLike:
+def rk4(y0: ArrayLike, ydot: Callable, t0: np.floating, tf: np.floating, nsteps: int) -> ArrayLike:
     """Propagate using 4th-order Runge-Kutta (RK4) method.
 
     Parameters
@@ -122,9 +122,9 @@ def rk4(y0: ArrayLike, ydot: Callable, t0: DtypeLike, tf: DtypeLike, nsteps: int
         Initial state vector
     ydot : Callable
         Function that computes the time derivative of y
-    t0 : DtypeLike
+    t0 : np.floating
         Initial time
-    tf : DtypeLike
+    tf : np.floating
         Final time
     nsteps : int
         Number of integration steps

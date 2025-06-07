@@ -9,11 +9,12 @@ from typing import Dict, Any
 import copy as cp
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 from .util import check_options
 from .constants import boltzmann
 from .tracer import Trace
-from .typing import ElectronicT, ArrayLike, DtypeLike
+from .typing import ElectronicT
 from .adiabatic_propagator import AdiabaticPropagator
 
 class AdiabaticMD:
@@ -333,7 +334,7 @@ class AdiabaticMD:
         """
         return 0.5 * np.einsum('m,m,m', self.mass, self.velocity, self.velocity)
 
-    def potential_energy(self, electronics: ElectronicT = None) -> DtypeLike:
+    def potential_energy(self, electronics: ElectronicT = None) -> np.floating:
         """Calculate potential energy.
 
         Parameters
@@ -343,14 +344,14 @@ class AdiabaticMD:
 
         Returns
         -------
-        DtypeLike
+        np.floating
             Potential energy.
         """
         if electronics is None:
             electronics = self.electronics
         return electronics.energies[0]
 
-    def total_energy(self, electronics: ElectronicT = None) -> DtypeLike:
+    def total_energy(self, electronics: ElectronicT = None) -> np.floating:
         """Calculate total energy (kinetic + potential).
 
         Parameters
@@ -360,7 +361,7 @@ class AdiabaticMD:
 
         Returns
         -------
-        DtypeLike
+        np.floating
             Total energy.
         """
         potential = self.potential_energy(electronics)

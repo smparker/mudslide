@@ -7,11 +7,12 @@ import queue
 import sys
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 from .constants import boltzmann
 from .exceptions import StillInteracting
 from .tracer import TraceManager
-from .typing import ModelT, TrajGenT, ArrayLike
+from .typing import ModelT, TrajGenT
 
 logger = logging.getLogger("mudslide")
 
