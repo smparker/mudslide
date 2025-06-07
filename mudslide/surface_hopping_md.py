@@ -13,7 +13,6 @@ from .propagation import propagate_exponential, propagate_interpolated_rk4
 from .tracer import Trace
 from .math import poisson_prob_scale
 from .surface_hopping_propagator import SHPropagator
-from .models import ElectronicModel_
 
 class SurfaceHoppingMD:
     """Class to propagate a single FSSH trajectory.
