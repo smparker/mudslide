@@ -14,8 +14,6 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('../'))
 
-from mudslide.version import __version__
-
 # -- Project information -----------------------------------------------------
 
 project = 'mudslide'
@@ -23,8 +21,8 @@ copyright = '2020-2025, Shane M. Parker'
 author = 'Shane M. Parker'
 
 # The full version, including alpha/beta/rc tags
-version = __version__
-release = __version__
+version = '0.11.0'
+release = '0.11.0'
 
 master_doc = 'index'
 
