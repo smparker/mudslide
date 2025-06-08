@@ -7,6 +7,15 @@ nonadiabatic molecular dynamics.
 
 from .version import __version__
 
+from . import models
+from . import math
+from . import io
+
+# modules for CLI
+from . import collect
+from . import surface
+from . import turbo_make_harmonic
+
 from .surface_hopping_md import *
 from .adiabatic_propagator import *
 from .adiabatic_md import *
@@ -16,11 +25,3 @@ from .afssh import *
 from .batch import *
 from .tracer import *
 
-from . import models
-from . import math
-from . import io
-
-# modules for CLI
-from . import collect
-from . import surface
-from . import turbo_make_harmonic
