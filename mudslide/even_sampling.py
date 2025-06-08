@@ -12,7 +12,6 @@ from numpy.typing import ArrayLike
 
 from .integration import quadrature
 from .surface_hopping_md import SurfaceHoppingMD
-from .typing import ElectronicT
 
 class SpawnStack:
     """Data structure to inform how new traces are spawned and weighted.
@@ -507,7 +506,7 @@ class EvenSamplingTrajectory(SurfaceHoppingMD):
         self.prob_cum = accumulated
         return []
 
-    def hop_to_it(self, hop_to: List[Dict[str, Any]], electronics: ElectronicT = None) -> None:
+    def hop_to_it(self, hop_to: List[Dict[str, Any]], electronics: 'ElectronicModel_' = None) -> None:
         """Handle hopping by spawning new trajectories.
 
         This method spawns new trajectories instead of enacting hops directly.
@@ -521,7 +520,7 @@ class EvenSamplingTrajectory(SurfaceHoppingMD):
         ----------
         hop_to : List[Dict[str, Any]]
             List of states and associated weights on which to hop.
-        electronics : ElectronicT, optional
+        electronics : ElectronicModel, optional
             Model class for electronic structure calculations, by default None
         """
         if self.spawn_stack.do_spawn():

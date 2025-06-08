@@ -14,7 +14,6 @@ from numpy.typing import ArrayLike
 from .util import check_options
 from .constants import boltzmann
 from .tracer import Trace
-from .typing import ElectronicT
 from .adiabatic_propagator import AdiabaticPropagator
 
 class AdiabaticMD:
@@ -334,13 +333,13 @@ class AdiabaticMD:
         """
         return 0.5 * np.einsum('m,m,m', self.mass, self.velocity, self.velocity)
 
-    def potential_energy(self, electronics: ElectronicT = None) -> np.floating:
+    def potential_energy(self, electronics: 'ElectronicModel_' = None) -> np.floating:
         """Calculate potential energy.
 
         Parameters
         ----------
-        electronics : ElectronicT, optional
-            ElectronicStates from current step.
+        electronics : ElectronicModel, optional
+            Electronic states from current step.
 
         Returns
         -------
@@ -351,13 +350,13 @@ class AdiabaticMD:
             electronics = self.electronics
         return electronics.energies[0]
 
-    def total_energy(self, electronics: ElectronicT = None) -> np.floating:
+    def total_energy(self, electronics: 'ElectronicModel_' = None) -> np.floating:
         """Calculate total energy (kinetic + potential).
 
         Parameters
         ----------
-        electronics : ElectronicT, optional
-            ElectronicStates from current step.
+        electronics : ElectronicModel, optional
+            Electronic states from current step.
 
         Returns
         -------
@@ -368,12 +367,12 @@ class AdiabaticMD:
         kinetic = self.kinetic_energy()
         return potential + kinetic
 
-    def force(self, electronics: ElectronicT = None) -> ArrayLike:
+    def force(self, electronics: 'ElectronicModel_' = None) -> ArrayLike:
         """Compute force on active state.
 
         Parameters
         ----------
-        electronics : ElectronicT, optional
+        electronics : 'ElectronicModel', optional
             ElectronicStates from current step.
 
         Returns

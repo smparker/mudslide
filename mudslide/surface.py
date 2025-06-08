@@ -7,9 +7,9 @@ import argparse
 import sys
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 from .models import scattering_models as models
-from .typing import ArrayLike
 
 def add_surface_parser(subparsers: Any) -> None:
     """ Should accept a subparser object from argparse, add new subcommand, and then add arguments

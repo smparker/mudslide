@@ -419,8 +419,8 @@ class SurfaceHoppingMD:
 
         Parameters
         ----------
-        electronics : 'ElectronicModel_', optional
-            ElectronicStates from current step, by default None
+        electronics : ElectronicModel, optional
+            electronic states from current step, by default None
 
         Returns
         -------
@@ -436,8 +436,8 @@ class SurfaceHoppingMD:
 
         Parameters
         ----------
-        electronics : 'ElectronicModel_', optional
-            ElectronicStates from current step, by default None
+        electronics : ElectronicModel, optional
+            Electronic states from current step, by default None
 
         Returns
         -------
@@ -453,8 +453,8 @@ class SurfaceHoppingMD:
 
         Parameters
         ----------
-        electronics : 'ElectronicModel_', optional
-            ElectronicStates from current step, by default None
+        electronics : ElectronicModel, optional
+            Electronic states from current step, by default None
 
         Returns
         -------
@@ -470,8 +470,8 @@ class SurfaceHoppingMD:
 
         Parameters
         ----------
-        electronics : 'ElectronicModel_', optional
-            ElectronicStates from current step, by default None
+        electronics : ElectronicModel, optional
+            electronic states from current step, by default None
         velocity : ArrayLike, optional
             Velocity used to compute NAC, by default None
 
@@ -552,7 +552,7 @@ class SurfaceHoppingMD:
             Active state before hop
         target : int
             Active state after hop
-        electronics : 'ElectronicModel_', optional
+        electronics : ElectronicModel, optional
             Electronic model information (used to pull derivative coupling), by default None
 
         Returns
@@ -594,10 +594,10 @@ class SurfaceHoppingMD:
 
         Parameters
         ----------
-        last_electronics : 'ElectronicModel_'
-            ElectronicStates at previous time step
-        this_electronics : 'ElectronicModel_'
-            ElectronicStates at current time step
+        last_electronics : ElectronicModel
+            Electronic states at previous time step
+        this_electronics : ElectronicModel
+            Electronic states at current time step
         velo : ArrayLike, optional
             Velocity at midpoint between current and previous time steps, by default None
 
@@ -628,10 +628,10 @@ class SurfaceHoppingMD:
 
         Parameters
         ----------
-        last_electronics : 'ElectronicModel_'
-            ElectronicStates at t
-        this_electronics : 'ElectronicModel_'
-            ElectronicStates at t+dt
+        last_electronics : ElectronicModel
+            Electronic states at t
+        this_electronics : ElectronicModel
+            Electronic states at t+dt
         dt : np.floating
             Time step
         """
@@ -661,10 +661,10 @@ class SurfaceHoppingMD:
 
         Parameters
         ----------
-        last_electronics : 'ElectronicModel_'
-            ElectronicStates at previous time step
-        this_electronics : 'ElectronicModel_'
-            ElectronicStates at current time step
+        last_electronics : ElectronicModel
+            Electronic states at previous time step
+        this_electronics : ElectronicModel
+            Electronic states at current time step
         """
         H = self.hamiltonian_propagator(last_electronics, this_electronics)
 
@@ -764,8 +764,8 @@ class SurfaceHoppingMD:
         ----------
         hop_targets : List[Dict[str, Union[float, int]]]
             List of (target, weight) pairs
-        electronics : 'ElectronicModel_', optional
-            ElectronicStates for current step, by default None
+        electronics : ElectronicModel, optional
+            Electronic states for current step, by default None
         """
         hop_dict = hop_targets[0]
         hop_to = int(hop_dict["target"])
@@ -784,7 +784,7 @@ class SurfaceHoppingMD:
                 event_dict={
                     "hop_from": int(hop_from),
                     "hop_to": int(hop_to),
-                    "zeta": float(hop_dict["zeta"]), 
+                    "zeta": float(hop_dict["zeta"]),
                     "prob": float(hop_dict["prob"])
                 },
                 event_type="hop"
@@ -793,7 +793,7 @@ class SurfaceHoppingMD:
             self.tracer.record_event(
                 event_dict={
                     "hop_from": int(hop_from),
-                    "hop_to": int(hop_to), 
+                    "hop_to": int(hop_to),
                     "zeta": float(hop_dict["zeta"]),
                     "prob": float(hop_dict["prob"])
                 },

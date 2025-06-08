@@ -201,7 +201,7 @@ class ElectronicModel_:
         Nothing is returned, but the model object should contain all the
         necessary date.
         """
-        raise NotImplementedError("ElectronicModels need a compute function")
+        raise NotImplementedError("ElectronicModel_ need a compute function")
 
     def update(self, X: "ArrayLike", electronics: Any = None, couplings: Any = None, gradients: Any = None) -> 'ElectronicModel_':
         """

@@ -4,9 +4,7 @@
 from typing import Tuple
 
 import numpy as np
-
-from .typing import ArrayLike
-
+from numpy.typing import ArrayLike
 
 def clenshaw_curtis(n: int, a: float = -1.0, b: float = 1.0) -> Tuple[ArrayLike, ArrayLike]:
     """

@@ -6,7 +6,6 @@ from typing import Any, Union
 import numpy as np
 from numpy.typing import ArrayLike
 
-from .typing import ElectronicT
 from .util import is_string
 from .math import poisson_prob_scale
 from .propagation import rk4
@@ -130,7 +129,7 @@ class AugmentedFSSH(SurfaceHoppingMD):
 
         Parameters
         ----------
-        this_electronics : ElectronicT
+        this_electronics : ElectronicModel
             Current electronic state information.
 
         Returns
@@ -149,9 +148,9 @@ class AugmentedFSSH(SurfaceHoppingMD):
 
         Parameters
         ----------
-        last_electronics : ElectronicT
+        last_electronics : ElectronicModel
             Electronic state information from previous step.
-        this_electronics : ElectronicT
+        this_electronics : ElectronicModel
             Electronic state information from current step.
         """
         dt = self.dt
@@ -187,9 +186,9 @@ class AugmentedFSSH(SurfaceHoppingMD):
 
         Parameters
         ----------
-        last_electronics : ElectronicT
+        last_electronics : ElectronicModel
             Electronic state information from previous step.
-        this_electronics : ElectronicT
+        this_electronics : ElectronicModel
             Electronic state information from current step.
         """
         dt = self.dt
@@ -230,7 +229,7 @@ class AugmentedFSSH(SurfaceHoppingMD):
             raise Exception("Unrecognized propagate delP method")
         return
 
-    def direction_of_rescale(self, source: int, target: int, electronics: ElectronicT=None) -> np.ndarray:
+    def direction_of_rescale(self, source: int, target: int, electronics: 'ElectronicModel_'=None) -> np.ndarray:
         """Return direction in which to rescale momentum.
 
         In Subotnik JCP 2011, they suggest to use the difference between the momenta on delP.
@@ -241,7 +240,7 @@ class AugmentedFSSH(SurfaceHoppingMD):
             Active state before hop.
         target : int
             Active state after hop.
-        electronics : ElectronicT, optional
+        electronics : ElectronicModel, optional
             Electronic model information (ignored), by default None.
 
         Returns
@@ -253,7 +252,7 @@ class AugmentedFSSH(SurfaceHoppingMD):
         assert np.linalg.norm(np.imag(out)) < 1e-8
         return np.real(out)
 
-    def gamma_collapse(self, electronics: ElectronicT=None) -> np.ndarray:
+    def gamma_collapse(self, electronics: 'ElectronicModel_'=None) -> np.ndarray:
         """Compute probability of collapse to each electronic state.
 
         Uses Eq. (55) in Subotnik JCP 2011. This formula has some major problems
@@ -261,7 +260,7 @@ class AugmentedFSSH(SurfaceHoppingMD):
 
         Parameters
         ----------
-        electronics : ElectronicT, optional
+        electronics : ElectronicModel, optional
             Electronic model information (forces), by default None.
 
         Returns
@@ -292,14 +291,14 @@ class AugmentedFSSH(SurfaceHoppingMD):
 
         return 0.5 * out * self.dt
 
-    def surface_hopping(self, last_electronics: ElectronicT, this_electronics: ElectronicT) -> None:
+    def surface_hopping(self, last_electronics: 'ElectronicModel_', this_electronics: 'ElectronicModel_') -> None:
         """Specialized version of surface_hopping that handles collapsing.
 
         Parameters
         ----------
-        last_electronics : ElectronicT
+        last_electronics : ElectronicModel
             ElectronicStates from previous step.
-        this_electronics : ElectronicT
+        this_electronics : ElectronicModel
             ElectronicStates from current step.
         """
         SurfaceHoppingMD.surface_hopping(self, last_electronics, this_electronics)

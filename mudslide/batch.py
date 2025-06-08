@@ -12,7 +12,6 @@ from numpy.typing import ArrayLike
 from .constants import boltzmann
 from .exceptions import StillInteracting
 from .tracer import TraceManager
-from .typing import ModelT, TrajGenT
 
 logger = logging.getLogger("mudslide")
 
@@ -211,9 +210,9 @@ class BatchedTraj:
 
     Parameters
     ----------
-    model : ModelT
+    model : ElectronicModel
         Object used to describe the model system.
-    traj_gen : TrajGenT
+    traj_gen : Any
         Generator object to generate initial conditions.
     trajectory_type : Any
         Surface hopping trajectory class.
@@ -234,7 +233,7 @@ class BatchedTraj:
 
     batch_only_options = [ "samples", "nprocs" ]
 
-    def __init__(self, model: ModelT, traj_gen: TrajGenT, trajectory_type: Any, tracemanager: Any = None, **inp: Any):
+    def __init__(self, model: 'ElectronicModel_', traj_gen: Any, trajectory_type: Any, tracemanager: Any = None, **inp: Any):
         self.model = model
         if tracemanager is None:
             self.tracemanager = TraceManager()

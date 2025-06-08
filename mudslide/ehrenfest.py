@@ -7,7 +7,6 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 from .surface_hopping_md import SurfaceHoppingMD
-from .typing import ElectronicT
 
 
 class Ehrenfest(SurfaceHoppingMD):
@@ -31,7 +30,7 @@ class Ehrenfest(SurfaceHoppingMD):
         """
         SurfaceHoppingMD.__init__(self, *args, **kwargs)
 
-    def potential_energy(self, electronics: ElectronicT = None) -> np.floating:
+    def potential_energy(self, electronics: 'ElectronicModel_' = None) -> np.floating:
         """Calculate Ehrenfest potential energy.
 
         The potential energy is computed as the trace of the product of the
@@ -39,7 +38,7 @@ class Ehrenfest(SurfaceHoppingMD):
 
         Parameters
         ----------
-        electronics : ElectronicT, optional
+        electronics : ElectronicModel, optional
             ElectronicStates from current step, by default None
 
         Returns
@@ -51,7 +50,7 @@ class Ehrenfest(SurfaceHoppingMD):
             electronics = self.electronics
         return np.real(np.trace(np.dot(self.rho, electronics.hamiltonian)))
 
-    def _force(self, electronics: ElectronicT = None) -> ArrayLike:
+    def _force(self, electronics: 'ElectronicModel_' = None) -> ArrayLike:
         """Calculate Ehrenfest force.
 
         The force is computed as the trace of the product of the density matrix
@@ -59,7 +58,7 @@ class Ehrenfest(SurfaceHoppingMD):
 
         Parameters
         ----------
-        electronics : ElectronicT, optional
+        electronics : ElectronicModel, optional
             ElectronicStates from current step, by default None
 
         Returns
@@ -75,7 +74,7 @@ class Ehrenfest(SurfaceHoppingMD):
             out += np.real(self.rho[i,i]) * electronics.force(i)
         return out
 
-    def surface_hopping(self, last_electronics: ElectronicT, this_electronics: ElectronicT):
+    def surface_hopping(self, last_electronics: 'ElectronicModel_', this_electronics: 'ElectronicModel_'):
         """Handle surface hopping.
 
         In Ehrenfest dynamics, surface hopping is not performed as the electronic
@@ -83,9 +82,9 @@ class Ehrenfest(SurfaceHoppingMD):
 
         Parameters
         ----------
-        last_electronics : ElectronicT
+        last_electronics : ElectronicModel
             Electronic states from previous step
-        this_electronics : ElectronicT
+        this_electronics : ElectronicModel
             Electronic states from current step
         """
         return
