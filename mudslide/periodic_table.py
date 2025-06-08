@@ -70,7 +70,7 @@ masses = {
     'ce': 139.9054431,
     'pr': 140.9076576,
     'nd': 141.9077290,
-    'pm': 145.91395045, # no info about isotope abundance (mean of 145Pm and 147Pm)
+    'pm': 145.91395045, # unknown isotope abundance (mean of 145Pm and 147Pm)
     'sm': 151.9197397,
     'eu': 152.921238,
     'gd': 157.9241123,
@@ -93,21 +93,21 @@ masses = {
     'tl': 204.9744278,
     'pb': 207.9766525,
     'bi': 208.9803991,
-    'po': 209.4826525, # no info about isotope abundance (mean of 209Po and 210Po)
-    'at': 210.4873223, # no info about isotope abundance (mean of 210At and 211At)
-    'rn': 217.6731911, # no info about isotope abundance (mean of 211Rn, 220Rn, and 222Rn)
+    'po': 209.4826525, # unknown isotope abundance (mean of 209Po and 210Po)
+    'at': 210.4873223, # unknown isotope abundance (mean of 210At and 211At)
+    'rn': 217.6731911, # unknown isotope abundance (mean of 211Rn, 220Rn, and 222Rn)
     'fr': 223.019736,
-    'ra': 225.2737988, # no info about isotope abundance (mean of 223Ra, 224Ra, 226Ra, and 228Ra)
+    'ra': 225.2737988, # unknown isotope abundance (mean of 223Ra, 224Ra, 226Ra, and 228Ra)
     'ac': 227.0277523,
-    'th': 231.0355949, # no info about isotope abundance (mean of 230Th and 232Th)
+    'th': 231.0355949, # unknown isotope abundance (mean of 230Th and 232Th)
     'pa': 231.0358842,
     'u' : 238.0507884,
-    'np': 236.5473718, # no info about isotope abundance (mean of 236Np and 237Np)
-    'pu': 240.7225563, # no info about isotope abundance (mean of 238Pu, 239Pu, 240Pu, 241Pu, 242Pu, and 244Pu)
-    'am': 242.0591053, # no info about isotope abundance (mean of 242Am and 243Am)
-    'cm': 245.5665936, # no info about isotope abundance (mean of 243Cm, 244Cm, 245Cm, 246Cm, 247Cm, and 248Cm)
-    'bk': 248.0726475, # no info about isotope abundance (mean of 247Bk and 249Bk)
-    'cf': 250.578119, # no info about isotope abundance (mean of 249Cf, 250Cf, 251Cf, and 252Cf)
+    'np': 236.5473718, # unknown isotope abundance (mean of 236Np and 237Np)
+    'pu': 240.7225563, # unknown isotope abundance (mean of Pu-238,239,240,241,242,244)
+    'am': 242.0591053, # unknown isotope abundance (mean of 242Am and 243Am)
+    'cm': 245.5665936, # unknown isotope abundance (mean of Cm-243,244,245,246,247,248)
+    'bk': 248.0726475, # unknown isotope abundance (mean of 247Bk and 249Bk)
+    'cf': 250.578119, # unknown isotope abundance (mean of 249Cf, 250Cf, 251Cf, and 252Cf)
     'es': 252.082980,
     'fm': 257.0951061,
     'md': 259.10104,

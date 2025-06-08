@@ -72,7 +72,8 @@ class AdiabaticMD:
             bounds : tuple or list, optional
                 Tuple or list of (lower, upper) bounds for the simulation box. Default is None.
             propagator : str or dict, optional
-                The propagator to use for nuclear motion. Can be a string (e.g., 'VV') or a dictionary with more options. Default is 'VV'.
+                The propagator to use for nuclear motion. Can be a string (e.g., 'VV') or a
+                dictionary with more options. Default is 'VV'.
             seed_sequence : int or numpy.random.SeedSequence, optional
                 Seed or SeedSequence for random number generation. Default is None.
             electronics : object, optional

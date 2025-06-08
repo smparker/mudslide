@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """Propagate FSSH trajectory"""
 
-from typing import List, Dict, Union, Any
 import copy as cp
+from typing import List, Dict, Union, Any
+
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -38,7 +39,7 @@ class SurfaceHoppingMD:
 
     def __init__(self,
                  model: Any,
-                 x0: ArrayLike,
+                 x0: np.ndarray,
                  v0: ArrayLike,
                  rho0: Union[ArrayLike, int, str],
                  tracer: Any = "default",
@@ -68,13 +69,16 @@ class SurfaceHoppingMD:
         Other Parameters
         ----------------
         propagator : str or dict, optional
-            The propagator to use for nuclear motion. Can be a string (e.g., 'vv', 'fssh') or a dictionary with more options. Default is 'vv'.
+            The propagator to use for nuclear motion. Can be a string (e.g., 'vv', 'fssh') or a
+            dictionary with more options. Default is 'vv'.
         last_velocity : array-like, optional
             The velocity from the previous step, used for restarts. Default is zeros.
         bounds : tuple or list, optional
-            Tuple or list of (lower, upper) bounds for the simulation box. Used to determine if the trajectory is inside a region. Default is None.
+            Tuple or list of (lower, upper) bounds for the simulation box. Used to determine if
+            the trajectory is inside a region. Default is None.
         duration : dict, optional
-            Dictionary controlling simulation duration (overrides max_steps, max_time, etc.). Default is auto-generated.
+            Dictionary controlling simulation duration (overrides max_steps, max_time, etc.).
+            Default is auto-generated.
         dt : float, optional
             Time step for nuclear propagation (in atomic units). Default is fs_to_au.
         t0 : float, optional
@@ -110,7 +114,8 @@ class SurfaceHoppingMD:
         state0 : int, optional
             Initial electronic state (used if rho0 is a matrix). Required if rho0 is not scalar.
         hopping_method : str, optional
-            Hopping method: 'cumulative', 'cumulative_integrated', or 'instantaneous'. Default is 'cumulative'.
+            Hopping method: 'cumulative', 'cumulative_integrated', or 'instantaneous'.
+            Default is 'cumulative'.
         """
         check_options(options, self.recognized_options, strict=strict_option_check)
 
@@ -133,7 +138,8 @@ class SurfaceHoppingMD:
                 self.rho[state, state] = 1.0
                 self.state = state
             except:
-                raise ValueError("Initial state rho0 must be convertible to an integer state index")
+                raise ValueError("Initial state rho0 must be convertible to an integer state "
+                                 "index")
         else:
             try:
                 self.rho = np.copy(rho0)
@@ -162,7 +168,8 @@ class SurfaceHoppingMD:
         self.outcome_type = options.get("outcome_type", "state")
 
         ss = options.get("seed_sequence", None)
-        self.seed_sequence = ss if isinstance(ss, np.random.SeedSequence) else np.random.SeedSequence(ss)
+        self.seed_sequence = ss if isinstance(ss, np.random.SeedSequence) \
+            else np.random.SeedSequence(ss)
         self.random_state = np.random.default_rng(self.seed_sequence)
 
         self.electronics = options.get("electronics", None)
@@ -336,7 +343,8 @@ class SurfaceHoppingMD:
 
         bounds = options.get('bounds', None)
         if bounds:
-            duration["box_bounds"] = (np.array(bounds[0], dtype=np.float64), np.array(bounds[1], dtype=np.float64))
+            duration["box_bounds"] = (np.array(bounds[0], dtype=np.float64),
+                                      np.array(bounds[1], dtype=np.float64))
         else:
             duration["box_bounds"] = None
 
@@ -465,7 +473,8 @@ class SurfaceHoppingMD:
             electronics = self.electronics
         return electronics.force(self.state)
 
-    def NAC_matrix(self, electronics: 'ElectronicModel_' = None, velocity: ArrayLike = None) -> ArrayLike:
+    def NAC_matrix(self, electronics: 'ElectronicModel_' = None,
+                   velocity: ArrayLike = None) -> ArrayLike:
         """Calculate nonadiabatic coupling matrix.
 
         Parameters
@@ -542,7 +551,8 @@ class SurfaceHoppingMD:
         c = -2.0 * dE
         return b * b > 4.0 * a * c
 
-    def direction_of_rescale(self, source: int, target: int, electronics: 'ElectronicModel_' = None) -> np.ndarray:
+    def direction_of_rescale(self, source: int, target: int,
+                             electronics: 'ElectronicModel_' = None) -> np.ndarray:
         """
         Return direction in which to rescale momentum.
 
@@ -612,13 +622,13 @@ class SurfaceHoppingMD:
             last_electronics = this_electronics
 
         H = 0.5 * (this_electronics.hamiltonian + last_electronics.hamiltonian)  # type: ignore
-        TV = 0.5 * np.einsum(
-            "ijx,x->ij",
-            this_electronics._derivative_coupling + last_electronics._derivative_coupling,  #type: ignore
-            velo)
+        this_tau = this_electronics.derivative_coupling_tensor
+        last_tau = last_electronics.derivative_coupling_tensor
+        TV = 0.5 * np.einsum("ijx,x->ij", this_tau + last_tau, velo)
         return H - 1j * TV
 
-    def propagate_electronics(self, last_electronics: 'ElectronicModel_', this_electronics: 'ElectronicModel_',
+    def propagate_electronics(self, last_electronics: 'ElectronicModel_',
+                              this_electronics: 'ElectronicModel_',
                               dt: np.floating) -> None:
         """
         Propagate density matrix from t to t+dt.
@@ -645,9 +655,11 @@ class SurfaceHoppingMD:
             while (dt / nsteps) > self.max_electronic_dt:
                 nsteps *= 2
 
+            this_tau = this_electronics.derivative_coupling_tensor
+            last_tau = last_electronics.derivative_coupling_tensor
             propagate_interpolated_rk4(self.rho,
-                    last_electronics.hamiltonian, last_electronics.derivative_coupling_tensor, self.last_velocity,
-                    this_electronics.hamiltonian, this_electronics.derivative_coupling_tensor, self.velocity,
+                    last_electronics.hamiltonian, last_tau, self.last_velocity,
+                    this_electronics.hamiltonian, this_tau, self.velocity,
                     self.dt, nsteps)
         else:
             raise ValueError(
@@ -655,7 +667,8 @@ class SurfaceHoppingMD:
                 "Must be one of ['exp', 'linear-rk4']"
             )
 
-    def surface_hopping(self, last_electronics: 'ElectronicModel_', this_electronics: 'ElectronicModel_'):
+    def surface_hopping(self, last_electronics: 'ElectronicModel_',
+                        this_electronics: 'ElectronicModel_'):
         """
         Compute probability of hopping, generate random number, and perform hops.
 
@@ -668,8 +681,8 @@ class SurfaceHoppingMD:
         """
         H = self.hamiltonian_propagator(last_electronics, this_electronics)
 
-        gkndt = 2.0 * np.imag(self.rho[self.state, :] * H[:, self.state]) * self.dt / np.real(self.rho[self.state,
-                                                                                                       self.state])
+        gkndt = 2.0 * np.imag(self.rho[self.state, :] * H[:, self.state]) * \
+            self.dt / np.real(self.rho[self.state, self.state])
 
         # zero out 'self-hop' for good measure (numerical safety)
         gkndt[self.state] = 0.0
@@ -739,7 +752,12 @@ class SurfaceHoppingMD:
                         hop_to = i
                         break
 
-                return [{"target": hop_to, "weight": 1.0, "zeta": self.zeta, "prob": acc_prob[hop_to]}]
+                return [{
+                    "target": hop_to,
+                    "weight": 1.0,
+                    "zeta": self.zeta,
+                    "prob": acc_prob[hop_to]
+                }]
             else:
                 return []
 
@@ -756,7 +774,9 @@ class SurfaceHoppingMD:
         """
         return
 
-    def hop_to_it(self, hop_targets: List[Dict[str, Union[float,int]]], electronics: 'ElectronicModel_' = None) -> None:
+    def hop_to_it(self, 
+                  hop_targets: List[Dict[str, Union[float,int]]], 
+                  electronics: 'ElectronicModel_' = None) -> None:
         """
         Hop from the current active state to the given state, including rescaling the momentum.
 
@@ -799,7 +819,6 @@ class SurfaceHoppingMD:
                 },
                 event_type="frustrated_hop"
             )
-
     def simulate(self) -> 'Trace':
         """
         Run the surface hopping molecular dynamics simulation.

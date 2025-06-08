@@ -74,7 +74,8 @@ class Ehrenfest(SurfaceHoppingMD):
             out += np.real(self.rho[i,i]) * electronics.force(i)
         return out
 
-    def surface_hopping(self, last_electronics: 'ElectronicModel_', this_electronics: 'ElectronicModel_'):
+    def surface_hopping(self, last_electronics: 'ElectronicModel_',
+                        this_electronics: 'ElectronicModel_'):
         """Handle surface hopping.
 
         In Ehrenfest dynamics, surface hopping is not performed as the electronic

@@ -14,7 +14,8 @@ def add_collect_parser(subparsers) -> None:
     """
     parser = subparsers.add_parser('collect', help="Collect data from a trajectory")
     parser.add_argument('logname', help="name of the trajectory to collect")
-    parser.add_argument('-k', '--keys', default="tkpea", help="keys to collect (default: %(default)s)")
+    parser.add_argument('-k', '--keys', default="tkpea",
+                        help="keys to collect (default: %(default)s)")
 
     parser.set_defaults(func=collect_wrapper)
 

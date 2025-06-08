@@ -168,6 +168,9 @@ class ElectronicModel_:
     def derivative_coupling_tensor(self) -> "ArrayLike":
         """Return the derivative coupling tensor"""
         if not np.all(self._derivative_couplings_available):
+            false_indices = np.argwhere(~self._derivative_couplings_available)
+            print(f"Derivative couplings not available for state pairs: {false_indices.tolist()}")
+            print(f"Full availability matrix:\n{self._derivative_couplings_available}")
             raise ValueError("All derivative couplings not available")
         return self._derivative_coupling
 

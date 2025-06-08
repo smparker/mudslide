@@ -1,16 +1,9 @@
 # -*- coding: utf-8 -*-
 """Propagate FSSH trajectory"""
 
-from typing import List, Dict, Union, Any
-import copy as cp
-
-import numpy as np
-from numpy.typing import ArrayLike
+from typing import Any
 
 from .util import is_string
-from .propagation import propagate_exponential, propagate_interpolated_rk4
-from .tracer import Trace
-from .math import poisson_prob_scale
 from .propagator import Propagator_
 
 class SHVVPropagator(Propagator_):
@@ -30,7 +23,7 @@ class SHVVPropagator(Propagator_):
         """
         super().__init__()
 
-    def __call__(self, traj: 'SurfaceHoppingMD', nsteps: int) -> None:
+    def __call__(self, traj: Any, nsteps: int) -> None:
         """Propagate trajectory using Velocity Verlet algorithm.
 
         Parameters
@@ -65,7 +58,7 @@ class SHVVPropagator(Propagator_):
             traj.time += dt
             traj.nsteps += 1
 
-class SHPropagator(Propagator_):
+class SHPropagator:
     """Surface Hopping propagator factory.
 
     This class serves as a factory for creating different types of propagators
@@ -95,7 +88,7 @@ class SHPropagator(Propagator_):
         if is_string(prop_options):
             prop_options = {"type": prop_options}
         elif not isinstance(prop_options, dict):
-            raise Exception("prop_options must be a string or a dictionary")
+            raise ValueError("prop_options must be a string or a dictionary")
 
         proptype = prop_options.get("type", "vv")
         if proptype.lower() == "vv":

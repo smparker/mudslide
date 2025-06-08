@@ -407,6 +407,10 @@ class TMModel(ElectronicModel_):
             self._derivative_coupling = np.zeros((self.nstates, self.nstates, self.ndof))
             self._derivative_couplings_available = np.zeros((self.nstates, self.nstates),
                                                             dtype=bool)
+            # Set diagonal elements to True since they are always zero
+            for i in range(self.nstates):
+                self._derivative_couplings_available[i,i] = True
+
             for dct in parsed_nac_coupling:
                 i = dct["bra_state"]
                 j = dct["ket_state"]
