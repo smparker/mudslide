@@ -153,7 +153,8 @@ class NACParser(CoordParser):
     coupled_states = SimpleLineParser(coupled_states_reg, ["bra_state", "ket_state"], types=[int, int])
 
     def __init__(self):
-        head = r" cartesian\s+nonadiabatic\s+coupling\s+matrix\s+elements\s+\((\d+)/(\w+)\)"
+        # Header may or may not have (state/method) at end
+        head = r"cartesian\s+nonadiabatic\s+coupling\s+matrix\s+elements(?:\s+\((\d+)/(\w+)\))?"
         tail = r"maximum component of gradient"
         CoordParser.__init__(self, head, tail)
         self.parsers.insert(0, self.coupled_states)
@@ -178,7 +179,9 @@ class GradientDataParser(CoordParser):
     name = "gradient"
 
     def __init__(self, head):
-        tail = r"maximum component of gradient"
+        # Tail matches end of gradient section: either "resulting FORCE" (when NAC follows),
+        # "maximum component of gradient" (when no NAC), or start of NAC section
+        tail = r"(?:resulting FORCE|maximum component of gradient|cartesian\s+nonadiabatic)"
         CoordParser.__init__(self, head, tail)
 
     def clean(self, liter, out):
