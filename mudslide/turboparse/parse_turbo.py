@@ -6,7 +6,7 @@ import re
 
 from .stack_iterator import StackIterator
 from .section_parser import ParseSection
-from .scf_parser import RIDFTParser, DSCFParser, RDGRADParser, GRADParser
+from .scf_parser import RIDFTParser, DSCFParser, RdgradModuleParser, GradModuleParser
 from .response_parser import EgradParser, EscfParser
 from .freeh_parser import FreeHParser
 from .thermo_parser import ThermoParser
@@ -18,8 +18,8 @@ class TurboParser(ParseSection):
     parsers = [
         RIDFTParser(),
         DSCFParser(),
-        RDGRADParser(),
-        GRADParser(),
+        RdgradModuleParser(),
+        GradModuleParser(),
         EgradParser(),
         EscfParser(),
         FreeHParser(),

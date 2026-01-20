@@ -6,8 +6,7 @@ import re
 
 from .line_parser import LineParser, SimpleLineParser
 from .section_parser import ParseSection
-from .common_parser import GroundParser, NACParser
-from .common_parser import GradParser
+from .common_parser import GroundParser, NACParser, GradientDataParser, EXCITED_STATE_GRADIENT_HEAD
 
 
 class ExcitedDipoleParser(ParseSection):
@@ -181,7 +180,7 @@ class EgradEscfParser(ParseSection):
     hyper = HyperParser()
     state_to_state = StateToStateParser()
     coupling = NACParser()
-    gradient = GradParser()
+    gradient = GradientDataParser(EXCITED_STATE_GRADIENT_HEAD)
 
     parsers = [
         ground, excited, rel_moment, rel_trans, unrel_moment, unrel_trans, tpa, hyper, state_to_state, coupling,

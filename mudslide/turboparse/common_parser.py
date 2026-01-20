@@ -167,30 +167,16 @@ class NACParser(CoordParser):
         del out["d_dz"]
 
 
-class GradParser(CoordParser):
-    """
-    Parser for gradient.
-    """
+# Constants for the two gradient types
+EXCITED_STATE_GRADIENT_HEAD = r" cartesian\s+gradients\s+of\s+excited\s+state\s+[0-9 ]+\((\w+)/(\w+)\)"
+GROUND_STATE_GRADIENT_HEAD = r"cartesian\s+gradient\s+of\s+the\s+energy\s+\((\w+)/(\w+)\)"
+
+
+class GradientDataParser(CoordParser):
+    """Parser for cartesian gradient data (ground or excited state)."""
     name = "gradient"
 
-    def __init__(self):
-        head = r" cartesian\s+gradients\s+of\s+excited\s+state\s+[0-9 ]+\((\w+)/(\w+)\)"
-        tail = r"maximum component of gradient"
-        CoordParser.__init__(self, head, tail)
-
-    def clean(self, liter, out):
-        atom_list = [atom.rstrip() for atom in out["atom_list"]]
-        out["atom_list"] = atom_list
-
-
-class RdGradParser(CoordParser):
-    """
-    Parser for gs_gradient.
-    """
-    name = "gradient"
-
-    def __init__(self):
-        head = r"cartesian\s+gradient\s+of\s+the\s+energy\s+\((\w+)/(\w+)\)"
+    def __init__(self, head):
         tail = r"maximum component of gradient"
         CoordParser.__init__(self, head, tail)
 

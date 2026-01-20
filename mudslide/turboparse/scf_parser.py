@@ -6,7 +6,7 @@ import re
 
 from .section_parser import ParseSection
 from .line_parser import SimpleLineParser
-from .common_parser import BasisParser, DFTParser, RdGradParser
+from .common_parser import BasisParser, DFTParser, GradientDataParser, GROUND_STATE_GRADIENT_HEAD
 
 
 class SCFParser(ParseSection):
@@ -32,21 +32,24 @@ class DSCFParser(SCFParser):
         SCFParser.__init__(self, r"^\s*d s c f", r"dscf\s*:\s*all done")
 
 
-class GradParser(ParseSection):
+class GradientModuleParser(ParseSection):
+    """Base parser for gradient module output (grad, rdgrad)."""
     dft = DFTParser()
-    gradient = RdGradParser()
+    gradient = GradientDataParser(GROUND_STATE_GRADIENT_HEAD)
     parsers = [dft, gradient]
 
 
-class RDGRADParser(GradParser):
+class RdgradModuleParser(GradientModuleParser):
+    """Parser for rdgrad module output."""
     name = 'rdgrad'
 
     def __init__(self):
-        GradParser.__init__(self, r"^\s*r d g r a d", r"rdgrad\s+:\s*all done")
+        GradientModuleParser.__init__(self, r"^\s*r d g r a d", r"rdgrad\s+:\s*all done")
 
 
-class GRADParser(GradParser):
+class GradModuleParser(GradientModuleParser):
+    """Parser for grad module output."""
     name = 'grad'
 
     def __init__(self):
-        GradParser.__init__(self, r"^\s*g r a d", r"grad\s+:\s*all done")
+        GradientModuleParser.__init__(self, r"^\s*g r a d", r"grad\s+:\s*all done")
