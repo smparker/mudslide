@@ -168,7 +168,8 @@ class NACParser(CoordParser):
 
 
 # Constants for the two gradient types
-EXCITED_STATE_GRADIENT_HEAD = r" cartesian\s+gradients\s+of\s+excited\s+state\s+[0-9 ]+\((\w+)/(\w+)\)"
+EXCITED_STATE_GRADIENT_HEAD = (r"(?:cartesian\s+gradients\s+of\s+excited\s+state\s+[0-9 ]+|"
+                               r"cartesian\s+gradient\s+of\s+the\s+energy)\s+\((\w+)/(\w+)\)")
 GROUND_STATE_GRADIENT_HEAD = r"cartesian\s+gradient\s+of\s+the\s+energy\s+\((\w+)/(\w+)\)"
 
 
