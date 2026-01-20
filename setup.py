@@ -12,7 +12,7 @@ def readme():
 
 setup(
     name='mudslide',
-    packages=['mudslide'],
+    packages=['mudslide', 'mudslide.models', 'mudslide.turboparse'],
     version=main_ns['__version__'],
     license='MIT',
     description='Package to simulate nonadiabatic molecular dynamics using trajectory methods',
@@ -25,8 +25,7 @@ setup(
         'numpy>=1.19',
         'scipy',
         'typing_extensions',
-        'pyyaml',
-        'turboparse==0.1.2'
+        'pyyaml'
         ],
     test_suite='nose.collector',
     tests_require=['nose'],
@@ -35,7 +34,8 @@ setup(
             'mudslide = mudslide.__main__:main',
             'mud = mudslide.mud:mud_main',
             'mudslide-surface = mudslide.surface:main',
-            'mudslide-make-harmonic = mudslide.turbo_make_harmonic:main'
+            'mudslide-make-harmonic = mudslide.turbo_make_harmonic:main',
+            'turboparse = mudslide.turboparse.parse:parse'
         ]
     },
     classifiers=[

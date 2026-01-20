@@ -14,7 +14,7 @@ from typing import Any, Dict
 import numpy as np
 from numpy.typing import ArrayLike
 
-import turboparse
+from .. import turboparse
 
 from ..util import find_unique_name
 from ..constants import amu_to_au

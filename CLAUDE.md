@@ -75,3 +75,4 @@ For diabatic models, derive from `DiabaticModel_` and implement `V(x)` and `dV(x
 - `mudslide` - Main CLI for running trajectories
 - `mudslide-surface` - Prints 1D surfaces and couplings
 - `mud` - Alternative CLI entry
+- `turboparse` - Parse Turbomole output files

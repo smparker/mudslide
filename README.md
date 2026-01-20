@@ -28,7 +28,8 @@ dimensional potentials.
 * numpy
 * scipy (for Shin-Metiu model)
 * pyyaml
-* turboparse
+
+Note: `turboparse` is bundled internally within mudslide.
 
 ## Setup
 Mudslide has switched to a proper python package structure, which means to work properly it now needs to be "installed". The
