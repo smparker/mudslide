@@ -127,7 +127,7 @@ class CoordParser(ParseSection):
     """
     name = "regex"
 
-    atom_reg = r"^\s*ATOM\s+(\d+\ \D+)" + 4 * r"(?:\s+(\d+\ \D))?" + r"\s*$"
+    atom_reg = r"^\s*ATOM\s+(\d+\ \D+)" + 4 * r"(?:\s+(\d+\ \D+))?" + r"\s*$"
     atom_list = VarLineParser(reg=atom_reg, title="atom_list", vars_type=str)
 
     d_dcoord = [
