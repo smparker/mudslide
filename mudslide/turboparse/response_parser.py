@@ -85,8 +85,8 @@ class StateToStateParser(ParseSection):
 
     def __init__(self):
         super(self.__class__,
-              self).__init__(r"<\s*\d+\s*\|\s*W\s*\|\s*\d+\s*>\s*transition moments",
-                             r"(<\s*\d+\s*\|\s*W\s*\|\s*\d+\s*>\s*transition moments)|(S\+T\+V CONTRIBUTIONS TO)",
+              self).__init__(r"<\s*\d+\s*\|\s*W\s*\|\s*\d+\s*>.*(?:transition|difference) moments",
+                             r"(<\s*\d+\s*\|\s*W\s*\|\s*\d+\s*>.*(?:transition|difference) moments)|(S\+T\+V CONTRIBUTIONS TO)",
                              multi=True)
 
 

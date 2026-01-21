@@ -241,13 +241,21 @@ class TestHHeS2S:
         """Test that state-to-state transition moments are parsed"""
         assert 'state-to-state' in parsed['egrad']
         s2s = parsed['egrad']['state-to-state']
-        # Only <1|W|2> is parsed (labeled as "transition moments")
-        # <2|W|2> is labeled as "difference moments" and not captured
-        assert len(s2s) == 1
+        # Should have 2 blocks: <2|W|2> difference moments and <1|W|2> transition moments
+        assert len(s2s) == 2
+
+    def test_state_to_state_2_2(self, parsed):
+        """Test <2|W|2> difference moments"""
+        s2s = parsed['egrad']['state-to-state'][0]
+        assert s2s['bra'] == 2
+        assert s2s['ket'] == 2
+        # Relaxed electric transition dipole moment (length rep.) from line 549
+        # z = 3.819847
+        assert np.isclose(s2s['diplen']['z'], 3.819847)
 
     def test_state_to_state_1_2(self, parsed):
         """Test <1|W|2> transition moments"""
-        s2s = parsed['egrad']['state-to-state'][0]
+        s2s = parsed['egrad']['state-to-state'][1]
         assert s2s['bra'] == 1
         assert s2s['ket'] == 2
         # Relaxed electric transition dipole moment (length rep.) from line 608

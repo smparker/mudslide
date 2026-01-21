@@ -50,6 +50,9 @@ class SimpleLineParser(LineParser):
                 if not (self.first_only and self.title in out):
                     out[self.title] = data
             else:
+                # For first_only without title, check if any of the keys already exist
+                if self.first_only and any(n in out for n in self.names):
+                    return
                 out.update(data)
         else:
             if self.title not in out:
