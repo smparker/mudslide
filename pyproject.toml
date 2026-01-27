@@ -1,0 +1,66 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mudslide"
+dynamic = ["version"]
+description = "Package to simulate nonadiabatic molecular dynamics using trajectory methods"
+readme = "README.md"
+license = "MIT"
+authors = [
+    { name = "Shane M. Parker", email = "shane.parker@case.edu" }
+]
+keywords = ["science", "chemistry", "nonadiabatic dynamics"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "numpy>=1.19",
+    "scipy",
+    "typing_extensions",
+    "pyyaml",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+]
+dev = [
+    "pytest",
+    "mypy",
+    "pylint",
+    "yapf",
+]
+
+[project.urls]
+Homepage = "https://github.com/smparker/mudslide"
+Repository = "https://github.com/smparker/mudslide"
+
+[project.scripts]
+mudslide = "mudslide.__main__:main"
+mud = "mudslide.mud:mud_main"
+mudslide-surface = "mudslide.surface:main"
+mudslide-make-harmonic = "mudslide.turbo_make_harmonic:main"
+turboparse = "mudslide.turboparse.parse:parse"
+
+[tool.setuptools.dynamic]
+version = { attr = "mudslide.version.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["mudslide*"]
+
+[tool.mypy]
+ignore_missing_imports = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
