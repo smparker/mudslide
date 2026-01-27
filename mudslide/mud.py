@@ -8,13 +8,16 @@ import sys
 import argparse
 
 import mudslide
+from .version import get_version_info
 
 def mud_main(argv=None, file=sys.stdout) -> None:
     """Mudslide CLI
     """
-    parser = argparse.ArgumentParser(prog="mudslide", description="Mudslide CLI")
+    parser = argparse.ArgumentParser(prog="mudslide", description="Mudslide CLI",
+                                     epilog=get_version_info(),
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('-v', '--version', action='version',
-                        version=f"%(prog)s {mudslide.__version__}")
+                        version=get_version_info())
     parser.add_argument('-d', '--debug', action='store_true', help="enable debug mode")
 
     subparsers = parser.add_subparsers(title="commands",

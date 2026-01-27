@@ -10,6 +10,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 from .models import scattering_models as models
+from .version import get_version_info
 
 def add_surface_parser(subparsers: Any) -> None:
     """ Should accept a subparser object from argparse, add new subcommand, and then add arguments
@@ -58,7 +59,10 @@ def main(argv=None) -> None:
 
     Deprecated
     """
-    parser = argparse.ArgumentParser(description="Generate potential energy surface scans of two-state models")
+    parser = argparse.ArgumentParser(description="Generate potential energy surface scans of two-state models",
+                                     epilog=get_version_info(),
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('-v', '--version', action='version', version=get_version_info())
 
     add_surface_arguments(parser)
     args = parser.parse_args(argv)

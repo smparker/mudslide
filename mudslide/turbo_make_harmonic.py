@@ -11,6 +11,7 @@ import numpy as np
 
 from .models.turbomole_model import TurboControl, turbomole_is_installed
 from .models.harmonic_model import HarmonicModel
+from .version import get_version_info
 
 def add_make_harmonic_parser(subparsers):
     """Add make_harmonic subparser to an argument parser.
@@ -65,7 +66,10 @@ def main(argv=None):
         Parsed command line arguments
     """
     parser = argparse.ArgumentParser(
-        description="Generate a harmonic model from a vibrational analysis")
+        description="Generate a harmonic model from a vibrational analysis",
+        epilog=get_version_info(),
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('-v', '--version', action='version', version=get_version_info())
     add_make_harmonic_arguments(parser)
     args = parser.parse_args(argv)
     return args

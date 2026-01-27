@@ -15,6 +15,7 @@ from .afssh import AugmentedFSSH
 from .batch import TrajGenConst, TrajGenNormal, BatchedTraj
 from .tracer import TraceManager
 from .models import scattering_models as models
+from .version import __version__, get_version_info
 
 import argparse as ap
 
@@ -31,7 +32,10 @@ methods = {
 
 
 def main(argv=None, file=sys.stdout) -> None:
-    parser = ap.ArgumentParser(description="Mudslide test driver")
+    parser = ap.ArgumentParser(description="Mudslide test driver",
+                               epilog=get_version_info(),
+                               formatter_class=ap.RawDescriptionHelpFormatter)
+    parser.add_argument('-v', '--version', action='version', version=get_version_info())
 
     parser.add_argument('-a', '--method', default="fssh", choices=methods.keys(), type=str.lower, help="Variant of SH")
     parser.add_argument('-m',
