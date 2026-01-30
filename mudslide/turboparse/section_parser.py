@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
-
 import re
 
 
-class ParseSection(object):
-    DEBUG = False
+class ParseSection:
     """Parse a section by looping over attached parsers until tail search is true"""
+    DEBUG = False
+    name = ""
+    parsers = []
 
     def __init__(self, head, tail, multi=False):
         self.head = re.compile(head)
@@ -44,7 +44,7 @@ class ParseSection(object):
                 found = found or fnd
                 advanced_by_parse = advanced_by_parse or adv
 
-            if (not first and self.test_tail(liter.top())):
+            if not first and self.test_tail(liter.top()):
                 done = True
             else:
                 first = False
@@ -62,30 +62,28 @@ class ParseSection(object):
         """
         found = False
         advanced = False
-        if (self.test_head(liter.top())):
+        if self.test_head(liter.top()):
             if self.DEBUG:
-                print("%s (%s) HEAD tested true at:" % (self.name, type(self)))
+                print(f"{self.name} ({type(self)}) HEAD tested true at:")
                 print(liter.top())
             dest = self.prepare(out)
             advanced = self.parse_driver(liter, dest)
             found = True
             self.clean(liter, dest)
         elif self.DEBUG:
-            print("No match for %s at %s" % (self.name, liter.top().strip()))
+            print(f"No match for {self.name} at {liter.top().strip()}")
         return found, advanced
 
     def prepare(self, out):
         if self.name == "":
             return out
-        else:
-            if self.multi:
-                if self.name not in out:
-                    out[self.name] = []
-                out[self.name].append({})
-                return out[self.name][-1]
-            else:
-                out[self.name] = {}
-                return out[self.name]
+        if self.multi:
+            if self.name not in out:
+                out[self.name] = []
+            out[self.name].append({})
+            return out[self.name][-1]
+        out[self.name] = {}
+        return out[self.name]
 
-    def clean(self, liter, dest):
+    def clean(self, liter, out):
         return

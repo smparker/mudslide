@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
-
 import re
 
 from .section_parser import ParseSection
@@ -17,10 +15,10 @@ class FreeHData(ParseSection):
     end_re = re.compile(r"\*{50}")
 
     def __init__(self):
-        ParseSection.__init__(self,
-                              r"T\s+p\s+ln\(qtrans\)\s+ln\(qrot\)\s+ln\(qvib\)\s+chem\.pot\.\s+energy\s+entropy",
-                              r"\*{50}",
-                              multi=False)
+        super().__init__(
+            r"T\s+p\s+ln\(qtrans\)\s+ln\(qrot\)\s+ln\(qvib\)\s+chem\.pot\.\s+energy\s+entropy",
+            r"\*{50}",
+            multi=False)
 
     def parse_driver(self, liter, out):
         """
@@ -32,7 +30,6 @@ class FreeHData(ParseSection):
         done = False
         advanced = False
         while not done:
-            found = False
             m = self.start1st_re.search(liter.top())
 
             if m:
@@ -101,7 +98,7 @@ class FreeHData(ParseSection):
             'entropy': 'kJ/mol/K',
             'enthalpy': 'kJ/mol',
             'Cv': 'kJ/mol-K',
-            'Cv': 'kJ/mol-K'
+            'Cp': 'kJ/mol-K'
         }
 
         return advanced
@@ -110,9 +107,6 @@ class FreeHData(ParseSection):
 class FreeHParser(ParseSection):
     name = "freeh"
 
-    freehdata = FreeHData()
-
     def __init__(self):
-        ParseSection.__init__(self, r"f r e e   e n t h a l p y", r"freeh\s*:\s*all done")
-
-    parsers = [freehdata]
+        super().__init__(r"f r e e   e n t h a l p y", r"freeh\s*:\s*all done")
+        self.parsers = [FreeHData()]

@@ -1,9 +1,5 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
-
-import re
-
 from .stack_iterator import StackIterator
 from .section_parser import ParseSection
 from .scf_parser import RIDFTParser, DSCFParser, RdgradModuleParser, GradModuleParser
@@ -15,19 +11,18 @@ from .thermo_parser import ThermoParser
 class TurboParser(ParseSection):
     name = ""
 
-    parsers = [
-        RIDFTParser(),
-        DSCFParser(),
-        RdgradModuleParser(),
-        GradModuleParser(),
-        EgradParser(),
-        EscfParser(),
-        FreeHParser(),
-        ThermoParser()
-    ]
-
     def __init__(self):
-        ParseSection.__init__(self, r".*", r"a^")
+        super().__init__(r".*", r"a^")
+        self.parsers = [
+            RIDFTParser(),
+            DSCFParser(),
+            RdgradModuleParser(),
+            GradModuleParser(),
+            EgradParser(),
+            EscfParser(),
+            FreeHParser(),
+            ThermoParser()
+        ]
 
 
 def parse_turbo(iterable):
@@ -42,7 +37,7 @@ def parse_turbo(iterable):
             fnd, adv = parser.parse(liter, out)
             gotparsed = gotparsed or fnd
 
-            if (not adv):
+            if not adv:
                 next(liter)
     except StopIteration:
         return out

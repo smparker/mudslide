@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
+import argparse
+import json
+
+import yaml
 
 from .parse_turbo import parse_turbo
 from ..version import get_version_info
-
-import argparse
-import json
-import yaml
 
 
 def parse():
@@ -22,7 +21,7 @@ def parse():
 
     args = ap.parse_args()
 
-    with open(args.file, "r") as f:
+    with open(args.file, "r", encoding="utf-8") as f:
         data = parse_turbo(f)
 
     if args.format == "json":

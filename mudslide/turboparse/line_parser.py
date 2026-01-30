@@ -1,12 +1,9 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
-
 import re
-import json
 
 
-class LineParser(object):
+class LineParser:
     """Base class to parse a single line and return results. Implementations require a process function"""
 
     def __init__(self, reg):
@@ -19,29 +16,32 @@ class LineParser(object):
         return: result, advanced
         """
         result = self.reg.search(liter.top())
-        if (result):
+        if result:
             self.process(result, out)
         return bool(result), False
+
+    def process(self, m, out):
+        raise NotImplementedError("Subclasses must implement process()")
 
 
 class SimpleLineParser(LineParser):
     """Parse a single line and return a list of all matched groups"""
 
-    def __init__(self, reg, names, type=None, types=None, title="", multi=False, first_only=False):
-        self.reg = re.compile(reg)
+    def __init__(self, reg, names, converter=None, types=None, title="", multi=False, first_only=False):
+        super().__init__(reg)
         self.names = names
-        if type is None and types is None:
+        if converter is None and types is None:
             self.types = [str] * len(names)
         elif types is not None:
             self.types = types
-        elif type is not None:
-            self.types = [type] * len(names)
+        elif converter is not None:
+            self.types = [converter] * len(names)
         self.title = title
         self.multi = multi
         self.first_only = first_only
 
         if self.multi and self.title == "":
-            raise Exception("SimpleLineParser in multi mode requires title")
+            raise ValueError("SimpleLineParser in multi mode requires title")
 
     def process(self, m, out):
         data = {n: self.types[i](m.group(i + 1)) for i, n in enumerate(self.names)}
