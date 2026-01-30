@@ -74,15 +74,9 @@ class TestHNAC:
         """Test gradient values - should be all zeros for this case"""
         gradient = parsed['egrad']['gradient'][0]
         # From lines 1579-1581: all zeros
-        expected_dx = [0.0, 0.0]
-        expected_dy = [0.0, 0.0]
-        expected_dz = [0.0, 0.0]
-        assert np.allclose(gradient['d_dx'], expected_dx), \
-            f"Expected d_dx={expected_dx}, got {gradient['d_dx']}"
-        assert np.allclose(gradient['d_dy'], expected_dy), \
-            f"Expected d_dy={expected_dy}, got {gradient['d_dy']}"
-        assert np.allclose(gradient['d_dz'], expected_dz), \
-            f"Expected d_dz={expected_dz}, got {gradient['d_dz']}"
+        expected = [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]]
+        assert np.allclose(gradient['d/dR'], expected), \
+            f"Expected d/dR={expected}, got {gradient['d/dR']}"
 
     def test_coupling_parsed(self, parsed):
         """Test that NAC coupling section is parsed"""
@@ -178,9 +172,8 @@ class TestHHeS2S:
         # dE/dx  0.0000000D+00  0.0000000D+00
         # dE/dy  0.0000000D+00  0.0000000D+00
         # dE/dz  0.7039368D-01 -0.7039368D-01
-        assert np.allclose(gradient['d_dx'], [0.0, 0.0])
-        assert np.allclose(gradient['d_dy'], [0.0, 0.0])
-        assert np.allclose(gradient['d_dz'], [0.07039368, -0.07039368])
+        expected = [[0.0, 0.0], [0.0, 0.0], [0.07039368, -0.07039368]]
+        assert np.allclose(gradient['d/dR'], expected)
 
     def test_coupling_parsed(self, parsed):
         """Test that NAC coupling sections are parsed"""

@@ -126,6 +126,16 @@ class CoordParser(ParseSection):
                 vars_type=fortran_float) for coord in "xyz"
         ]
 
+    def clean(self, liter, out):
+        atom_list = [atom.rstrip() for atom in out["atom_list"]]
+        out["atom_list"] = atom_list
+
+        # not always sure the d_dx, d_dy, d_dz exist, but if they do, combine them
+        components = [ x for x in [ "dE_dx", "dE_dy", "dE_dz", "d_dx", "d_dy", "d_dz"] if x in out ]
+        out["d/dR"] = [list(out[component]) for component in components]
+        for component in components:
+            del out[component]
+
 
 class NACParser(CoordParser):
     """
@@ -137,19 +147,11 @@ class NACParser(CoordParser):
 
     def __init__(self):
         # Header may or may not have (state/method) at end
-        head = r"cartesian\s+nonadiabatic\s+coupling\s+matrix\s+elements(?:\s+\((\d+)/(\w+)\))?"
+        head = r"\s+cartesian\s+nonadiabatic\s+coupling\s+matrix\s+elements(?:\s+\((\d+)/(\w+)\))?"
         tail = r"maximum component of gradient"
         super().__init__(head, tail)
         self.parsers.insert(
             0, SimpleLineParser(self.coupled_states_reg, ["bra_state", "ket_state"], types=[int, int]))
-
-    def clean(self, liter, out):
-        atom_list = [atom.rstrip() for atom in out["atom_list"]]
-        out["atom_list"] = atom_list
-        out["d/dR"] = [list(out[component]) for component in ["d_dx", "d_dy", "d_dz"]]
-        del out["d_dx"]
-        del out["d_dy"]
-        del out["d_dz"]
 
 
 # Constants for the two gradient types
@@ -167,7 +169,3 @@ class GradientDataParser(CoordParser):
         # "maximum component of gradient" (when no NAC), or start of NAC section
         tail = r"(?:resulting FORCE|maximum component of gradient|cartesian\s+nonadiabatic)"
         super().__init__(head, tail)
-
-    def clean(self, liter, out):
-        atom_list = [atom.rstrip() for atom in out["atom_list"]]
-        out["atom_list"] = atom_list
