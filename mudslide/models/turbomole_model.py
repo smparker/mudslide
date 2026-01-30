@@ -388,7 +388,7 @@ class TMModel(ElectronicModel_):
         energy = data_dict[self.turbomole_modules["gs_energy"]]["energy"]
         self.energies[:] = 0.0
         self.energies[0] = energy
-        dE0 = np.array(data_dict[self.turbomole_modules["gs_grads"]]["gradient"][0]["gradients"])
+        dE0 = np.array(data_dict[self.turbomole_modules["gs_grads"]]["gradient"][0]["d/dR"])
         self._force[0,:] = -dE0.flatten()
         self._forces_available[0] = True
 
@@ -423,7 +423,7 @@ class TMModel(ElectronicModel_):
 
             # egrad updates to gradients
             for i in range(len(data_dict["egrad"]["gradient"])):
-                dE = np.array(data_dict["egrad"]["gradient"][i]["gradients"])
+                dE = np.array(data_dict["egrad"]["gradient"][i]["d/dR"])
                 self._force[i+1,:] = -dE.flatten()
                 self._forces_available[i+1] = True
 
