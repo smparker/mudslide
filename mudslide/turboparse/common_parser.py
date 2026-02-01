@@ -131,8 +131,9 @@ class CoordParser(ParseSection):
         out["atom_list"] = atom_list
 
         # not always sure the d_dx, d_dy, d_dz exist, but if they do, combine them
+        # into (natoms, 3) array with xyz contiguous per atom
         components = [ x for x in [ "dE_dx", "dE_dy", "dE_dz", "d_dx", "d_dy", "d_dz"] if x in out ]
-        out["d/dR"] = [list(out[component]) for component in components]
+        out["d/dR"] = [list(vals) for vals in zip(*[out[c] for c in components])]
         for component in components:
             del out[component]
 

@@ -74,7 +74,7 @@ class TestHNAC:
         """Test gradient values - should be all zeros for this case"""
         gradient = parsed['egrad']['gradient'][0]
         # From lines 1579-1581: all zeros
-        expected = [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]]
+        expected = [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
         assert np.allclose(gradient['d/dR'], expected), \
             f"Expected d/dR={expected}, got {gradient['d/dR']}"
 
@@ -92,9 +92,8 @@ class TestHNAC:
         # dE/dy  0.2216329D+00  0.0000000D+00
         # dE/dz -0.1151528D+00  0.0000000D+00
         expected_nac = [
-            [-0.1251235, 0.0],
-            [0.2216329, 0.0],
-            [-0.1151528, 0.0]
+            [-0.1251235, 0.2216329, -0.1151528],
+            [0.0, 0.0, 0.0]
         ]
         assert 'd/dR' in coupling
         assert np.allclose(coupling['d/dR'], expected_nac)
@@ -172,7 +171,7 @@ class TestHHeS2S:
         # dE/dx  0.0000000D+00  0.0000000D+00
         # dE/dy  0.0000000D+00  0.0000000D+00
         # dE/dz  0.7039368D-01 -0.7039368D-01
-        expected = [[0.0, 0.0], [0.0, 0.0], [0.07039368, -0.07039368]]
+        expected = [[0.0, 0.0, 0.07039368], [0.0, 0.0, -0.07039368]]
         assert np.allclose(gradient['d/dR'], expected)
 
     def test_coupling_parsed(self, parsed):
@@ -192,9 +191,8 @@ class TestHHeS2S:
         assert coupling['bra_state'] == 1
         assert coupling['ket_state'] == 2
         expected_nac = [
-            [0.0, 0.0],  # dx
-            [0.0, 0.0],  # dy
-            [-0.06646843, 0.05750408]  # dz
+            [0.0, 0.0, -0.06646843],  # atom 1
+            [0.0, 0.0, 0.05750408]  # atom 2
         ]
         assert np.allclose(coupling['d/dR'], expected_nac)
 
@@ -208,9 +206,8 @@ class TestHHeS2S:
         assert coupling['bra_state'] == 0
         assert coupling['ket_state'] == 1
         expected_nac = [
-            [0.0, 0.0],  # dx
-            [0.0, 0.0],  # dy
-            [0.07739182, -0.2188796]  # dz
+            [0.0, 0.0, 0.07739182],  # atom 1
+            [0.0, 0.0, -0.2188796]  # atom 2
         ]
         assert np.allclose(coupling['d/dR'], expected_nac)
 
@@ -224,9 +221,8 @@ class TestHHeS2S:
         assert coupling['bra_state'] == 0
         assert coupling['ket_state'] == 2
         expected_nac = [
-            [0.0, 0.0],  # dx
-            [0.0, 0.0],  # dy
-            [0.009668936, 0.1534590]  # dz
+            [0.0, 0.0, 0.009668936],  # atom 1
+            [0.0, 0.0, 0.1534590]  # atom 2
         ]
         assert np.allclose(coupling['d/dR'], expected_nac)
 

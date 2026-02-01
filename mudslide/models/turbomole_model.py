@@ -173,7 +173,7 @@ class TurboControl:
 
     def get_masses(self, symbols):
         """Get the masses of the atoms in the system"""
-        atomic_masses = np.array([masses[s] for s in symbols for i in range(3)], dtype=np.float64)
+        atomic_masses = np.array([masses[s] for s in symbols for _ in range(3)], dtype=np.float64)
         atomic_masses *= amu_to_au
         return atomic_masses
 
@@ -415,7 +415,7 @@ class TMModel(ElectronicModel_):
                 i = dct["bra_state"]
                 j = dct["ket_state"]
 
-                ddr = np.array(dct["d/dR"]).reshape(self.ndof, order="F")
+                ddr = np.array(dct["d/dR"]).flatten()
                 self._derivative_coupling[i, j, :] = ddr
                 self._derivative_coupling[j, i, :] = -(self._derivative_coupling[i, j, :])
                 self._derivative_couplings_available[i, j] = True
