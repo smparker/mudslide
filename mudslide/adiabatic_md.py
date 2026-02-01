@@ -118,7 +118,7 @@ class AdiabaticMD:
         self.remove_angular_momentum_every = int(options.get("remove_angular_momentum_every", 0))
 
         # read out of options
-        self.dt = np.longdouble(options["dt"])
+        self.dt = float(options["dt"])
         self.outcome_type = options.get("outcome_type", "state")
 
         ss = options.get("seed_sequence", None)
