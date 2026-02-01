@@ -13,6 +13,8 @@ import openmm
 import openmm.app
 
 if __name__ == "__main__":
+    mudslide.print_header()
+
     pdb = openmm.app.PDBFile("ala3.pdb")
     ff = openmm.app.ForceField('amber14-all.xml')
     system = ff.createSystem(pdb.topology,

@@ -6,6 +6,7 @@ nonadiabatic molecular dynamics.
 """
 
 from .version import __version__
+from .header import print_header
 
 from . import models
 from . import math

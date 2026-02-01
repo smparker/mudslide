@@ -4,6 +4,8 @@ import numpy as np
 
 import mudslide
 
+mudslide.print_header()
+
 simple_model = mudslide.models.TullySimpleAvoidedCrossing()
 
 # Generates trajectories always with starting position -5, starting momentum 10.0, on ground state

@@ -2,6 +2,8 @@ import json
 import mudslide
 import numpy as np
 
+mudslide.print_header()
+
 water_model = json.load(open('harmonic_water.json'))
 
 model = mudslide.models.HarmonicModel.from_dict(water_model)
