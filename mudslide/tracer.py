@@ -18,6 +18,21 @@ from .math import RollingAverage
 from .version import __version__
 
 
+def _sanitize_for_yaml(data: Any) -> Any:
+    """Recursively convert numpy types to native Python types for YAML serialization."""
+    if isinstance(data, dict):
+        return {k: _sanitize_for_yaml(v) for k, v in data.items()}
+    if isinstance(data, list):
+        return [_sanitize_for_yaml(v) for v in data]
+    if isinstance(data, np.integer):
+        return int(data)
+    if isinstance(data, np.floating):
+        return float(data)
+    if isinstance(data, np.ndarray):
+        return data.tolist()
+    return data
+
+
 class Trace_(ABC):
     """Base class for collecting and storing trajectory data.
 
@@ -137,12 +152,12 @@ class Trace_(ABC):
         """
         has_electronic_wfn = "density_matrix" in self[0]
         nst = len(self[0]["density_matrix"]) if has_electronic_wfn else 1
-        headerlist = [f"{x:12s}" for x in ["time", "x", "p", "V", "KE", "E"]]
+        headerlist = [f"{x:>12s}" for x in ["time", "x", "p", "V", "KE", "E"]]
         if has_electronic_wfn:
-            headerlist += [f"{f'rho_{i},{i}':12s}" for i in range(nst)]
-            headerlist += [f"{f'H_{i},{i}':12s}" for i in range(nst)]
-            headerlist += [f"{'active':12s}"]
-            headerlist += [f"{'hopping':12s}"]
+            headerlist += [f"{f'rho_{i},{i}':>12s}" for i in range(nst)]
+            headerlist += [f"{f'H_{i},{i}':>12s}" for i in range(nst)]
+            headerlist += [f"{'active':>12s}"]
+            headerlist += [f"{'hopping':>12s}"]
         print("#" + " ".join(headerlist), file=file)
         for i in self:
             line = (f" {i['time']:12.6f} {i['position'][0]:12.6f} {i['velocity'][0]:12.6f}"
@@ -159,7 +174,7 @@ class Trace_(ABC):
         has_electronic_wfn = "density_matrix" in self[0]
         temperature_avg = RollingAverage(T_window)
         nst = len(self[0]["density_matrix"]) if has_electronic_wfn else 1
-        headerlist = [f"{x:12s}" for x in [
+        headerlist = [f"{x:>12s}" for x in [
             "time (fs)", "V (H)", "KE (H)", "T (K)", "<T> (K)", "E (H)"
         ]]
         if has_electronic_wfn:
@@ -176,7 +191,7 @@ class Trace_(ABC):
             i["avg_temperature"] = avg_T
 
             line = (f" {i['time']:12.3f} {i['potential']:12.6f} {i['kinetic']:12.6f}"
-                   f" {i['temperature']:8.2f} {i['avg_temperature']:8.2f} {i['energy']:12.6f} ")
+                   f" {i['temperature']:12.2f} {i['avg_temperature']:12.2f} {i['energy']:12.6f} ")
 
             if has_electronic_wfn:
                 line += " ".join([f"{x:12.6f}" for x in np.real(np.diag(i["density_matrix"]))])
@@ -399,7 +414,7 @@ class YAMLTrace(Trace_):
             self.write_main_log()
 
         with open(os.path.join(self.location, self.active_logfile), "a", encoding='utf-8') as f:
-            yaml.safe_dump([snapshot], f, explicit_start=False)
+            yaml.safe_dump([_sanitize_for_yaml(snapshot)], f, explicit_start=False)
 
         self.logsize += 1
 
@@ -416,7 +431,7 @@ class YAMLTrace(Trace_):
                 self.write_main_log()  # Update main log with new event log
             log = self.event_logs[event_type]
         with open(os.path.join(self.location, log), "a", encoding='utf-8') as f:
-            yaml.safe_dump([event_dict], f, explicit_start=False)
+            yaml.safe_dump([_sanitize_for_yaml(event_dict)], f, explicit_start=False)
 
     def clone(self):
         """Create a deep copy of the trace.
