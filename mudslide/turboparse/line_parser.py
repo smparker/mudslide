@@ -58,3 +58,37 @@ class SimpleLineParser(LineParser):
             if self.title not in out:
                 out[self.title] = []
             out[self.title].append(data)
+
+
+class BooleanLineParser(LineParser):
+    """Parse a line and store a boolean based on success/failure regex matches."""
+
+    def __init__(self, success_reg, failure_reg, key, first_only=False):
+        self.success_reg = re.compile(success_reg)
+        self.failure_reg = re.compile(failure_reg)
+        self.key = key
+        self.first_only = first_only
+
+    def parse(self, liter, out):
+        """
+        Parse line found at liter.top()
+
+        return: result, advanced
+        """
+        line = liter.top()
+        success = self.success_reg.search(line)
+        if success:
+            self.process(True, out)
+            return True, False
+
+        failure = self.failure_reg.search(line)
+        if failure:
+            self.process(False, out)
+            return True, False
+
+        return False, False
+
+    def process(self, value, out):
+        if not (self.first_only and self.key in out):
+            out[self.key] = value
+

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from .section_parser import ParseSection
-from .line_parser import SimpleLineParser
+from .line_parser import BooleanLineParser, SimpleLineParser
 from .common_parser import BasisParser, DFTParser, GradientDataParser, GROUND_STATE_GRADIENT_HEAD
 
 
@@ -10,8 +10,17 @@ class SCFParser(ParseSection):
     def __init__(self, head, tail):
         super().__init__(head, tail)
         self.parsers = [
-            SimpleLineParser(r"\|\s*total energy\s*=\s*(\S+)\s*\|", names=['energy'], types=[float]),
-            SimpleLineParser(r"Total energy \+ OC corr\. =\s*(\S+)", names=['energy+OC'], types=[float]),
+            SimpleLineParser(r"\|\s*total energy\s*=\s*(\S+)\s*\|",
+                             names=['energy'],
+                             types=[float]),
+            SimpleLineParser(r"Total energy \+ OC corr\. =\s*(\S+)",
+                             names=['energy+OC'],
+                             types=[float]),
+            BooleanLineParser(
+                r"convergence criteria satisfied after\s+\d+\s+iterations",
+                r"convergence criteria cannot be satisfied within\s+\d+\s+iterations\s*!",
+                "converged",
+            ),
             BasisParser(),
             DFTParser(),
         ]
