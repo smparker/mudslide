@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Implementations of the interface between turbomole and mudslide."""
 
+import glob
 import os
 import sys
 import shlex
@@ -10,7 +11,7 @@ import copy as cp
 import subprocess
 
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -302,9 +303,11 @@ class TMModel(ElectronicModel_):
         reference: Any = None,
         expert: bool=False,  # when False, update turbomole parameters for NAMD
         turbomole_modules: Dict=None,
-        command_prefix: Optional[str] = None
+        command_prefix: Optional[str] = None,
+        keep_output: int = 0
     ):
         self.command_prefix = _resolve_command_prefix(command_prefix)
+        self.keep_output = keep_output
         self.workdir_stem = workdir_stem
         self.run_turbomole_dir = run_turbomole_dir
         unique_workdir = find_unique_name(self.workdir_stem, self.run_turbomole_dir,
@@ -417,7 +420,7 @@ class TMModel(ElectronicModel_):
 
         # Now add results to model
 
-    def call_turbomole(self, outname="turbo.out") -> None:
+    def call_turbomole(self, outname: Union[str, Path] = "tm.current") -> None:
         """Call Turbomole to run the calculation"""
         # which forces are actually found?
         self._force = np.zeros((self.nstates, self.ndof))
@@ -474,6 +477,37 @@ class TMModel(ElectronicModel_):
                 self._force[i+1,:] = -dE.flatten()
                 self._forces_available[i+1] = True
 
+        self._manage_output(Path(outname))
+
+    def _manage_output(self, outpath: Path) -> None:
+        """Rename the output file according to the keep_output policy.
+
+        keep_output == 0:  rename to tm.last (overwriting previous)
+        keep_output < 0:   rename to tm.{N} keeping all
+        keep_output > 0:   rename to tm.{N} keeping only the last N
+        """
+        parent = outpath.parent
+
+        # find existing numbered tm.N files
+        existing = glob.glob(str(parent / "tm.[0-9]*"))
+        numbers = []
+        for f in existing:
+            base = os.path.basename(f)
+            parts = base.split(".", 1)
+            if len(parts) == 2 and parts[1].isdigit():
+                numbers.append(int(parts[1]))
+
+        next_number = max(numbers) + 1 if numbers else 1
+
+        if self.keep_output == 0:
+            outpath.rename(parent / "tm.last")
+        else:
+            outpath.rename(parent / f"tm.{next_number}")
+
+            if self.keep_output > 0:
+                numbers.append(next_number)
+                for n in sorted(numbers)[:-self.keep_output]:
+                    (parent / f"tm.{n}").unlink(missing_ok=True)
 
     def compute(self, X, couplings: Any=None, gradients: Any=None, reference: Any=None) -> None:
         """
@@ -485,7 +519,7 @@ class TMModel(ElectronicModel_):
         """
         self._position = X
         self.update_coords(X)
-        self.call_turbomole(outname = Path(self.control.workdir)/"turbo.out")
+        self.call_turbomole(outname = Path(self.control.workdir)/"tm.current")
 
         self._hamiltonian = np.zeros([self.nstates, self.nstates])
         self._hamiltonian = np.diag(self.energies)
