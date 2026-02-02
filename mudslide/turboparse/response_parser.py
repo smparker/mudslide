@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-from .line_parser import LineParser, SimpleLineParser
+from .line_parser import LineParser, SimpleLineParser, BooleanLineParser
 from .section_parser import ParseSection
-from .common_parser import GroundParser, NACParser, GradientDataParser, EXCITED_STATE_GRADIENT_HEAD
+from .common_parser import GroundParser, NACParser, GradientDataParser, EXCITED_STATE_GRADIENT_HEAD, fortran_float
 
 
 class ExcitedDipoleParser(ParseSection):
@@ -157,11 +157,45 @@ class HyperParser(ParseSection):
         ]
 
 
+class _DavidsonIterationParsers:
+    """Common parsers for Block Davidson iteration sections"""
+
+    @staticmethod
+    def make_parsers():
+        return [
+            SimpleLineParser(r"^\s*(\d+)\s+\S+\s+\d+\s+(\S+)\s*$", ["step", "max_residual_norm"],
+                             types=[int, fortran_float],
+                             title="iterations",
+                             multi=True),
+            BooleanLineParser(r"^\s*converged!", r"not converged!", "converged"),
+        ]
+
+
+class CPKSParser(ParseSection):
+    """Parser for CPKS iterations"""
+    name = "cpks"
+
+    def __init__(self):
+        super().__init__(r"CPKS right-hand side", r"(not )?converged!")
+        self.parsers = _DavidsonIterationParsers.make_parsers()
+
+
+class DavidsonParser(ParseSection):
+    """Parser for excitation vector Davidson iterations"""
+    name = "davidson"
+
+    def __init__(self):
+        super().__init__(r"excitation vector", r"(not )?converged!")
+        self.parsers = _DavidsonIterationParsers.make_parsers()
+
+
 class EgradEscfParser(ParseSection):
 
     def __init__(self, head, tail):
         super().__init__(head, tail)
         self.parsers = [
+            DavidsonParser(),
+            CPKSParser(),
             GroundParser(),
             ExcitedParser(),
             ExcitedMoments("relaxed moments", r"Fully relaxed moments of the excited states"),

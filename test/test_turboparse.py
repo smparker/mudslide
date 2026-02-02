@@ -98,6 +98,38 @@ class TestHNAC:
         assert 'd/dR' in coupling
         assert np.allclose(coupling['d/dR'], expected_nac)
 
+    def test_cpks_parsed(self, parsed):
+        """Test that CPKS section is parsed"""
+        assert 'cpks' in parsed['egrad']
+
+    def test_cpks_converged(self, parsed):
+        """Test CPKS convergence flag"""
+        assert parsed['egrad']['cpks']['converged'] is True
+
+    def test_cpks_single_iteration(self, parsed):
+        """Test CPKS with single iteration"""
+        iterations = parsed['egrad']['cpks']['iterations']
+        assert len(iterations) == 1
+        assert iterations[0]['step'] == 1
+        assert np.isclose(iterations[0]['max_residual_norm'], 5.047087406128772e-15)
+
+    def test_davidson_parsed(self, parsed):
+        """Test that Davidson section is parsed"""
+        assert 'davidson' in parsed['egrad']
+
+    def test_davidson_converged(self, parsed):
+        """Test Davidson convergence flag"""
+        assert parsed['egrad']['davidson']['converged'] is True
+
+    def test_davidson_iterations(self, parsed):
+        """Test Davidson iterations (3 iterations for 15 roots)"""
+        iterations = parsed['egrad']['davidson']['iterations']
+        assert len(iterations) == 3
+        assert iterations[0]['step'] == 1
+        assert np.isclose(iterations[0]['max_residual_norm'], 1.534162418811829e-02)
+        assert iterations[2]['step'] == 3
+        assert np.isclose(iterations[2]['max_residual_norm'], 2.513145479422938e-10)
+
 
 class TestHHeS2S:
     """Test parsing of HHe_S2S.txt egrad output (H-He system with state-to-state couplings)"""
@@ -250,3 +282,43 @@ class TestHHeS2S:
         # Relaxed electric transition dipole moment (length rep.) from line 608
         # z = 0.546674
         assert np.isclose(s2s['diplen']['z'], 0.546674)
+
+    def test_cpks_parsed(self, parsed):
+        """Test that CPKS section is parsed"""
+        assert 'cpks' in parsed['egrad']
+
+    def test_cpks_converged(self, parsed):
+        """Test CPKS convergence flag"""
+        assert parsed['egrad']['cpks']['converged'] is True
+
+    def test_cpks_iterations_count(self, parsed):
+        """Test number of CPKS iterations"""
+        iterations = parsed['egrad']['cpks']['iterations']
+        assert len(iterations) == 3
+
+    def test_cpks_iterations_values(self, parsed):
+        """Test CPKS iteration step numbers and residual norms"""
+        iterations = parsed['egrad']['cpks']['iterations']
+        assert iterations[0]['step'] == 1
+        assert np.isclose(iterations[0]['max_residual_norm'], 2.131934773503221e-02)
+        assert iterations[1]['step'] == 2
+        assert np.isclose(iterations[1]['max_residual_norm'], 8.626720870149588e-04)
+        assert iterations[2]['step'] == 3
+        assert np.isclose(iterations[2]['max_residual_norm'], 9.799962299242865e-14)
+
+    def test_davidson_parsed(self, parsed):
+        """Test that Davidson section is parsed"""
+        assert 'davidson' in parsed['egrad']
+
+    def test_davidson_converged(self, parsed):
+        """Test Davidson convergence flag"""
+        assert parsed['egrad']['davidson']['converged'] is True
+
+    def test_davidson_iterations(self, parsed):
+        """Test Davidson iterations (2 iterations for 2 roots)"""
+        iterations = parsed['egrad']['davidson']['iterations']
+        assert len(iterations) == 2
+        assert iterations[0]['step'] == 1
+        assert np.isclose(iterations[0]['max_residual_norm'], 7.045689164616345e-02)
+        assert iterations[1]['step'] == 2
+        assert np.isclose(iterations[1]['max_residual_norm'], 3.274080506635812e-14)
