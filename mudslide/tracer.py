@@ -186,10 +186,10 @@ class Trace_(ABC):
             ["time (fs)", "V (H)", "KE (H)", "T (K)", "<T> (K)", "E (H)"]
         ]
         if has_electronic_wfn:
-            headerlist += [f"{f'rho_{i},{i}':12s}" for i in range(nst)]
-            headerlist += [f"{f'H_{i},{i}':12s}" for i in range(nst)]
-            headerlist += [f"{'active':12s}"]
-            headerlist += [f"{'hopping':12s}"]
+            headerlist += [f"{f'rho_{i},{i}':>12s}" for i in range(nst)]
+            headerlist += [f"{f'H_{i},{i}':>12s}" for i in range(nst)]
+            headerlist += [f"{'active':>12s}"]
+            headerlist += [f"{'hopping':>12s}"]
         print("#" + " ".join(headerlist), file=file)
         for i in self:
             i["time"] /= fs_to_au
