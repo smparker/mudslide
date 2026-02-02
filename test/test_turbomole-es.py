@@ -124,6 +124,16 @@ class TestTMModel(unittest.TestCase):
                                                    results[1][t]["electronics"]["derivative_coupling"][s1][s2],
                                                    decimal=6)
 
+    def test_ridft_convergence_failure(self):
+        """Test that non-convergence of ridft raises RuntimeError"""
+        tm_model = TMModel(states=[0, 1, 2, 3], expert=True)
+        tm_model.control.adg("scfiterlimit", 2)
+        # perturb geometry so the converged MOs are no longer a good guess
+        positions = tm_model._position.copy()
+        positions += 0.5 * np.random.default_rng(42).standard_normal(positions.shape)
+        with self.assertRaises(RuntimeError):
+            tm_model.compute(positions)
+
     def tearDown(self):
         os.chdir(self.origin)
 
