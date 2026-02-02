@@ -16,6 +16,7 @@ from mudslide.tracer import TraceManager
 from mudslide.batch import TrajGenConst, TrajGenNormal, BatchedTraj
 
 from mudslide.models import TMModel, turbomole_is_installed
+from mudslide.config import get_config
 
 testdir = os.path.dirname(__file__)
 _refdir = os.path.join(testdir, "ref")
@@ -26,15 +27,15 @@ def clean_directory(dirname):
         shutil.rmtree(dirname)
 
 def _turbomole_available():
-    return turbomole_is_installed() or "MUDSLIDE_TURBOMOLE_PREFIX" in os.environ
+    return (turbomole_is_installed()
+            or "MUDSLIDE_TURBOMOLE_PREFIX" in os.environ
+            or get_config("turbomole.command_prefix") is not None)
 
 @unittest.skipUnless(_turbomole_available(), "Turbomole must be installed")
 class TestTMModel(unittest.TestCase):
     """Test Suite for TMModel class"""
 
     def setUp(self):
-        self.command_prefix = os.environ.get("MUDSLIDE_TURBOMOLE_PREFIX")
-
         self.refdir = os.path.join(_refdir, "tm-es-c2h4")
 
         self.rundir = os.path.join(_checkdir, "tm-es-c2h4")
@@ -53,8 +54,7 @@ class TestTMModel(unittest.TestCase):
 
     def test_get_gs_ex_properties(self):
         """test for gs_ex_properties function"""
-        tm_model = TMModel(states=[0, 1, 2, 3], expert=True,
-                           command_prefix=self.command_prefix)
+        tm_model = TMModel(states=[0, 1, 2, 3], expert=True)
 
         # yapf: disable
         mom = [ 5.583286976987380000, -2.713959745507320000,  0.392059702162967000,

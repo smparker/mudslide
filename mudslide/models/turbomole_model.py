@@ -20,7 +20,18 @@ from .. import turboparse
 from ..util import find_unique_name
 from ..constants import amu_to_au
 from ..periodic_table import masses
+from ..config import get_config
 from .electronics import ElectronicModel_
+
+
+def _resolve_command_prefix(explicit: Optional[str]) -> Optional[str]:
+    """Resolve command_prefix: explicit arg > env var > config file."""
+    if explicit is not None:
+        return explicit
+    env = os.environ.get("MUDSLIDE_TURBOMOLE_PREFIX")
+    if env:
+        return env
+    return get_config("turbomole.command_prefix")
 
 
 def turbomole_is_installed():
@@ -293,7 +304,7 @@ class TMModel(ElectronicModel_):
         turbomole_modules: Dict=None,
         command_prefix: Optional[str] = None
     ):
-        self.command_prefix = command_prefix
+        self.command_prefix = _resolve_command_prefix(command_prefix)
         self.workdir_stem = workdir_stem
         self.run_turbomole_dir = run_turbomole_dir
         unique_workdir = find_unique_name(self.workdir_stem, self.run_turbomole_dir,

@@ -12,6 +12,7 @@ import mudslide
 import yaml
 
 from mudslide.models import TMModel, turbomole_is_installed
+from mudslide.config import get_config
 from mudslide.tracer import YAMLTrace
 
 testdir = os.path.dirname(__file__)
@@ -19,7 +20,9 @@ _refdir = os.path.join(testdir, "ref")
 _checkdir = os.path.join(testdir, "checks")
 
 def _turbomole_available():
-    return turbomole_is_installed() or "MUDSLIDE_TURBOMOLE_PREFIX" in os.environ
+    return (turbomole_is_installed()
+            or "MUDSLIDE_TURBOMOLE_PREFIX" in os.environ
+            or get_config("turbomole.command_prefix") is not None)
 
 pytestmark = pytest.mark.skipif(not _turbomole_available(),
                                      reason="Turbomole must be installed")
@@ -27,16 +30,13 @@ pytestmark = pytest.mark.skipif(not _turbomole_available(),
 def test_raise_on_missing_control():
     """Test if an exception is raised if no control file is found"""
     with pytest.raises(RuntimeError):
-        model = TMModel(states=[0],
-                        command_prefix=os.environ.get("MUDSLIDE_TURBOMOLE_PREFIX"))
+        model = TMModel(states=[0])
 
 class _TestTM(unittest.TestCase):
     """Base class for TMModel class"""
     testname = None
 
     def setUp(self):
-        self.command_prefix = os.environ.get("MUDSLIDE_TURBOMOLE_PREFIX")
-
         self.refdir = os.path.join(_refdir, self.testname)
         self.rundir = os.path.join(_checkdir, self.testname)
 
@@ -61,7 +61,7 @@ class TestTMGround(_TestTM):
     testname = "tm-c2h4-ground"
 
     def test_ridft_rdgrad(self):
-        model = TMModel(states=[0], command_prefix=self.command_prefix)
+        model = TMModel(states=[0])
         xyz = model._position
 
         model.compute(xyz)
@@ -77,7 +77,7 @@ class TestTMGroundPC(_TestTM):
     testname = "tm-c2h4-ground-pc"
 
     def test_ridft_rdgrad_w_pc(self):
-        model = TMModel(states=[0], command_prefix=self.command_prefix)
+        model = TMModel(states=[0])
         xyzpc = np.array([[3.0, 3.0, 3.0],[-3.0, -3.0, -3.0]])
         pcharges = np.array([2, -2])
         model.control.add_point_charges(xyzpc, pcharges)
@@ -105,8 +105,7 @@ class TestTMExDynamics(_TestTM):
 
     def test_get_gs_ex_properties(self):
         """test for gs_ex_properties function"""
-        model = TMModel(states=[0, 1, 2, 3], expert=True,
-                        command_prefix=self.command_prefix)
+        model = TMModel(states=[0, 1, 2, 3], expert=True)
         positions = model._position
 
         # yapf: disable
