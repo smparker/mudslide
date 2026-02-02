@@ -88,6 +88,29 @@ When more than one source is configured, the explicit ``command_prefix``
 argument wins over the environment variable, which wins over the config file.
 
 
+Managing Turbomole output files
+-------------------------------
+By default, ``TMModel`` writes Turbomole output to ``tm.current`` in the
+working directory and renames it to ``tm.last`` after each step (overwriting
+the previous ``tm.last``). The ``keep_output`` parameter controls how many
+output files are kept:
+
+* ``keep_output=0`` (default) — rename ``tm.current`` to ``tm.last`` after
+  each step. Only the most recent output is preserved.
+* ``keep_output=-1`` — keep all outputs. Each step produces a numbered file
+  (``tm.1``, ``tm.2``, ...).
+* ``keep_output=N`` (positive integer) — keep the last *N* outputs. Older
+  numbered files are deleted automatically.
+
+.. code-block:: python
+
+    # keep the last 5 output files
+    model = mudslide.models.TMModel(states=[0, 1], keep_output=5)
+
+    # keep every output file
+    model = mudslide.models.TMModel(states=[0, 1], keep_output=-1)
+
+
 Advice
 ------
 
