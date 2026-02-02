@@ -56,7 +56,7 @@ class TurboControl:
     pcgrad_file = "pcgrad"
     control_file = "control"
 
-    def __init__(self, control_file="control", workdir=None,
+    def __init__(self, control_file=None, workdir=None,
                  command_prefix: Optional[str] = None):
         self.command_prefix = command_prefix
         # workdir is directory of control file
@@ -66,7 +66,7 @@ class TurboControl:
             self.workdir = os.path.abspath(workdir)
         else:
             raise ValueError("Must provide either control_file or workdir")
-        self.control_file = control_file
+        self.control_file = control_file or "control"
 
         # make sure control file exists
         if not os.path.exists(os.path.join(self.workdir, self.control_file)):
