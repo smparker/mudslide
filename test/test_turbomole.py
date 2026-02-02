@@ -4,6 +4,7 @@
 
 import numpy as np
 import os
+import shlex
 import shutil
 import unittest
 import pytest
@@ -18,7 +19,10 @@ testdir = os.path.dirname(__file__)
 _refdir = os.path.join(testdir, "ref")
 _checkdir = os.path.join(testdir, "checks")
 
-pytestmark = pytest.mark.skipif(not turbomole_is_installed(),
+def _turbomole_available():
+    return turbomole_is_installed() or "MUDSLIDE_TURBOMOLE_PREFIX" in os.environ
+
+pytestmark = pytest.mark.skipif(not _turbomole_available(),
                                      reason="Turbomole must be installed")
 
 def test_raise_on_missing_control():
@@ -31,6 +35,9 @@ class _TestTM(unittest.TestCase):
     testname = None
 
     def setUp(self):
+        env = os.environ.get("MUDSLIDE_TURBOMOLE_PREFIX")
+        self.command_prefix = shlex.split(env) if env else None
+
         self.refdir = os.path.join(_refdir, self.testname)
         self.rundir = os.path.join(_checkdir, self.testname)
 
@@ -55,7 +62,7 @@ class TestTMGround(_TestTM):
     testname = "tm-c2h4-ground"
 
     def test_ridft_rdgrad(self):
-        model = TMModel(states=[0])
+        model = TMModel(states=[0], command_prefix=self.command_prefix)
         xyz = model._position
 
         model.compute(xyz)
@@ -71,7 +78,7 @@ class TestTMGroundPC(_TestTM):
     testname = "tm-c2h4-ground-pc"
 
     def test_ridft_rdgrad_w_pc(self):
-        model = TMModel(states=[0])
+        model = TMModel(states=[0], command_prefix=self.command_prefix)
         xyzpc = np.array([[3.0, 3.0, 3.0],[-3.0, -3.0, -3.0]])
         pcharges = np.array([2, -2])
         model.control.add_point_charges(xyzpc, pcharges)
@@ -99,7 +106,8 @@ class TestTMExDynamics(_TestTM):
 
     def test_get_gs_ex_properties(self):
         """test for gs_ex_properties function"""
-        model = TMModel(states=[0, 1, 2, 3],  expert=True)
+        model = TMModel(states=[0, 1, 2, 3], expert=True,
+                        command_prefix=self.command_prefix)
         positions = model._position
 
         # yapf: disable

@@ -9,7 +9,7 @@ import copy as cp
 import subprocess
 
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -44,7 +44,9 @@ class TurboControl:
     pcgrad_file = "pcgrad"
     control_file = "control"
 
-    def __init__(self, control_file="control", workdir=None):
+    def __init__(self, control_file="control", workdir=None,
+                 command_prefix: Optional[List[str]] = None):
+        self.command_prefix = command_prefix if command_prefix is not None else []
         # workdir is directory of control file
         if control_file is not None:
             self.workdir = os.path.abspath(os.path.dirname(control_file))
@@ -60,6 +62,10 @@ class TurboControl:
 
         # list of data groups and which file they are in, used to avoid rerunning sdg too much
         self.dg_in_file = {}
+
+    def _build_command(self, cmd: list) -> list:
+        """Prepend command_prefix to a command list"""
+        return self.command_prefix + cmd
 
     def check_turbomole_is_installed(self):
         """Check that turbomole is installed, raise exception if not"""
@@ -101,8 +107,8 @@ class TurboControl:
 
         sdg_command += f" {dg}"
 
-        result = subprocess.run(sdg_command.split(), capture_output=True, text=True,
-                                cwd=self.workdir, check=False)
+        result = subprocess.run(self._build_command(sdg_command.split()), capture_output=True,
+                                text=True, cwd=self.workdir, check=False)
         return result.stdout.rstrip()
 
     def adg(self, dg, data, newline=False):
@@ -113,15 +119,15 @@ class TurboControl:
         if newline:
             lines = "\\n" + lines
         adg_command = f"adg {dg} {lines}"
-        result = subprocess.run(adg_command.split(), capture_output=True, text=True, cwd=self.workdir,
-                           check=True)
+        result = subprocess.run(self._build_command(adg_command.split()), capture_output=True,
+                                text=True, cwd=self.workdir, check=True)
         # check that the command ran successfully
         if "abnormal" in result.stderr:
             raise RuntimeError(f"Call to adg ended abnormally: {result.stderr}")
 
     def cpc(self, dest):
         """Copy the control file and other files to a new directory"""
-        subprocess.run(["cpc", dest], cwd=self.workdir, check=False)
+        subprocess.run(self._build_command(["cpc", dest]), cwd=self.workdir, check=False)
         file_list = ['ciss_a','exspectrum', 'statistics', 'dipl_a',
                      'excitationlog.1', 'moments', 'vecsao', 'control',
                      'gradient', 'energy', 'moments' ]
@@ -146,8 +152,8 @@ class TurboControl:
 
     def run_single(self, module, stdout=sys.stdout):
         """Run a single turbomole module"""
-        output = subprocess.run(module, capture_output=True, text=True, cwd=self.workdir,
-                                check=False)
+        output = subprocess.run(self._build_command([module]), capture_output=True, text=True,
+                                cwd=self.workdir, check=False)
         print(output.stdout, file=stdout)
         if "abnormal" in output.stderr:
             raise RuntimeError(f"Call to {module} ended abnormally")
@@ -264,15 +270,18 @@ class TMModel(ElectronicModel_):
         representation: str = "adiabatic",
         reference: Any = None,
         expert: bool=False,  # when False, update turbomole parameters for NAMD
-        turbomole_modules: Dict=None
+        turbomole_modules: Dict=None,
+        command_prefix: Optional[List[str]] = None
     ):
+        self.command_prefix = command_prefix if command_prefix is not None else []
         self.workdir_stem = workdir_stem
         self.run_turbomole_dir = run_turbomole_dir
         unique_workdir = find_unique_name(self.workdir_stem, self.run_turbomole_dir,
                                           always_enumerate=True)
         work = os.path.join(os.path.abspath(self.run_turbomole_dir), unique_workdir)
-        subprocess.run(["cpc", work], cwd=self.run_turbomole_dir, check=False)
-        self.control = TurboControl(workdir=work)
+        subprocess.run(self.command_prefix + ["cpc", work], cwd=self.run_turbomole_dir,
+                       check=False)
+        self.control = TurboControl(workdir=work, command_prefix=self.command_prefix)
 
         # read coordinates and elements from the control file
         elements, X = self.control.read_coords()
@@ -288,8 +297,9 @@ class TMModel(ElectronicModel_):
 
         self.energies = np.zeros(self._nstates, dtype=np.float64)
 
-        if not turbomole_is_installed():
-            raise RuntimeError("Turbomole is not installed")
+        if not self.command_prefix:
+            if not turbomole_is_installed():
+                raise RuntimeError("Turbomole is not installed")
 
         if turbomole_modules is None:
             # always need energy and gradients
@@ -299,8 +309,9 @@ class TMModel(ElectronicModel_):
             self.turbomole_modules = mod
         else:
             self.turbomole_modules = turbomole_modules
-        if not all(shutil.which(x) is not None for x in self.turbomole_modules.values()):
-            raise RuntimeError("Turbomole modules not found")
+        if not self.command_prefix:
+            if not all(shutil.which(x) is not None for x in self.turbomole_modules.values()):
+                raise RuntimeError("Turbomole modules not found")
 
         # self.turbomole_init()
 

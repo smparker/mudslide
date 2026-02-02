@@ -4,6 +4,7 @@
 
 import numpy as np
 import os
+import shlex
 import shutil
 import unittest
 from pathlib import Path
@@ -25,11 +26,17 @@ def clean_directory(dirname):
     if os.path.isdir(dirname):
         shutil.rmtree(dirname)
 
-@unittest.skipUnless(turbomole_is_installed(), "Turbomole must be installed")
+def _turbomole_available():
+    return turbomole_is_installed() or "MUDSLIDE_TURBOMOLE_PREFIX" in os.environ
+
+@unittest.skipUnless(_turbomole_available(), "Turbomole must be installed")
 class TestTMModel(unittest.TestCase):
     """Test Suite for TMModel class"""
 
     def setUp(self):
+        env = os.environ.get("MUDSLIDE_TURBOMOLE_PREFIX")
+        self.command_prefix = shlex.split(env) if env else None
+
         self.refdir = os.path.join(_refdir, "tm-es-c2h4")
 
         self.rundir = os.path.join(_checkdir, "tm-es-c2h4")
@@ -48,7 +55,8 @@ class TestTMModel(unittest.TestCase):
 
     def test_get_gs_ex_properties(self):
         """test for gs_ex_properties function"""
-        tm_model = TMModel(states=[0, 1, 2, 3], expert=True)
+        tm_model = TMModel(states=[0, 1, 2, 3], expert=True,
+                           command_prefix=self.command_prefix)
 
         # yapf: disable
         mom = [ 5.583286976987380000, -2.713959745507320000,  0.392059702162967000,
