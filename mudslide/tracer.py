@@ -16,6 +16,7 @@ from .constants import fs_to_au
 from .util import find_unique_name, is_string
 from .math import RollingAverage
 from .version import __version__
+from .yaml_format import CompactSafeDumper
 
 
 def _sanitize_for_yaml(data: Any) -> Any:
@@ -160,23 +161,30 @@ class Trace_(ABC):
             headerlist += [f"{'hopping':>12s}"]
         print("#" + " ".join(headerlist), file=file)
         for i in self:
-            line = (f" {i['time']:12.6f} {i['position'][0]:12.6f} {i['velocity'][0]:12.6f}"
-                   f" {i['potential']:12.6f} {i['kinetic']:12.6f} {i['energy']:12.6f} ")
+            line = (
+                f" {i['time']:12.6f} {i['position'][0]:12.6f} {i['velocity'][0]:12.6f}"
+                f" {i['potential']:12.6f} {i['kinetic']:12.6f} {i['energy']:12.6f} "
+            )
             if has_electronic_wfn:
-                line += " ".join([f"{x:12.6f}" for x in np.real(np.diag(i["density_matrix"]))])
-                line += " " + " ".join([f"{x:12.6f}" for x in
-                                    np.real(np.diag(i["electronics"]["hamiltonian"]))])
+                line += " ".join([
+                    f"{x:12.6f}" for x in np.real(np.diag(i["density_matrix"]))
+                ])
+                line += " " + " ".join([
+                    f"{x:12.6f}"
+                    for x in np.real(np.diag(i["electronics"]["hamiltonian"]))
+                ])
                 line += f" {i['active']:12d} {i['hopping']:12e}"
             print(line, file=file)
 
-    def print_egylog(self, file: Any = sys.stdout, T_window: int=50) -> None:
+    def print_egylog(self, file: Any = sys.stdout, T_window: int = 50) -> None:
         """Prints the energy log of the trajectory"""
         has_electronic_wfn = "density_matrix" in self[0]
         temperature_avg = RollingAverage(T_window)
         nst = len(self[0]["density_matrix"]) if has_electronic_wfn else 1
-        headerlist = [f"{x:>12s}" for x in [
-            "time (fs)", "V (H)", "KE (H)", "T (K)", "<T> (K)", "E (H)"
-        ]]
+        headerlist = [
+            f"{x:>12s}" for x in
+            ["time (fs)", "V (H)", "KE (H)", "T (K)", "<T> (K)", "E (H)"]
+        ]
         if has_electronic_wfn:
             headerlist += [f"{f'rho_{i},{i}':12s}" for i in range(nst)]
             headerlist += [f"{f'H_{i},{i}':12s}" for i in range(nst)]
@@ -190,17 +198,22 @@ class Trace_(ABC):
             avg_T = temperature_avg.get_average()
             i["avg_temperature"] = avg_T
 
-            line = (f" {i['time']:12.3f} {i['potential']:12.6f} {i['kinetic']:12.6f}"
-                   f" {i['temperature']:12.2f} {i['avg_temperature']:12.2f} {i['energy']:12.6f} ")
+            line = (
+                f" {i['time']:12.3f} {i['potential']:12.6f} {i['kinetic']:12.6f}"
+                f" {i['temperature']:12.2f} {i['avg_temperature']:12.2f} {i['energy']:12.6f} "
+            )
 
             if has_electronic_wfn:
-                line += " ".join([f"{x:12.6f}" for x in np.real(np.diag(i["density_matrix"]))])
-                line += " " + " ".join([f"{x:12.6f}" for x in
-                                    np.real(np.diag(i["electronics"]["hamiltonian"]))])
+                line += " ".join([
+                    f"{x:12.6f}" for x in np.real(np.diag(i["density_matrix"]))
+                ])
+                line += " " + " ".join([
+                    f"{x:12.6f}"
+                    for x in np.real(np.diag(i["electronics"]["hamiltonian"]))
+                ])
                 line += f" {i['active']:12d} {i['hopping']:12e}"
 
             print(line, file=file)
-
 
     def outcome(self) -> ArrayLike:
         """Classifies end of simulation: 2*state + [0 for left, 1 for right]"""
@@ -225,16 +238,22 @@ class Trace_(ABC):
         """Writes trajectory to an xyz file"""
         ndof = self[-1]["position"].shape[0]
         natoms = ndof // 3
-        with open(filename, "w", encoding="utf-8") as f: # TODO fix for more general cases.
+        with open(filename, "w",
+                  encoding="utf-8") as f:  # TODO fix for more general cases.
             for i, snap in enumerate(self):
                 print(f"{natoms:d}", file=f)
-                print(f"energy: {snap['energy']:g}; time: {snap['time']:f}; step: {i:d}", file=f)
+                print(
+                    f"energy: {snap['energy']:g}; time: {snap['time']:f}; step: {i:d}",
+                    file=f)
                 coords = np.array(snap["position"]).reshape(natoms, 3)
                 el = "H"
                 for j in range(natoms):
-                    print(f"{el:3s} "
-                          f"{coords[j, 0]:22.16f} {coords[j, 1]:22.16f} {coords[j, 2]:22.16f}",
-                          file=f)
+                    print(
+                        f"{el:3s} "
+                        f"{coords[j, 0]:22.16f} {coords[j, 1]:22.16f} {coords[j, 2]:22.16f}",
+                        file=f)
+
+
 class InMemoryTrace(Trace_):
     """Collect results from a single trajectory"""
 
@@ -286,8 +305,12 @@ class InMemoryTrace(Trace_):
 class YAMLTrace(Trace_):
     """Collect results from a single trajectory and write to yaml files"""
 
-    def __init__(self, base_name: str = "traj", weight: float = 1.0, log_pitch=512,
-                 location="", load_main_log=None):
+    def __init__(self,
+                 base_name: str = "traj",
+                 weight: float = 1.0,
+                 log_pitch=512,
+                 location="",
+                 load_main_log=None):
         """Initialize a YAML trace object.
 
         Parameters
@@ -340,12 +363,17 @@ class YAMLTrace(Trace_):
 
             # create empty files
 
-            with open(os.path.join(self.location, self.main_log), "x", encoding='utf-8') as f:
-                pass
-            with open(os.path.join(self.location, self.active_logfile), "x",
+            with open(os.path.join(self.location, self.main_log),
+                      "x",
                       encoding='utf-8') as f:
                 pass
-            with open(os.path.join(self.location, self.hop_log), "x", encoding='utf-8') as f:
+            with open(os.path.join(self.location, self.active_logfile),
+                      "x",
+                      encoding='utf-8') as f:
+                pass
+            with open(os.path.join(self.location, self.hop_log),
+                      "x",
+                      encoding='utf-8') as f:
                 pass
 
             self.write_main_log()
@@ -369,11 +397,13 @@ class YAMLTrace(Trace_):
             self.weight = logdata["weight"]
 
             # sizes assume log_pitch never changes. is that safe?
-            with open(os.path.join(self.location, self.active_logfile), "r",
+            with open(os.path.join(self.location, self.active_logfile),
+                      "r",
                       encoding='utf-8') as f:
                 activelog = yaml.safe_load(f)
                 self.active_logsize = len(activelog)
-            self.logsize = self.log_pitch * (self.nlogs - 1) + self.active_logsize
+            self.logsize = self.log_pitch * (self.nlogs -
+                                             1) + self.active_logsize
 
     def files(self, absolute_path=True):
         """returns a list of all files associated with this trace
@@ -382,7 +412,8 @@ class YAMLTrace(Trace_):
             otherwise returns the relative path
         :return: list of files
         """
-        rel_files = self.logfiles + [self.main_log, self.hop_log] + list(self.event_logs.values())
+        rel_files = self.logfiles + [self.main_log, self.hop_log] + list(
+            self.event_logs.values())
         if absolute_path:
             return [os.path.join(self.location, x) for x in rel_files]
         return rel_files
@@ -399,8 +430,13 @@ class YAMLTrace(Trace_):
             "weight": self.weight
         }
 
-        with open(os.path.join(self.location, self.main_log), "w", encoding='utf-8') as f:
-            yaml.safe_dump(out, f)
+        with open(os.path.join(self.location, self.main_log),
+                  "w",
+                  encoding='utf-8') as f:
+            yaml.dump(out,
+                      f,
+                      Dumper=CompactSafeDumper,
+                      default_flow_style=False)
 
     def collect(self, snapshot: Any) -> None:
         """collect and optionally process data"""
@@ -413,8 +449,14 @@ class YAMLTrace(Trace_):
             self.nlogs += 1
             self.write_main_log()
 
-        with open(os.path.join(self.location, self.active_logfile), "a", encoding='utf-8') as f:
-            yaml.safe_dump([_sanitize_for_yaml(snapshot)], f, explicit_start=False)
+        with open(os.path.join(self.location, self.active_logfile),
+                  "a",
+                  encoding='utf-8') as f:
+            yaml.dump([_sanitize_for_yaml(snapshot)],
+                      f,
+                      Dumper=CompactSafeDumper,
+                      default_flow_style=False,
+                      explicit_start=False)
 
         self.logsize += 1
 
@@ -424,14 +466,21 @@ class YAMLTrace(Trace_):
         else:
             if event_type not in self.event_logs:
                 # Create new event log file if it doesn't exist
-                self.event_logs[event_type] = f"{self.unique_name}-{event_type}.yaml"
-                with open(os.path.join(self.location, self.event_logs[event_type]), "x",
+                self.event_logs[
+                    event_type] = f"{self.unique_name}-{event_type}.yaml"
+                with open(os.path.join(self.location,
+                                       self.event_logs[event_type]),
+                          "x",
                           encoding='utf-8') as f:
                     pass
                 self.write_main_log()  # Update main log with new event log
             log = self.event_logs[event_type]
         with open(os.path.join(self.location, log), "a", encoding='utf-8') as f:
-            yaml.safe_dump([_sanitize_for_yaml(event_dict)], f, explicit_start=False)
+            yaml.dump([_sanitize_for_yaml(event_dict)],
+                      f,
+                      Dumper=CompactSafeDumper,
+                      default_flow_style=False,
+                      explicit_start=False)
 
     def clone(self):
         """Create a deep copy of the trace.
@@ -450,9 +499,12 @@ class YAMLTrace(Trace_):
         out.nlogs = self.nlogs
         out.active_logsize = self.active_logsize
 
-        out.logfiles = [f"{out.unique_name}-log_{i}.yaml" for i in range(out.nlogs)]
+        out.logfiles = [
+            f"{out.unique_name}-log_{i}.yaml" for i in range(out.nlogs)
+        ]
         for selflog, outlog in zip(self.logfiles, out.logfiles):
-            shutil.copy(os.path.join(self.location, selflog), os.path.join(self.location, outlog))
+            shutil.copy(os.path.join(self.location, selflog),
+                        os.path.join(self.location, outlog))
         out.active_logfile = out.logfiles[-1]
 
         # Copy hop log
@@ -487,7 +539,8 @@ class YAMLTrace(Trace_):
 
         target_log = i // self.log_pitch
         target_snap = i - target_log * self.log_pitch
-        with open(os.path.join(self.location, self.logfiles[target_log]), "r",
+        with open(os.path.join(self.location, self.logfiles[target_log]),
+                  "r",
                   encoding='utf-8') as f:
             chunk = yaml.safe_load(f)
             return self.form_data(chunk[target_snap])
@@ -497,11 +550,16 @@ class YAMLTrace(Trace_):
 
     def as_dict(self) -> Dict:
         """return the object as a dictionary"""
-        with open(os.path.join(self.location, self.main_log), "r",
+        with open(os.path.join(self.location, self.main_log),
+                  "r",
                   encoding='utf-8') as f:
             info = yaml.safe_load(f)
 
-            return {"hops": info["hops"], "data": list(self), "weight": self.weight}
+            return {
+                "hops": info["hops"],
+                "data": list(self),
+                "weight": self.weight
+            }
 
 
 def load_log(main_log_name):
@@ -555,9 +613,9 @@ def Trace(trace_type, *args, **kwargs):
         trace_type = trace_type.lower()
         if trace_type == "default":
             return InMemoryTrace(*args, **kwargs)
-        elif trace_type in [ "memory", "inmemory" ]:
+        elif trace_type in ["memory", "inmemory"]:
             return InMemoryTrace(*args, **kwargs)
-        elif trace_type in [ "yaml" ]:
+        elif trace_type in ["yaml"]:
             return YAMLTrace(*args, **kwargs)
     elif isinstance(trace_type, Trace_):
         return trace_type
@@ -567,7 +625,11 @@ def Trace(trace_type, *args, **kwargs):
 
 class TraceManager:
     """Manage the collection of observables from a set of trajectories"""
-    def __init__(self, trace_type="default", trace_args=None, trace_kwargs=None) -> None:
+
+    def __init__(self,
+                 trace_type="default",
+                 trace_args=None,
+                 trace_kwargs=None) -> None:
         self.trace_type = trace_type
 
         self.trace_args = trace_args if trace_args is not None else []
@@ -597,7 +659,8 @@ class TraceManager:
     def outcome(self) -> ArrayLike:
         """summarize outcomes from entire set of traces"""
         weight_norm = sum((t.weight for t in self.traces))
-        outcome = sum((t.weight * t.outcome() for t in self.traces)) / weight_norm
+        outcome = sum(
+            (t.weight * t.outcome() for t in self.traces)) / weight_norm
         return outcome
 
     def counts(self) -> ArrayLike:
@@ -621,19 +684,23 @@ class TraceManager:
         print(f"# of trajectories: {len(self.traces)}", file=file)
 
         nhops = np.array([len(t.hops) for t in self.traces])
-        hop_stats = [np.sum((t.weight for t in self.traces if len(t.hops) == i)) / norm
-                     for i in range(max(nhops) + 1)]
+        hop_stats = [
+            np.sum((t.weight for t in self.traces if len(t.hops) == i)) /
+            norm for i in range(max(nhops) + 1)
+        ]
         print(f"{'nhops':5s} {'percentage':16s}", file=file)
         for i, w in enumerate(hop_stats):
             print(f"{i:5d} {w:16.12f}", file=file)
 
         if verbose:
             print(file=file)
-            print(f"{'trace':>6s} {'runtime':>16s} {'nhops':>6s} {'weight':>12s}",
-                  file=file)
+            print(
+                f"{'trace':>6s} {'runtime':>16s} {'nhops':>6s} {'weight':>12s}",
+                file=file)
             for i, t in enumerate(self.traces):
-                print(f"{i:6d} {t.data[-1]['time']:16.4f} {len(t.hops):6d} {t.weight/norm:12.6f}",
-                      file=file)
+                print(
+                    f"{i:6d} {t.data[-1]['time']:16.4f} {len(t.hops):6d} {t.weight/norm:12.6f}",
+                    file=file)
         event_list = self.event_list()
         if event_list:
             print("Types of events logged: ", ", ".join(event_list))
@@ -642,20 +709,22 @@ class TraceManager:
             print(file=file)
 
             print(f"Statistics for {e} event", file=file)
-            nevents = np.array([ len(t.events[e]) if e in t.events else 0 for t in self.traces ])
+            nevents = np.array(
+                [len(t.events[e]) if e in t.events else 0 for t in self.traces])
             if verbose:
                 print(f"{'trace':>6s} {'runtime':>16s} {e:>6s} {'weight':>12s}",
                       file=file)
                 for i, nevent in enumerate(nevents):
-                    print(f"{i:6d} "
-                          f"{self[i][-1]['time']:16.4f} "
-                          f"{nevent:6d} "
-                          f"{self[i].weight/norm:12.6f}",
-                          file=file)
-            print(f"  {e} mean:      {np.mean(nevents):8.2f}",   file=file)
-            print(f"  {e} deviation: {np.std(nevents):8.2f}",    file=file)
-            print(f"  {e} min:       {np.amin(nevents):8.2f}",   file=file)
-            print(f"  {e} max:       {np.amax(nevents):8.2f}",   file=file)
+                    print(
+                        f"{i:6d} "
+                        f"{self[i][-1]['time']:16.4f} "
+                        f"{nevent:6d} "
+                        f"{self[i].weight/norm:12.6f}",
+                        file=file)
+            print(f"  {e} mean:      {np.mean(nevents):8.2f}", file=file)
+            print(f"  {e} deviation: {np.std(nevents):8.2f}", file=file)
+            print(f"  {e} min:       {np.amin(nevents):8.2f}", file=file)
+            print(f"  {e} max:       {np.amax(nevents):8.2f}", file=file)
             print(f"  {e} median:    {np.median(nevents):8.2f}", file=file)
 
     def as_dict(self) -> Dict:
