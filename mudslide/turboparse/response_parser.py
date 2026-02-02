@@ -185,7 +185,7 @@ class DavidsonParser(ParseSection):
     name = "davidson"
 
     def __init__(self):
-        super().__init__(r"excitation vector", r"(not )?converged!")
+        super().__init__(r"^\s*excitation vector\s*$", r"(not )?converged!")
         self.parsers = _DavidsonIterationParsers.make_parsers()
 
 
