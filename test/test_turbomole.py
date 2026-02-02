@@ -12,13 +12,19 @@ import mudslide
 import yaml
 
 from mudslide.models import TMModel, turbomole_is_installed
+from mudslide.config import get_config
 from mudslide.tracer import YAMLTrace
 
 testdir = os.path.dirname(__file__)
 _refdir = os.path.join(testdir, "ref")
 _checkdir = os.path.join(testdir, "checks")
 
-pytestmark = pytest.mark.skipif(not turbomole_is_installed(),
+def _turbomole_available():
+    return (turbomole_is_installed()
+            or "MUDSLIDE_TURBOMOLE_PREFIX" in os.environ
+            or get_config("turbomole.command_prefix") is not None)
+
+pytestmark = pytest.mark.skipif(not _turbomole_available(),
                                      reason="Turbomole must be installed")
 
 def test_raise_on_missing_control():
@@ -99,7 +105,7 @@ class TestTMExDynamics(_TestTM):
 
     def test_get_gs_ex_properties(self):
         """test for gs_ex_properties function"""
-        model = TMModel(states=[0, 1, 2, 3],  expert=True)
+        model = TMModel(states=[0, 1, 2, 3], expert=True)
         positions = model._position
 
         # yapf: disable

@@ -98,6 +98,38 @@ class TestHNAC:
         assert 'd/dR' in coupling
         assert np.allclose(coupling['d/dR'], expected_nac)
 
+    def test_cpks_parsed(self, parsed):
+        """Test that CPKS section is parsed"""
+        assert 'cpks' in parsed['egrad']
+
+    def test_cpks_converged(self, parsed):
+        """Test CPKS convergence flag"""
+        assert parsed['egrad']['cpks']['converged'] is True
+
+    def test_cpks_single_iteration(self, parsed):
+        """Test CPKS with single iteration"""
+        iterations = parsed['egrad']['cpks']['iterations']
+        assert len(iterations) == 1
+        assert iterations[0]['step'] == 1
+        assert np.isclose(iterations[0]['max_residual_norm'], 5.047087406128772e-15)
+
+    def test_davidson_parsed(self, parsed):
+        """Test that Davidson section is parsed"""
+        assert 'davidson' in parsed['egrad']
+
+    def test_davidson_converged(self, parsed):
+        """Test Davidson convergence flag"""
+        assert parsed['egrad']['davidson']['converged'] is True
+
+    def test_davidson_iterations(self, parsed):
+        """Test Davidson iterations (3 iterations for 15 roots)"""
+        iterations = parsed['egrad']['davidson']['iterations']
+        assert len(iterations) == 3
+        assert iterations[0]['step'] == 1
+        assert np.isclose(iterations[0]['max_residual_norm'], 1.534162418811829e-02)
+        assert iterations[2]['step'] == 3
+        assert np.isclose(iterations[2]['max_residual_norm'], 2.513145479422938e-10)
+
 
 class TestHHeS2S:
     """Test parsing of HHe_S2S.txt egrad output (H-He system with state-to-state couplings)"""
@@ -250,3 +282,119 @@ class TestHHeS2S:
         # Relaxed electric transition dipole moment (length rep.) from line 608
         # z = 0.546674
         assert np.isclose(s2s['diplen']['z'], 0.546674)
+
+    def test_cpks_parsed(self, parsed):
+        """Test that CPKS section is parsed"""
+        assert 'cpks' in parsed['egrad']
+
+    def test_cpks_converged(self, parsed):
+        """Test CPKS convergence flag"""
+        assert parsed['egrad']['cpks']['converged'] is True
+
+    def test_cpks_iterations_count(self, parsed):
+        """Test number of CPKS iterations"""
+        iterations = parsed['egrad']['cpks']['iterations']
+        assert len(iterations) == 3
+
+    def test_cpks_iterations_values(self, parsed):
+        """Test CPKS iteration step numbers and residual norms"""
+        iterations = parsed['egrad']['cpks']['iterations']
+        assert iterations[0]['step'] == 1
+        assert np.isclose(iterations[0]['max_residual_norm'], 2.131934773503221e-02)
+        assert iterations[1]['step'] == 2
+        assert np.isclose(iterations[1]['max_residual_norm'], 8.626720870149588e-04)
+        assert iterations[2]['step'] == 3
+        assert np.isclose(iterations[2]['max_residual_norm'], 9.799962299242865e-14)
+
+    def test_davidson_parsed(self, parsed):
+        """Test that Davidson section is parsed"""
+        assert 'davidson' in parsed['egrad']
+
+    def test_davidson_converged(self, parsed):
+        """Test Davidson convergence flag"""
+        assert parsed['egrad']['davidson']['converged'] is True
+
+    def test_davidson_iterations(self, parsed):
+        """Test Davidson iterations (2 iterations for 2 roots)"""
+        iterations = parsed['egrad']['davidson']['iterations']
+        assert len(iterations) == 2
+        assert iterations[0]['step'] == 1
+        assert np.isclose(iterations[0]['max_residual_norm'], 7.045689164616345e-02)
+        assert iterations[1]['step'] == 2
+        assert np.isclose(iterations[1]['max_residual_norm'], 3.274080506635812e-14)
+
+
+class TestAcroleinCIS:
+    """Test parsing of acrolein.cis.txt egrad output (8-atom system with dense Fortran formatting)"""
+
+    @pytest.fixture
+    def parsed(self):
+        """Parse the acrolein.cis.txt file"""
+        filepath = os.path.join(exampledir, "acrolein.cis.txt")
+        with open(filepath, 'r') as f:
+            return parse_turbo(f)
+
+    def test_has_egrad_key(self, parsed):
+        assert 'egrad' in parsed
+
+    def test_davidson_converged(self, parsed):
+        assert parsed['egrad']['davidson']['converged'] is True
+
+    def test_davidson_iterations(self, parsed):
+        iterations = parsed['egrad']['davidson']['iterations']
+        assert len(iterations) == 10
+        assert np.isclose(iterations[0]['max_residual_norm'], 1.29407479841089e-01)
+        assert np.isclose(iterations[9]['max_residual_norm'], 3.932525923725169e-06)
+
+    def test_cpks_converged(self, parsed):
+        assert parsed['egrad']['cpks']['converged'] is True
+
+    def test_cpks_iterations(self, parsed):
+        iterations = parsed['egrad']['cpks']['iterations']
+        assert len(iterations) == 9
+        assert np.isclose(iterations[0]['max_residual_norm'], 7.800946513368974e-02)
+        assert np.isclose(iterations[8]['max_residual_norm'], 2.823662172303088e-06)
+
+    def test_ground_state_dipole(self, parsed):
+        dipole = parsed['egrad']['ground']['dipole']
+        assert np.isclose(dipole['total'][0], -0.356430)
+        assert np.isclose(dipole['total'][1], -1.424067)
+        assert np.isclose(dipole['total'][2], 0.0)
+
+    def test_gradient_atom_count(self, parsed):
+        gradient = parsed['egrad']['gradient'][0]
+        assert len(gradient['atom_list']) == 8
+
+    def test_gradient_atom_list(self, parsed):
+        gradient = parsed['egrad']['gradient'][0]
+        assert gradient['atom_list'] == [
+            '1 c', '2 c', '3 h', '4 h', '5 h', '6 c', '7 o', '8 h'
+        ]
+
+    def test_gradient_shape(self, parsed):
+        """Each atom should have all 3 gradient components"""
+        grad = parsed['egrad']['gradient'][0]['d/dR']
+        assert len(grad) == 8
+        for atom_grad in grad:
+            assert len(atom_grad) == 3
+
+    def test_gradient_values(self, parsed):
+        """Test all gradient values, especially where Fortran formatting
+        causes adjacent values to run together without whitespace.
+
+        For example, line 469 of the output:
+          dE/dx -0.3076426D-02 0.6824289D-02 0.3807253D-02-0.1180016D-01 0.1286775D-01
+        has no space between the 3rd and 4th values.
+        """
+        grad = parsed['egrad']['gradient'][0]['d/dR']
+        expected = [
+            [-0.3076426e-02, -0.5258624e-02,  0.0],
+            [ 0.6824289e-02,  0.9902150e-02,  0.0],
+            [ 0.3807253e-02, -0.1064780e-01,  0.0],
+            [-0.1180016e-01,  0.3806394e-03,  0.0],
+            [ 0.1286775e-01,  0.5345889e-03,  0.0],
+            [ 0.1834220e-01,  0.5186150e-01,  0.0],
+            [-0.9453334e-02, -0.3598091e-01,  0.0],
+            [-0.1751157e-01, -0.1079154e-01,  0.0],
+        ]
+        assert np.allclose(grad, expected)

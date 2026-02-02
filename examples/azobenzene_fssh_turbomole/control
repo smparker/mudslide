@@ -1,0 +1,15 @@
+$atoms
+  basis=def2-SVP
+$rij
+$dft
+  functional pbe
+  gridsize 4
+  weight derivatives
+$disp3 bj
+$scfconv 9
+$scfiterlimit 100
+$coord  file=coord
+$grad file=gradients
+$scfinstab ciss
+$soes all 1
+$end

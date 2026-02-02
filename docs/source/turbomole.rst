@@ -47,6 +47,70 @@ and run the simulation. An example script is shown below:
     results = traj.simulate()
 
 
+Running Turbomole via Docker or Singularity
+--------------------------------------------
+If Turbomole is not installed locally, you can run it through a container
+using a **command prefix**. The command prefix is prepended to every
+Turbomole command that mudslide executes. There are three ways to set it,
+listed from highest to lowest priority:
+
+1. **Pass it directly** to ``TMModel``:
+
+   .. code-block:: python
+
+       model = mudslide.models.TMModel(
+           states=[0, 1],
+           command_prefix="docker run --rm -i --platform linux/amd64 -v $(pwd):$(pwd) -w $(pwd) smparker/tm:latest"
+       )
+
+2. **Set an environment variable** before running your script:
+
+   .. code-block:: bash
+
+       export MUDSLIDE_TURBOMOLE_PREFIX="docker run --rm -i --platform linux/amd64 -v $(pwd):$(pwd) -w $(pwd) smparker/tm:latest"
+
+3. **Add it to the config file** at ``~/.config/mudslide/config.yaml``
+   (or ``$XDG_CONFIG_HOME/mudslide/config.yaml``):
+
+   .. code-block:: yaml
+
+       turbomole:
+         command_prefix: "docker run --rm -i --platform linux/amd64 -v $(pwd):$(pwd) -w $(pwd) smparker/tm:latest"
+
+   With the config file in place, no extra arguments or environment variables
+   are needed — ``TMModel`` will pick up the prefix automatically:
+
+   .. code-block:: python
+
+       model = mudslide.models.TMModel(states=[0, 1])
+
+When more than one source is configured, the explicit ``command_prefix``
+argument wins over the environment variable, which wins over the config file.
+
+
+Managing Turbomole output files
+-------------------------------
+By default, ``TMModel`` writes Turbomole output to ``tm.current`` in the
+working directory and renames it to ``tm.last`` after each step (overwriting
+the previous ``tm.last``). The ``keep_output`` parameter controls how many
+output files are kept:
+
+* ``keep_output=0`` (default) — rename ``tm.current`` to ``tm.last`` after
+  each step. Only the most recent output is preserved.
+* ``keep_output=-1`` — keep all outputs. Each step produces a numbered file
+  (``tm.1``, ``tm.2``, ...).
+* ``keep_output=N`` (positive integer) — keep the last *N* outputs. Older
+  numbered files are deleted automatically.
+
+.. code-block:: python
+
+    # keep the last 5 output files
+    model = mudslide.models.TMModel(states=[0, 1], keep_output=5)
+
+    # keep every output file
+    model = mudslide.models.TMModel(states=[0, 1], keep_output=-1)
+
+
 Advice
 ------
 

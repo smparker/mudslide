@@ -121,7 +121,7 @@ class CoordParser(ParseSection):
         ] + [
             VarLineParser(
                 reg=(rf"^\s*d\w*/d{coord}\s+(-*\d+.\d+D(?:\+|-)\d+)" +
-                     4 * r"(?:\s+(-*\d+.\d+D(?:\+|-)\d+))?" + r"\s*$"),
+                     4 * r"(?:\s*(-*\d+.\d+D(?:\+|-)\d+))?" + r"\s*$"),
                 title=f"d_d{coord}",
                 vars_type=fortran_float) for coord in "xyz"
         ]

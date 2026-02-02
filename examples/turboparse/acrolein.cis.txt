@@ -1,0 +1,543 @@
+ operating system is UNIX !
+ hostname is         tchplx10
+
+ egrad(tchplx10) : TURBOMOLE working version 2 Aug 2004 at 12:34:11
+ Copyright (C) 2004 University of Karlsruhe
+
+
+    2004-08-02 13:12:02.843 
+
+
+
+
+                               e g r a d
+
+                       quantum chemistry group
+                       university of karlsruhe
+                               germany
+
+
+          integral direct evaluation of excited state gradients 
+
+
+
+          references (see also programs escf, dscf and ridft) 
+
+          F. Furche and R. Ahlrichs,
+          J. Chem. Phys. 117 (2002), 7433.
+                                     
+
+
+
+
+              +--------------------------------------------------+
+              | Atomic coordinate, charge and isotop information |
+              +--------------------------------------------------+
+
+
+              atomic coordinates              atom shells charge pseudo isotop
+    -0.28080288   -3.50691585    0.00000000    c      6    6.000    0     0
+     0.82822495   -1.20930774    0.00000000    c      6    6.000    0     0
+     0.81625698   -5.26727730    0.00000000    h      2    1.000    0     0
+    -2.35274800   -3.68768106    0.00000000    h      2    1.000    0     0
+     2.89508247   -0.97730867    0.00000000    h      2    1.000    0     0
+    -0.69103357    1.13295119    0.00000000    c      6    6.000    0     0
+     0.19875576    3.26376002    0.00000000    o      6    8.000    0     0
+    -2.80212011    0.82586532    0.00000000    h      2    1.000    0     0
+ 
+
+     center of nuclear mass  :    0.00000000    0.00000000    0.00000000
+
+     center of nuclear charge:   -0.02383839   -0.14986520    0.00000000
+
+
+              +--------------------------------------------------+
+              |               basis set information              |
+              +--------------------------------------------------+
+
+
+              we will work with the  1s 3p 5d  7f  9g ... basis set
+              ...i.e. with spherical basis functions...
+
+
+   type   atoms  prim   cont   basis
+   ---------------------------------------------------------------------------
+    c        3     24     14   SV(P)   [3s2p1d|7s4p1d]
+    h        4      4      2   SV(P)   [2s|4s]
+    o        1     24     14   SV(P)   [3s2p1d|7s4p1d]
+   ---------------------------------------------------------------------------
+   total:    8    112     64
+   ---------------------------------------------------------------------------
+
+   total number of primitive shells          :   28
+   total number of contracted shells         :   32
+   total number of cartesian basis functions :   68
+   total number of SCF-basis functions       :   64
+
+
+ residuum convergence criterium   :  0.10E-04
+
+
+ integral neglect threshold       :  0.10E-09
+ integral storage threshold THIZE :  0.10E-04
+ integral storage threshold THIME :         5
+
+ CI SINGLES SINGLET-CALCULATION (TAMM-DANCOFF-APPROXIMATION)
+
+ symmetry group of the molecule :   cs
+
+ the group has the following generators :
+   c1(z)
+   mirror plane sigma(xy)
+
+    2 symmetry operations found
+
+ there are 2 real representations :   a'   a"  
+ 
+ IRREP of excited state :   a"  
+
+ determining totally symmetric integral contributions 
+    - equivalent to irreducible tensor elements - 
+ which can be formed within each triple of representations :
+
+             representation triple      contributions
+
+              a'    a'    a'              1
+              a'    a"    a"              1
+              a"    a'    a"              1
+              a"    a"    a'              1
+
+ maximum number of shells which are related by symmetry :  1
+
+
+    mo occupation :
+   irrep   mo's   occupied
+    a'      48       13
+    a"      16        2
+ 
+ number of basis functions   :           64
+ number of occupied orbitals :           15
+ 
+
+ biggest AO integral is expected to be     4.776656448
+
+ cpu time for 2e-integral bound :      0.01 sec
+
+
+ reading orbital data $scfmo  from file control . 
+
+ orbital characterization : scfconv=7
+ 
+
+ number of non-frozen orbitals          :    64
+ number of non-frozen occupied orbitals :    15
+
+
+
+                        -------------------
+                         excitation vector 
+                        -------------------
+
+
+          IRREP   tensor space dimension   number of roots
+
+           a"              252                   1
+
+ dimension of super-tensorspace: 1
+
+ machine precision: 2.22D-16
+
+
+ logfile ciss_a"   will be constructed
+
+   disc space (kbyte) allocation for  1 2e-integral file(s) :
+   --------------------------------------------------------
+   twoint                                             12288
+   --------------------------------------------------------
+
+ maximum number of buffers which may be written onto 2e-file(s) =       768
+
+
+
+                       Block Davidson iteration
+
+
+ total number of roots to be determined:   1
+
+
+ maximum core memory set to    20 MB,
+ corresponding to      539 vectors in CAO basis
+
+
+ maximum number of simultaneously treated vectors:   2
+
+
+ Iteration IRREP Converged      Max. Euclidean
+                 roots          residual norm
+
+
+   1422668 2 e - integrals written in       695 blocks requiring   11120 k-byte
+
+    1       a"       0        1.294074798410890D-01
+ 
+    2       a"       0        4.786491232209637D-02
+ 
+    3       a"       0        2.306868657879860D-02
+ 
+    4       a"       0        5.057531427336216D-03
+ 
+    5       a"       0        1.729521119793886D-03
+ 
+    6       a"       0        5.100414966801341D-04
+ 
+    7       a"       0        1.338181748116469D-04
+ 
+    8       a"       0        5.456289754718556D-05
+ 
+    9       a"       0        1.472896256058259D-05
+ 
+   10       a"       1        3.932525923725169D-06
+ 
+
+ converged!
+
+ Eigenpairs written on logfile ciss_a"  
+
+
+
+ IRREP   Vector     Eigenvalue           Euclidean residual norm
+
+  a"        1    1.695062785565417D-01    3.932525923725169D-06
+ 
+
+
+
+
+                    Selection rules for point group cs  
+
+
+ Subduction with respect to cs  :
+
+    Polar vector representation: a', a"                      
+
+    Axial vector representation: a', a"                      
+
+    Symmetric second rank tensor representation: a', a"                      
+
+
+
+
+                            Ground state
+
+
+ Total energy:                           -190.6026720382000    
+
+ Charge:
+
+               elec          nuc         total
+
+           -30.000000    30.000000     0.000000
+
+
+ Electric dipole moment:
+
+               elec          nuc         total   
+
+    x        0.358722    -0.715152    -0.356430    Norm:              1.467995
+    y        3.071889    -4.495956    -1.424067
+    z        0.000000     0.000000     0.000000    Norm / debye:      3.731299
+
+
+ Electric quadrupole moment:
+
+               elec          nuc         total   
+
+   xx      -46.349902    30.205114   -16.144788
+   yy     -238.705692   218.464198   -20.241494    1/3*trace:       -18.389120
+   zz      -18.781080     0.000000   -18.781080
+   xy       -0.144620    -0.375706    -0.520327
+   xz        0.000000     0.000000     0.000000    Anisotropy:        3.707444
+   yz        0.000000     0.000000     0.000000
+
+
+
+ ==============================================================================
+
+                              I R R E P   a"  
+
+ ==============================================================================
+
+
+ Excitation is electric dipole allowed
+
+ Excitation is magnetic dipole allowed
+
+ Excitation is electric quadrupole allowed
+
+
+
+
+                         1 singlet a" excitation
+
+
+ Total energy:                           -190.4331657596435    
+
+ Excitation energy:                      0.1695062785565417    
+
+ Excitation energy / eV:                  4.612502499104431    
+
+ Excitation energy / nm:                  268.8003833722394    
+
+ Excitation energy / cm^(-1):             37202.32788752831    
+
+
+ Oscillator strength:
+
+    velocity representation:             0.3043549682005942E-03
+
+    length representation:               0.2104497996995404E-03
+
+    mixed representation:                0.2530838637593773E-03
+
+
+ Rotatory strength:
+
+    velocity representation:              0.000000000000000    
+
+    velocity rep. / 10^(-40)erg*cm^3:     0.000000000000000    
+
+    length representation:                0.000000000000000    
+
+    length rep. / 10^(-40)erg*cm^3:       0.000000000000000    
+
+
+ Dominant contributions:
+
+    occ. orbital  energy / eV   virt. orbital  energy / eV   |coeff.|^2*100
+      13 a'        -11.78           3 a"          2.14           76.4
+      13 a'        -11.78           4 a"          6.14           19.4
+ 
+
+ Change of electron number:
+
+             0.000000
+
+
+ Electric transition dipole moment (velocity rep.):
+
+    x        0.000000        Norm:                  0.051897
+    y        0.000000
+    z        0.051897        Norm / debye:          0.131910
+
+
+ Electric transition dipole moment (length rep.):
+
+    x        0.000000        Norm:                  0.043155
+    y        0.000000
+    z        0.043155        Norm / debye:          0.109689
+
+
+ Magnetic transition dipole moment / i:
+
+    x        0.000832        Norm:                  0.003406
+    y        0.003302
+    z        0.000000        Norm / Bohr mag.:      0.933354
+
+
+ Electric quadrupole transition moment:
+
+   xx        0.000000
+   yy        0.000000        1/3*trace:             0.000000
+   zz        0.000000
+   xy        0.000000
+   xz       -0.414508        Anisotropy:            0.736620
+   yz        0.095145
+
+ Data group $exopt missing or empty
+ Default for state to be optimized is   1
+
+
+                       ----------------------
+                        CPKS right-hand side 
+                       ----------------------
+
+
+                          ----------------
+                           CPKS equations 
+                          ----------------
+
+
+          IRREP   tensor space dimension   number of roots
+
+           a'              483                   1
+
+ logfile dipl_a'   will be constructed
+
+
+                       Block Davidson iteration
+
+
+ total number of roots to be determined:   1
+
+
+ maximum core memory set to    20 MB,
+ corresponding to      539 vectors in CAO basis
+
+
+ maximum number of simultaneously treated vectors:   1
+
+
+ Iteration IRREP Converged      Max. Euclidean
+                 roots          residual norm
+
+    1       a'       0        7.800946513368974D-02
+ 
+    2       a'       0        1.709156299105125D-02
+ 
+    3       a'       0        6.913627610881767D-03
+ 
+    4       a'       0        2.092994789670195D-03
+ 
+    5       a'       0        6.617090210922216D-04
+ 
+    6       a'       0        2.467508226457737D-04
+ 
+    7       a'       0        5.422332887258560D-05
+ 
+    8       a'       0        1.394198162855195D-05
+ 
+    9       a'       1        2.823662172303088D-06
+ 
+
+ converged!
+
+ Eigenpairs written on logfile dipl_a'  
+
+
+
+ IRREP   Vector     Frequency            Euclidean residual norm
+
+  a'        1    0.000000000000000D+00    2.823662172303088D-06
+ 
+
+                          -------------------
+                           relaxed densities 
+                          -------------------
+
+
+    ----------------------------------------
+     S+T+V CONTRIBUTIONS TO ENERGY GRADIENT 
+    ----------------------------------------
+
+ 1e-integral 1st. derivatives will be neglected if expon. factor < 0.100000E-10
+
+
+    -----------------------------------------------
+     TWO ELECTRON CONTRIBUTIONS TO ENERGY GRADIENT 
+    -----------------------------------------------
+
+ biggest 1-particle AO density matrix element is expected to be    2.1465100427
+
+ core memory to be involved in 2e-gradient :
+   symmetry shell pair data              :         1
+   two particle density+dens. estimates  :      1824
+   derivative integrals                  :1217983972
+   ij-primitive data                     :       225
+   derivative integral bound             :      1584
+   totally                               :     10305
+
+
+ setting up bound for integral derivative estimation
+
+ increment for numerical differentiation : 0.00050000
+
+ biggest AO integral is expected to be     4.776656448
+ biggest cartesian 1st derivative AO integral is expected to be     8.648874439
+
+ cpu time for 2e-integral derivative bound :      0.09 sec
+
+
+ 2e-integral 1st. derivatives will be neglected if expon. factor < 0.100000E-06
+ outer boundary for 2e-integral derivative neglection is 0.361729E-08
+
+
+          ------------------------------------------------
+           cartesian gradient of the energy (hartree/bohr)
+          ------------------------------------------------
+
+  ATOM      1 c           2 c           3 h           4 h           5 h 
+ dE/dx -0.3076426D-02 0.6824289D-02 0.3807253D-02-0.1180016D-01 0.1286775D-01
+ dE/dy -0.5258624D-02 0.9902150D-02-0.1064780D-01 0.3806394D-03 0.5345889D-03
+ dE/dz  0.0000000D+00 0.0000000D+00 0.0000000D+00 0.0000000D+00 0.0000000D+00
+
+  ATOM      6 c           7 o           8 h 
+ dE/dx  0.1834220D-01-0.9453334D-02-0.1751157D-01
+ dE/dy  0.5186150D-01-0.3598091D-01-0.1079154D-01
+ dE/dz  0.0000000D+00 0.0000000D+00 0.0000000D+00
+ 
+ resulting FORCE  (fx,fy,fz) = (0.366D-09,0.582D-09,0.000D+00)
+ resulting MOMENT (mx,my,mz) = (0.000D+00,0.000D+00,0.147D-05)
+
+
+ exx =       0.109155 eyy =      -0.006963 ezz =       0.000000
+ eyz =       0.000000 exz =       0.000000 exy =      -0.011112
+
+
+ **********************************************************************
+  |maximum component of gradient| : 0.51861501E-01  (atom  6 c )       
+   gradient norm                  : 0.73810710E-01
+ **********************************************************************
+
+ <getgrd> : data group $grad  is missing 
+
+   ***  cartesian gradients written onto <gradient>  ***
+ 
+ 
+ 
+ ==============================================================================
+                           electrostatic moments
+ ==============================================================================
+ 
+              nuc          SCF,e       -> SCF,tot          excit     ->  total
+ ------------------------------------------------------------------------------
+                          charge      
+ ------------------------------------------------------------------------------
+          30.000000     -30.000000       0.000000       0.000000       0.000000
+ 
+ ------------------------------------------------------------------------------
+                       dipole moment  
+ ------------------------------------------------------------------------------
+   x      -0.715152       0.358722      -0.356430       0.135177      -0.221253
+   y      -4.495956       3.071889      -1.424067       1.076350      -0.347717
+   z       0.000000       0.000000       0.000000       0.000000       0.000000
+ 
+   | dipole moment | =     0.4121 a.u. =     1.0476 debye 
+ 
+ ------------------------------------------------------------------------------
+                     quadrupole moment
+ ------------------------------------------------------------------------------
+  xx      30.205114     -46.349902     -16.144788       0.857644     -15.287143
+  yy     218.464198    -238.705692     -20.241494       0.842062     -19.399432
+  zz       0.000000     -18.781080     -18.781080      -1.360183     -20.141263
+  xy      -0.375706      -0.144620      -0.520327      -0.167041      -0.687368
+  xz       0.000000       0.000000       0.000000       0.000000       0.000000
+  yz       0.000000       0.000000       0.000000       0.000000       0.000000
+ 
+     1/3  trace=     -18.275946
+     anisotropy=       4.682871
+ 
+ ==============================================================================
+ 
+
+
+    ------------------------------------------------------------------------
+         total  cpu-time :   7.22 seconds
+         total wall-time :   7.21 seconds
+    ------------------------------------------------------------------------
+
+
+   ****  egrad : all done  ****
+
+
+    2004-08-02 13:12:10.045 
+

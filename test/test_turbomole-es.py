@@ -16,6 +16,7 @@ from mudslide.tracer import TraceManager
 from mudslide.batch import TrajGenConst, TrajGenNormal, BatchedTraj
 
 from mudslide.models import TMModel, turbomole_is_installed
+from mudslide.config import get_config
 
 testdir = os.path.dirname(__file__)
 _refdir = os.path.join(testdir, "ref")
@@ -25,7 +26,12 @@ def clean_directory(dirname):
     if os.path.isdir(dirname):
         shutil.rmtree(dirname)
 
-@unittest.skipUnless(turbomole_is_installed(), "Turbomole must be installed")
+def _turbomole_available():
+    return (turbomole_is_installed()
+            or "MUDSLIDE_TURBOMOLE_PREFIX" in os.environ
+            or get_config("turbomole.command_prefix") is not None)
+
+@unittest.skipUnless(_turbomole_available(), "Turbomole must be installed")
 class TestTMModel(unittest.TestCase):
     """Test Suite for TMModel class"""
 
@@ -117,6 +123,26 @@ class TestTMModel(unittest.TestCase):
                     np.testing.assert_almost_equal(refs[t]["electronics"]["derivative_coupling"][s1][s2],
                                                    results[1][t]["electronics"]["derivative_coupling"][s1][s2],
                                                    decimal=6)
+
+    def test_ridft_convergence_failure(self):
+        """Test that non-convergence of ridft raises RuntimeError"""
+        tm_model = TMModel(states=[0, 1, 2, 3], expert=True)
+        tm_model.control.adg("scfiterlimit", 2)
+        # perturb geometry so the converged MOs are no longer a good guess
+        positions = tm_model._position.copy()
+        positions += 0.5 * np.random.default_rng(42).standard_normal(positions.shape)
+        with self.assertRaises(RuntimeError):
+            tm_model.compute(positions)
+
+    def test_egrad_convergence_failure(self):
+        """Test that non-convergence of egrad raises RuntimeError"""
+        tm_model = TMModel(states=[0, 1, 2, 3], expert=True)
+        tm_model.control.adg("escfiterlimit", 2)
+        # perturb geometry so the excited state solver needs more iterations
+        positions = tm_model._position.copy()
+        #positions += 0.5 * np.random.default_rng(42).standard_normal(positions.shape)
+        with self.assertRaises(RuntimeError):
+            tm_model.compute(positions)
 
     def tearDown(self):
         os.chdir(self.origin)

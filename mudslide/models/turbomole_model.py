@@ -1,15 +1,19 @@
 # -*- coding: utf-8 -*-
 """Implementations of the interface between turbomole and mudslide."""
 
+import glob
+import io
 import os
 import sys
+import shlex
 import shutil
 import re
 import copy as cp
 import subprocess
+import warnings
 
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional, Union
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -19,7 +23,18 @@ from .. import turboparse
 from ..util import find_unique_name
 from ..constants import amu_to_au
 from ..periodic_table import masses
+from ..config import get_config
 from .electronics import ElectronicModel_
+
+
+def _resolve_command_prefix(explicit: Optional[str]) -> Optional[str]:
+    """Resolve command_prefix: explicit arg > env var > config file."""
+    if explicit is not None:
+        return explicit
+    env = os.environ.get("MUDSLIDE_TURBOMOLE_PREFIX")
+    if env:
+        return env
+    return get_config("turbomole.command_prefix")
 
 
 def turbomole_is_installed():
@@ -37,6 +52,48 @@ def turbomole_is_installed():
 
     return has_turbodir and has_scripts and has_bin
 
+
+def verify_module_output(module: str, data_dict: dict, stderr: str) -> None:
+    """Verify that a turbomole module ran through correctly.
+
+    Checks stderr for normal termination and the parsed output to verify
+    convergence of iterative procedures. Dispatches to module-specific
+    verification functions.
+    """
+    if "ended normally" not in stderr:
+        warnings.warn(f"{module} did not report normal termination")
+
+    if module in ("ridft", "dscf"):
+        _verify_scf(module, data_dict)
+    elif module in ("egrad", "escf"):
+        _verify_response(module, data_dict)
+
+
+def _verify_scf(module: str, data_dict: dict) -> None:
+    """Verify SCF convergence for ridft/dscf."""
+    try:
+        converged = data_dict[module]["converged"]
+    except KeyError:
+        warnings.warn(f"Convergence information not found for {module}")
+        return
+    if not converged:
+        raise RuntimeError(f"{module} SCF did not converge")
+
+
+def _verify_response(module: str, data_dict: dict) -> None:
+    """Verify Davidson and CPKS convergence for egrad/escf."""
+    for solver in ("davidson", "cpks"):
+        try:
+            converged = data_dict[module][solver]["converged"]
+        except KeyError:
+            warnings.warn(
+                f"Convergence information for {solver} not found in {module} output"
+            )
+            continue
+        if not converged:
+            raise RuntimeError(f"{module} {solver} did not converge")
+
+
 class TurboControl:
     """A class to handle the control file for turbomole"""
 
@@ -44,7 +101,9 @@ class TurboControl:
     pcgrad_file = "pcgrad"
     control_file = "control"
 
-    def __init__(self, control_file="control", workdir=None):
+    def __init__(self, control_file=None, workdir=None,
+                 command_prefix: Optional[str] = None):
+        self.command_prefix = command_prefix
         # workdir is directory of control file
         if control_file is not None:
             self.workdir = os.path.abspath(os.path.dirname(control_file))
@@ -52,7 +111,7 @@ class TurboControl:
             self.workdir = os.path.abspath(workdir)
         else:
             raise ValueError("Must provide either control_file or workdir")
-        self.control_file = control_file
+        self.control_file = control_file or "control"
 
         # make sure control file exists
         if not os.path.exists(os.path.join(self.workdir, self.control_file)):
@@ -60,6 +119,25 @@ class TurboControl:
 
         # list of data groups and which file they are in, used to avoid rerunning sdg too much
         self.dg_in_file = {}
+
+    def _build_command(self, cmd: list, cwd: Optional[str] = None) -> tuple:
+        """Build command with prefix and working directory handling.
+
+        When command_prefix is set, the entire command is run through
+        ``sh -c`` so that shell constructs in the prefix (e.g. ``$(pwd)``)
+        are evaluated at execution time. The working directory is embedded
+        via ``cd`` so that it is respected inside containers.
+
+        Returns (command_list, effective_cwd) tuple.
+        """
+        if self.command_prefix:
+            cmd_str = " ".join(shlex.quote(c) for c in cmd)
+            if cwd is not None:
+                shell_cmd = f"cd {shlex.quote(cwd)} && {self.command_prefix} {cmd_str}"
+            else:
+                shell_cmd = f"{self.command_prefix} {cmd_str}"
+            return ["sh", "-c", shell_cmd], None
+        return cmd, cwd
 
     def check_turbomole_is_installed(self):
         """Check that turbomole is installed, raise exception if not"""
@@ -101,8 +179,9 @@ class TurboControl:
 
         sdg_command += f" {dg}"
 
-        result = subprocess.run(sdg_command.split(), capture_output=True, text=True,
-                                cwd=self.workdir, check=False)
+        full_cmd, effective_cwd = self._build_command(sdg_command.split(), cwd=self.workdir)
+        result = subprocess.run(full_cmd, capture_output=True, text=True, cwd=effective_cwd,
+                                check=False)
         return result.stdout.rstrip()
 
     def adg(self, dg, data, newline=False):
@@ -113,15 +192,18 @@ class TurboControl:
         if newline:
             lines = "\\n" + lines
         adg_command = f"adg {dg} {lines}"
-        result = subprocess.run(adg_command.split(), capture_output=True, text=True, cwd=self.workdir,
-                           check=True)
+        full_cmd, effective_cwd = self._build_command(adg_command.split(), cwd=self.workdir)
+        result = subprocess.run(full_cmd, capture_output=True, text=True, cwd=effective_cwd,
+                                check=True)
         # check that the command ran successfully
         if "abnormal" in result.stderr:
             raise RuntimeError(f"Call to adg ended abnormally: {result.stderr}")
 
     def cpc(self, dest):
         """Copy the control file and other files to a new directory"""
-        subprocess.run(["cpc", dest], cwd=self.workdir, check=False)
+        full_cmd, effective_cwd = self._build_command(["cpc", dest], cwd=self.workdir)
+        subprocess.run(full_cmd, cwd=effective_cwd, check=False,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         file_list = ['ciss_a','exspectrum', 'statistics', 'dipl_a',
                      'excitationlog.1', 'moments', 'vecsao', 'control',
                      'gradient', 'energy', 'moments' ]
@@ -144,13 +226,26 @@ class TurboControl:
                          [x for x in current_dft if "weight derivatives" not in x],
                          newline=True)
 
-    def run_single(self, module, stdout=sys.stdout):
-        """Run a single turbomole module"""
-        output = subprocess.run(module, capture_output=True, text=True, cwd=self.workdir,
+    def run_single(self, module: str, outname: Optional[Union[str, Path]] = None) -> dict:
+        """Run a single turbomole module, verify its output, and return parsed results.
+
+        :param module: name of the turbomole module to run
+        :param outname: optional path to write the module output
+        :return: parsed output dictionary from turboparse
+        """
+        full_cmd, effective_cwd = self._build_command([module], cwd=self.workdir)
+        output = subprocess.run(full_cmd, capture_output=True, text=True, cwd=effective_cwd,
                                 check=False)
-        print(output.stdout, file=stdout)
+        if outname is not None:
+            with open(outname, "w", encoding='utf-8') as f:
+                f.write(output.stdout)
+        else:
+            print(output.stdout)
         if "abnormal" in output.stderr:
             raise RuntimeError(f"Call to {module} ended abnormally")
+        data_dict = turboparse.parse_turbo(io.StringIO(output.stdout))
+        verify_module_output(module, data_dict, output.stderr)
+        return data_dict
 
     def read_coords(self):
         """Read the coordinates from the control file
@@ -264,15 +359,27 @@ class TMModel(ElectronicModel_):
         representation: str = "adiabatic",
         reference: Any = None,
         expert: bool=False,  # when False, update turbomole parameters for NAMD
-        turbomole_modules: Dict=None
+        turbomole_modules: Dict=None,
+        command_prefix: Optional[str] = None,
+        keep_output: int = 0
     ):
+        self.command_prefix = _resolve_command_prefix(command_prefix)
+        self.keep_output = keep_output
         self.workdir_stem = workdir_stem
         self.run_turbomole_dir = run_turbomole_dir
         unique_workdir = find_unique_name(self.workdir_stem, self.run_turbomole_dir,
                                           always_enumerate=True)
-        work = os.path.join(os.path.abspath(self.run_turbomole_dir), unique_workdir)
-        subprocess.run(["cpc", work], cwd=self.run_turbomole_dir, check=False)
-        self.control = TurboControl(workdir=work)
+        abs_run_dir = os.path.abspath(self.run_turbomole_dir)
+        work = os.path.join(abs_run_dir, unique_workdir)
+        if self.command_prefix:
+            cmd_str = " ".join(shlex.quote(c) for c in ["cpc", work])
+            shell_cmd = f"cd {shlex.quote(abs_run_dir)} && {self.command_prefix} {cmd_str}"
+            subprocess.run(["sh", "-c", shell_cmd], check=False,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        else:
+            subprocess.run(["cpc", work], cwd=self.run_turbomole_dir, check=False,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.control = TurboControl(workdir=work, command_prefix=self.command_prefix)
 
         # read coordinates and elements from the control file
         elements, X = self.control.read_coords()
@@ -288,8 +395,9 @@ class TMModel(ElectronicModel_):
 
         self.energies = np.zeros(self._nstates, dtype=np.float64)
 
-        if not turbomole_is_installed():
-            raise RuntimeError("Turbomole is not installed")
+        if not self.command_prefix:
+            if not turbomole_is_installed():
+                raise RuntimeError("Turbomole is not installed")
 
         if turbomole_modules is None:
             # always need energy and gradients
@@ -299,8 +407,9 @@ class TMModel(ElectronicModel_):
             self.turbomole_modules = mod
         else:
             self.turbomole_modules = turbomole_modules
-        if not all(shutil.which(x) is not None for x in self.turbomole_modules.values()):
-            raise RuntimeError("Turbomole modules not found")
+        if not self.command_prefix:
+            if not all(shutil.which(x) is not None for x in self.turbomole_modules.values()):
+                raise RuntimeError("Turbomole modules not found")
 
         # self.turbomole_init()
 
@@ -370,19 +479,28 @@ class TMModel(ElectronicModel_):
 
         # Now add results to model
 
-    def call_turbomole(self, outname="turbo.out") -> None:
+    def call_turbomole(self, outname: Union[str, Path] = "tm.current") -> None:
         """Call Turbomole to run the calculation"""
         # which forces are actually found?
         self._force = np.zeros((self.nstates, self.ndof))
         self._forces_available = np.zeros(self.nstates, dtype=bool)
 
-        with open(outname, "w", encoding='utf-8') as f:
-            for turbomole_module in self.turbomole_modules.values():
-                self.control.run_single(turbomole_module, stdout=f)
+        outpath = Path(outname)
+        data_dict = {}
+        module_outfiles = []
 
-        # Parse results with Turboparse
-        with open(outname, "r", encoding='utf-8') as f:
-            data_dict = turboparse.parse_turbo(f)
+        for turbomole_module in self.turbomole_modules.values():
+            module_outpath = outpath.parent / f"tm.{turbomole_module}.current"
+            module_data = self.control.run_single(turbomole_module, outname=module_outpath)
+            data_dict.update(module_data)
+            module_outfiles.append(module_outpath)
+
+        # Combine individual output files into one
+        with open(outpath, "w", encoding='utf-8') as combined:
+            for mf in module_outfiles:
+                with open(mf, "r", encoding='utf-8') as inf:
+                    combined.write(inf.read())
+                mf.unlink()
 
         # Now add results to model
         energy = data_dict[self.turbomole_modules["gs_energy"]]["energy"]
@@ -427,6 +545,37 @@ class TMModel(ElectronicModel_):
                 self._force[i+1,:] = -dE.flatten()
                 self._forces_available[i+1] = True
 
+        self._manage_output(outpath)
+
+    def _manage_output(self, outpath: Path) -> None:
+        """Rename the output file according to the keep_output policy.
+
+        keep_output == 0:  rename to tm.last (overwriting previous)
+        keep_output < 0:   rename to tm.{N} keeping all
+        keep_output > 0:   rename to tm.{N} keeping only the last N
+        """
+        parent = outpath.parent
+
+        # find existing numbered tm.N files
+        existing = glob.glob(str(parent / "tm.[0-9]*"))
+        numbers = []
+        for f in existing:
+            base = os.path.basename(f)
+            parts = base.split(".", 1)
+            if len(parts) == 2 and parts[1].isdigit():
+                numbers.append(int(parts[1]))
+
+        next_number = max(numbers) + 1 if numbers else 1
+
+        if self.keep_output == 0:
+            outpath.rename(parent / "tm.last")
+        else:
+            outpath.rename(parent / f"tm.{next_number}")
+
+            if self.keep_output > 0:
+                numbers.append(next_number)
+                for n in sorted(numbers)[:-self.keep_output]:
+                    (parent / f"tm.{n}").unlink(missing_ok=True)
 
     def compute(self, X, couplings: Any=None, gradients: Any=None, reference: Any=None) -> None:
         """
@@ -438,7 +587,7 @@ class TMModel(ElectronicModel_):
         """
         self._position = X
         self.update_coords(X)
-        self.call_turbomole(outname = Path(self.control.workdir)/"turbo.out")
+        self.call_turbomole(outname = Path(self.control.workdir)/"tm.current")
 
         self._hamiltonian = np.zeros([self.nstates, self.nstates])
         self._hamiltonian = np.diag(self.energies)
