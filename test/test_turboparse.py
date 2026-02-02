@@ -322,3 +322,79 @@ class TestHHeS2S:
         assert np.isclose(iterations[0]['max_residual_norm'], 7.045689164616345e-02)
         assert iterations[1]['step'] == 2
         assert np.isclose(iterations[1]['max_residual_norm'], 3.274080506635812e-14)
+
+
+class TestAcroleinCIS:
+    """Test parsing of acrolein.cis.txt egrad output (8-atom system with dense Fortran formatting)"""
+
+    @pytest.fixture
+    def parsed(self):
+        """Parse the acrolein.cis.txt file"""
+        filepath = os.path.join(exampledir, "acrolein.cis.txt")
+        with open(filepath, 'r') as f:
+            return parse_turbo(f)
+
+    def test_has_egrad_key(self, parsed):
+        assert 'egrad' in parsed
+
+    def test_davidson_converged(self, parsed):
+        assert parsed['egrad']['davidson']['converged'] is True
+
+    def test_davidson_iterations(self, parsed):
+        iterations = parsed['egrad']['davidson']['iterations']
+        assert len(iterations) == 10
+        assert np.isclose(iterations[0]['max_residual_norm'], 1.29407479841089e-01)
+        assert np.isclose(iterations[9]['max_residual_norm'], 3.932525923725169e-06)
+
+    def test_cpks_converged(self, parsed):
+        assert parsed['egrad']['cpks']['converged'] is True
+
+    def test_cpks_iterations(self, parsed):
+        iterations = parsed['egrad']['cpks']['iterations']
+        assert len(iterations) == 9
+        assert np.isclose(iterations[0]['max_residual_norm'], 7.800946513368974e-02)
+        assert np.isclose(iterations[8]['max_residual_norm'], 2.823662172303088e-06)
+
+    def test_ground_state_dipole(self, parsed):
+        dipole = parsed['egrad']['ground']['dipole']
+        assert np.isclose(dipole['total'][0], -0.356430)
+        assert np.isclose(dipole['total'][1], -1.424067)
+        assert np.isclose(dipole['total'][2], 0.0)
+
+    def test_gradient_atom_count(self, parsed):
+        gradient = parsed['egrad']['gradient'][0]
+        assert len(gradient['atom_list']) == 8
+
+    def test_gradient_atom_list(self, parsed):
+        gradient = parsed['egrad']['gradient'][0]
+        assert gradient['atom_list'] == [
+            '1 c', '2 c', '3 h', '4 h', '5 h', '6 c', '7 o', '8 h'
+        ]
+
+    def test_gradient_shape(self, parsed):
+        """Each atom should have all 3 gradient components"""
+        grad = parsed['egrad']['gradient'][0]['d/dR']
+        assert len(grad) == 8
+        for atom_grad in grad:
+            assert len(atom_grad) == 3
+
+    def test_gradient_values(self, parsed):
+        """Test all gradient values, especially where Fortran formatting
+        causes adjacent values to run together without whitespace.
+
+        For example, line 469 of the output:
+          dE/dx -0.3076426D-02 0.6824289D-02 0.3807253D-02-0.1180016D-01 0.1286775D-01
+        has no space between the 3rd and 4th values.
+        """
+        grad = parsed['egrad']['gradient'][0]['d/dR']
+        expected = [
+            [-0.3076426e-02, -0.5258624e-02,  0.0],
+            [ 0.6824289e-02,  0.9902150e-02,  0.0],
+            [ 0.3807253e-02, -0.1064780e-01,  0.0],
+            [-0.1180016e-01,  0.3806394e-03,  0.0],
+            [ 0.1286775e-01,  0.5345889e-03,  0.0],
+            [ 0.1834220e-01,  0.5186150e-01,  0.0],
+            [-0.9453334e-02, -0.3598091e-01,  0.0],
+            [-0.1751157e-01, -0.1079154e-01,  0.0],
+        ]
+        assert np.allclose(grad, expected)
