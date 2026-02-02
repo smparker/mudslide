@@ -3,13 +3,14 @@
 
 import os
 import sys
+import shlex
 import shutil
 import re
 import copy as cp
 import subprocess
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -45,8 +46,8 @@ class TurboControl:
     control_file = "control"
 
     def __init__(self, control_file="control", workdir=None,
-                 command_prefix: Optional[List[str]] = None):
-        self.command_prefix = command_prefix if command_prefix is not None else []
+                 command_prefix: Optional[str] = None):
+        self.command_prefix = command_prefix
         # workdir is directory of control file
         if control_file is not None:
             self.workdir = os.path.abspath(os.path.dirname(control_file))
@@ -63,9 +64,24 @@ class TurboControl:
         # list of data groups and which file they are in, used to avoid rerunning sdg too much
         self.dg_in_file = {}
 
-    def _build_command(self, cmd: list) -> list:
-        """Prepend command_prefix to a command list"""
-        return self.command_prefix + cmd
+    def _build_command(self, cmd: list, cwd: Optional[str] = None) -> tuple:
+        """Build command with prefix and working directory handling.
+
+        When command_prefix is set, the entire command is run through
+        ``sh -c`` so that shell constructs in the prefix (e.g. ``$(pwd)``)
+        are evaluated at execution time. The working directory is embedded
+        via ``cd`` so that it is respected inside containers.
+
+        Returns (command_list, effective_cwd) tuple.
+        """
+        if self.command_prefix:
+            cmd_str = " ".join(shlex.quote(c) for c in cmd)
+            if cwd is not None:
+                shell_cmd = f"cd {shlex.quote(cwd)} && {self.command_prefix} {cmd_str}"
+            else:
+                shell_cmd = f"{self.command_prefix} {cmd_str}"
+            return ["sh", "-c", shell_cmd], None
+        return cmd, cwd
 
     def check_turbomole_is_installed(self):
         """Check that turbomole is installed, raise exception if not"""
@@ -107,8 +123,9 @@ class TurboControl:
 
         sdg_command += f" {dg}"
 
-        result = subprocess.run(self._build_command(sdg_command.split()), capture_output=True,
-                                text=True, cwd=self.workdir, check=False)
+        full_cmd, effective_cwd = self._build_command(sdg_command.split(), cwd=self.workdir)
+        result = subprocess.run(full_cmd, capture_output=True, text=True, cwd=effective_cwd,
+                                check=False)
         return result.stdout.rstrip()
 
     def adg(self, dg, data, newline=False):
@@ -119,15 +136,17 @@ class TurboControl:
         if newline:
             lines = "\\n" + lines
         adg_command = f"adg {dg} {lines}"
-        result = subprocess.run(self._build_command(adg_command.split()), capture_output=True,
-                                text=True, cwd=self.workdir, check=True)
+        full_cmd, effective_cwd = self._build_command(adg_command.split(), cwd=self.workdir)
+        result = subprocess.run(full_cmd, capture_output=True, text=True, cwd=effective_cwd,
+                                check=True)
         # check that the command ran successfully
         if "abnormal" in result.stderr:
             raise RuntimeError(f"Call to adg ended abnormally: {result.stderr}")
 
     def cpc(self, dest):
         """Copy the control file and other files to a new directory"""
-        subprocess.run(self._build_command(["cpc", dest]), cwd=self.workdir, check=False)
+        full_cmd, effective_cwd = self._build_command(["cpc", dest], cwd=self.workdir)
+        subprocess.run(full_cmd, cwd=effective_cwd, check=False)
         file_list = ['ciss_a','exspectrum', 'statistics', 'dipl_a',
                      'excitationlog.1', 'moments', 'vecsao', 'control',
                      'gradient', 'energy', 'moments' ]
@@ -152,8 +171,9 @@ class TurboControl:
 
     def run_single(self, module, stdout=sys.stdout):
         """Run a single turbomole module"""
-        output = subprocess.run(self._build_command([module]), capture_output=True, text=True,
-                                cwd=self.workdir, check=False)
+        full_cmd, effective_cwd = self._build_command([module], cwd=self.workdir)
+        output = subprocess.run(full_cmd, capture_output=True, text=True, cwd=effective_cwd,
+                                check=False)
         print(output.stdout, file=stdout)
         if "abnormal" in output.stderr:
             raise RuntimeError(f"Call to {module} ended abnormally")
@@ -271,16 +291,21 @@ class TMModel(ElectronicModel_):
         reference: Any = None,
         expert: bool=False,  # when False, update turbomole parameters for NAMD
         turbomole_modules: Dict=None,
-        command_prefix: Optional[List[str]] = None
+        command_prefix: Optional[str] = None
     ):
-        self.command_prefix = command_prefix if command_prefix is not None else []
+        self.command_prefix = command_prefix
         self.workdir_stem = workdir_stem
         self.run_turbomole_dir = run_turbomole_dir
         unique_workdir = find_unique_name(self.workdir_stem, self.run_turbomole_dir,
                                           always_enumerate=True)
-        work = os.path.join(os.path.abspath(self.run_turbomole_dir), unique_workdir)
-        subprocess.run(self.command_prefix + ["cpc", work], cwd=self.run_turbomole_dir,
-                       check=False)
+        abs_run_dir = os.path.abspath(self.run_turbomole_dir)
+        work = os.path.join(abs_run_dir, unique_workdir)
+        if self.command_prefix:
+            cmd_str = " ".join(shlex.quote(c) for c in ["cpc", work])
+            shell_cmd = f"cd {shlex.quote(abs_run_dir)} && {self.command_prefix} {cmd_str}"
+            subprocess.run(["sh", "-c", shell_cmd], check=False)
+        else:
+            subprocess.run(["cpc", work], cwd=self.run_turbomole_dir, check=False)
         self.control = TurboControl(workdir=work, command_prefix=self.command_prefix)
 
         # read coordinates and elements from the control file

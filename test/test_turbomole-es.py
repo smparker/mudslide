@@ -4,7 +4,6 @@
 
 import numpy as np
 import os
-import shlex
 import shutil
 import unittest
 from pathlib import Path
@@ -34,8 +33,7 @@ class TestTMModel(unittest.TestCase):
     """Test Suite for TMModel class"""
 
     def setUp(self):
-        env = os.environ.get("MUDSLIDE_TURBOMOLE_PREFIX")
-        self.command_prefix = shlex.split(env) if env else None
+        self.command_prefix = os.environ.get("MUDSLIDE_TURBOMOLE_PREFIX")
 
         self.refdir = os.path.join(_refdir, "tm-es-c2h4")
 

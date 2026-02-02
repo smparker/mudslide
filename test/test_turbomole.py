@@ -4,7 +4,6 @@
 
 import numpy as np
 import os
-import shlex
 import shutil
 import unittest
 import pytest
@@ -28,15 +27,15 @@ pytestmark = pytest.mark.skipif(not _turbomole_available(),
 def test_raise_on_missing_control():
     """Test if an exception is raised if no control file is found"""
     with pytest.raises(RuntimeError):
-        model = TMModel(states=[0])
+        model = TMModel(states=[0],
+                        command_prefix=os.environ.get("MUDSLIDE_TURBOMOLE_PREFIX"))
 
 class _TestTM(unittest.TestCase):
     """Base class for TMModel class"""
     testname = None
 
     def setUp(self):
-        env = os.environ.get("MUDSLIDE_TURBOMOLE_PREFIX")
-        self.command_prefix = shlex.split(env) if env else None
+        self.command_prefix = os.environ.get("MUDSLIDE_TURBOMOLE_PREFIX")
 
         self.refdir = os.path.join(_refdir, self.testname)
         self.rundir = os.path.join(_checkdir, self.testname)
