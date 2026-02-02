@@ -158,7 +158,8 @@ class TurboControl:
     def cpc(self, dest):
         """Copy the control file and other files to a new directory"""
         full_cmd, effective_cwd = self._build_command(["cpc", dest], cwd=self.workdir)
-        subprocess.run(full_cmd, cwd=effective_cwd, check=False)
+        subprocess.run(full_cmd, cwd=effective_cwd, check=False,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         file_list = ['ciss_a','exspectrum', 'statistics', 'dipl_a',
                      'excitationlog.1', 'moments', 'vecsao', 'control',
                      'gradient', 'energy', 'moments' ]
@@ -317,9 +318,11 @@ class TMModel(ElectronicModel_):
         if self.command_prefix:
             cmd_str = " ".join(shlex.quote(c) for c in ["cpc", work])
             shell_cmd = f"cd {shlex.quote(abs_run_dir)} && {self.command_prefix} {cmd_str}"
-            subprocess.run(["sh", "-c", shell_cmd], check=False)
+            subprocess.run(["sh", "-c", shell_cmd], check=False,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         else:
-            subprocess.run(["cpc", work], cwd=self.run_turbomole_dir, check=False)
+            subprocess.run(["cpc", work], cwd=self.run_turbomole_dir, check=False,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.control = TurboControl(workdir=work, command_prefix=self.command_prefix)
 
         # read coordinates and elements from the control file
