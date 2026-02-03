@@ -35,6 +35,27 @@ def test_tully_avoided_crossing_cumulative():
     assert step_800["prob_cum"] == pytest.approx(0.07770987897120947)  # Cumulative probability
     assert step_800["zeta"] == pytest.approx(0.26871620122784523)  # Random number for hopping
 
+def test_forced_hop():
+    # Use smaller coupling (c=0.003) so the minimum adiabatic gap (2c = 0.006)
+    # falls below the forced_hop_threshold of 0.008
+    simple_model = mudslide.models.TullySimpleAvoidedCrossing(c=0.003)
+    x0 = np.array([-5.0])
+    p0 = np.array([15.0])
+    v0 = p0 / simple_model.mass
+
+    # Start on excited state (state 1) and run until forced hop triggers
+    traj = mudslide.SurfaceHoppingMD(simple_model, x0, v0, 1, dt=1, max_steps=700,
+                                    forced_hop_threshold=0.008, trace_every=1,
+                                    seed_sequence=7943)
+    log = traj.simulate()
+
+    # A forced hop to the lowest state should have occurred
+    assert len(log.hops) >= 1
+    forced = log.hops[0]
+    assert forced["hop_from"] == 1
+    assert forced["hop_to"] == 0
+    assert forced["prob"] == 1.0  # forced hops are recorded with prob=1.0
+
 def test_tully_avoided_crossing_cumulative_integrated():
     # Set up the model and initial conditions
     simple_model = mudslide.models.TullySimpleAvoidedCrossing()

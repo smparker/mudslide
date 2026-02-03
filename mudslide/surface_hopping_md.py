@@ -34,7 +34,8 @@ class SurfaceHoppingMD:
         "restarting",
         "hopping_probability", "zeta_list",
         "state0",
-        "hopping_method"
+        "hopping_method",
+        "forced_hop_threshold"
         ]
 
     def __init__(self,
@@ -116,6 +117,10 @@ class SurfaceHoppingMD:
         hopping_method : str, optional
             Hopping method: 'cumulative', 'cumulative_integrated', or 'instantaneous'.
             Default is 'cumulative'.
+        forced_hop_threshold : float, optional
+            When the energy gap between the two lowest states falls below this threshold
+            and the active state is not the lowest, force a hop to the lowest state.
+            Default is None (off).
         """
         check_options(options, self.recognized_options, strict=strict_option_check)
 
@@ -206,6 +211,8 @@ class SurfaceHoppingMD:
         allowed_methods = ["instantaneous", "cumulative", "cumulative_integrated"]
         if self.hopping_method not in allowed_methods:
             raise ValueError(f"hopping_method should be one of {allowed_methods}")
+
+        self.forced_hop_threshold = options.get("forced_hop_threshold", None)
 
         if self.hopping_method in ["cumulative", "cumulative_integrated"]:
             self.prob_cum = np.longdouble(0.0)
@@ -714,6 +721,22 @@ class SurfaceHoppingMD:
         elif self.hopping_probability == "poisson":
             probs = gkndt * poisson_prob_scale(np.sum(gkndt))
         self.hopping = np.sum(probs).item()  # store total hopping probability
+
+        # Forced hop check — short-circuit normal hopping logic
+        if self.forced_hop_threshold is not None:
+            energies = np.diag(self.electronics.hamiltonian).real
+            sorted_energies = np.sort(energies)
+            gap = sorted_energies[1] - sorted_energies[0]
+            if gap < self.forced_hop_threshold and self.state != np.argmin(energies):
+                lowest_state = int(np.argmin(energies))
+                # Reset hopping state as a normal hop would
+                if self.hopping_method in ["cumulative", "cumulative_integrated"]:
+                    self.prob_cum = np.longdouble(0.0)
+                self.zeta = self.draw_new_zeta()
+                if self.hopping_method == "cumulative_integrated":
+                    self.zeta = -np.log(1.0 - self.zeta)
+                return [{"target": lowest_state, "weight": 1.0,
+                         "zeta": self.zeta, "prob": 1.0}]
 
         if self.hopping_method in ["cumulative", "cumulative_integrated"]:
             accumulated = np.longdouble(self.prob_cum)

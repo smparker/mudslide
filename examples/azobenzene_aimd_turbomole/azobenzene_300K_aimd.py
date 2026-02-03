@@ -1,4 +1,6 @@
 import mudslide
+from mudslide.units import *
+
 import numpy as np
 
 if __name__ == "__main__":
@@ -9,10 +11,8 @@ if __name__ == "__main__":
     X = model._position
     velocities = mudslide.math.boltzmann_velocities(model.mass,
                                                     temperature=300.0,
+                                                    coords=X,
                                                     seed=1234)
-    velocities = mudslide.util.remove_angular_momentum(
-        velocities.reshape((-1, 3)),
-        model.mass.reshape((-1, 3))[:, 0], X.reshape((-1, 3))).flatten()
 
     traj = mudslide.AdiabaticMD(model,
                                 X,
@@ -22,7 +22,7 @@ if __name__ == "__main__":
                                     "temperature": 300
                                 },
                                 tracer="yaml",
-                                dt=0.5 * mudslide.fs_to_au,
+                                dt=0.5 * fs,
                                 max_steps=100,
                                 remove_com_every=1,
                                 remove_angular_momentum_every=1)
