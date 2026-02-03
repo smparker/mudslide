@@ -385,11 +385,11 @@ class TMModel(ElectronicModel_):
         elements, X = self.control.read_coords()
         nparts, ndims = X.shape
         self._position = X.flatten()
-        self._elements = elements
         self.states = states
         ElectronicModel_.__init__(self, nstates=len(self.states), ndims=ndims, nparticles=nparts,
+                                atom_types=elements,
                                 representation=representation, reference=reference)
-        self.mass = self.control.get_masses(self._elements)
+        self.mass = self.control.get_masses(elements)
 
         self.expert = expert
 
@@ -470,7 +470,7 @@ class TMModel(ElectronicModel_):
         coordline += 1
         for i, coord_list in enumerate(X):
             x, y, z = coord_list[:3]
-            s = self._elements[i]
+            s = self.atom_types[i]
             lines[coordline] = f"{x:26.16e} {y:28.16e} {z:28.16e} {s:>7}\n"
             coordline += 1
 

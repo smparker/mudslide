@@ -10,7 +10,7 @@ from typing import Any, Dict
 
 import numpy as np
 
-from .constants import fs_to_au, boltzmann
+from .constants import fs_to_au, boltzmann, amu_to_au
 from .propagator import Propagator_
 from .util import remove_center_of_mass_motion, remove_angular_momentum
 
@@ -165,7 +165,7 @@ class NoseHooverChainPropagator(Propagator_):
         print(f"  Temperature: {temperature:.2f} K")
         print(f"  Number of chains: {nchains}")
         print(f"  Timescale: {timescale / fs_to_au:.2f} fs")
-        print(f"  Thermostat mass: {self.nh_mass}")
+        print(f"  Thermostat mass: {self.nh_mass / amu_to_au} amu")
 
     def nhc_step(self, velocity, mass, dt: float):
         """Move forward one step in the extended system variables.
