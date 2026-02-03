@@ -1,4 +1,6 @@
 import mudslide
+from mudslide.units import *
+
 import numpy as np
 
 if __name__ == "__main__":
@@ -22,7 +24,7 @@ if __name__ == "__main__":
                                     "temperature": 300
                                 },
                                 tracer="yaml",
-                                dt=0.5 * mudslide.fs_to_au,
+                                dt=0.5 * fs,
                                 max_steps=100,
                                 remove_com_every=1,
                                 remove_angular_momentum_every=1)

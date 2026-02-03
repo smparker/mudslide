@@ -1,4 +1,6 @@
 import mudslide
+from mudslide.units import *
+
 import numpy as np
 
 if __name__ == "__main__":
@@ -19,7 +21,7 @@ if __name__ == "__main__":
                                      velocities,
                                      1,
                                      tracer="yaml",
-                                     dt=mudslide.fs_to_au,
+                                     dt=fs,
                                      max_steps=10)
 
     results = traj.simulate()

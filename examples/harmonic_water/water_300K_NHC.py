@@ -1,5 +1,7 @@
-import json
 import mudslide
+from mudslide.units import *
+
+import json
 import numpy as np
 
 mudslide.print_header()
@@ -23,7 +25,7 @@ traj = mudslide.AdiabaticMD(model,
                                 "type": "nhc",
                                 "temperature": 300
                             },
-                            dt=0.5 * mudslide.fs_to_au,
+                            dt=0.5 * fs,
                             max_steps=30000,
                             remove_com_every=1,
                             remove_angular_momentum_every=1)
