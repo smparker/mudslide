@@ -6,7 +6,7 @@ import warnings
 import numpy as np
 from numpy.typing import ArrayLike
 
-from .util import remove_center_of_mass_motion
+from .util import remove_center_of_mass_motion, remove_angular_momentum
 
 from .constants import boltzmann
 
@@ -34,6 +34,7 @@ def poisson_prob_scale(x: ArrayLike):
 
 
 def boltzmann_velocities(mass, temperature, remove_translation=True,
+                         coords=None, remove_rotation=None,
                          scale=True, seed=None):
     """Generate random velocities according to the Boltzmann distribution.
 
@@ -46,6 +47,14 @@ def boltzmann_velocities(mass, temperature, remove_translation=True,
     remove_translation : bool, optional
         Whether to remove center of mass translation from velocities.
         Default is True.
+    coords : ArrayLike or None, optional
+        Array of particle coordinates. Required if removing rotation.
+        Default is None.
+    remove_rotation : bool or None, optional
+        Whether to remove overall rotation from velocities.
+        Requires coords is provided.
+        If None, rotation removal is performed if coords are provided.
+        Default is None.
     scale : bool, optional
         Whether to scale velocities to match the target temperature.
         Default is True.
@@ -62,21 +71,31 @@ def boltzmann_velocities(mass, temperature, remove_translation=True,
     sigma = np.sqrt(kt * mass)
     p = rng.normal(0.0, sigma)
 
+    if remove_rotation is None:
+        remove_rotation = coords is not None
+    elif remove_rotation and coords is None:
+        raise ValueError("Coordinates must be provided to remove rotation.")
+
     if remove_translation:
         v = p / mass
         v3 = v.reshape((-1, 3))
         M = mass.reshape((-1, 3))[:,0] # pylint: disable=invalid-name
 
-        v = remove_center_of_mass_motion(v3, M).flatten()
+        v3_com = remove_center_of_mass_motion(v3, M)
+        v = v3_com.reshape(mass.shape)
         p = v * mass
 
-    #if remove_rotation:
-    #    v3 = v.reshape((-1, 3))
-    #    M = mass.reshape((-1, 3))[:,0]
-    #    v = remove_angular_momentum(v3, M, np.zeros_like(v3)).flatten()
+    if remove_rotation:
+        v3 = v.reshape((-1, 3))
+        M = mass.reshape((-1, 3))[:,0]
+        coords3 = coords.reshape((-1, 3))
+
+        v3_am = remove_angular_momentum(v3, M, coords3)
+        v = v3_am.reshape(mass.shape)
+        p = v * mass
 
     if scale:
-        avg_KE = 0.5 * np.dot(p**2, np.reciprocal(mass)) / mass.size # pylint: disable=invalid-name
+        avg_KE = 0.5 * np.sum(p**2 / mass) / mass.size # pylint: disable=invalid-name
         kbT2 = 0.5 * kt # pylint: disable=invalid-name
         scal = np.sqrt(kbT2 / avg_KE)
         p *= scal

@@ -11,10 +11,8 @@ if __name__ == "__main__":
     X = model._position
     velocities = mudslide.math.boltzmann_velocities(model.mass,
                                                     temperature=200.0,
+                                                    coords=X,
                                                     seed=1234)
-    velocities = mudslide.util.remove_angular_momentum(
-        velocities.reshape((-1, 3)),
-        model.mass.reshape((-1, 3))[:, 0], X.reshape((-1, 3))).flatten()
 
     traj = mudslide.SurfaceHoppingMD(model,
                                      X,
