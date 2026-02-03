@@ -20,6 +20,7 @@ if __name__ == "__main__":
                                      1,
                                      tracer="yaml",
                                      dt=fs,
+                                     forced_hop_threshold=0.2 * eV,
                                      max_steps=10)
 
     results = traj.simulate()
