@@ -135,13 +135,15 @@ class TestTMExDynamics(_TestTM):
         states = [0, 1, 2, 3]
 
         for t in ref_times:
+            available = results[t]["electronics"]["forces_available"]
             for s in states:
                 np.testing.assert_almost_equal(refs[t]["electronics"]["hamiltonian"][s][s],
                                        results[t]["electronics"]["hamiltonian"][s][s],
                                        decimal=8)
-                np.testing.assert_almost_equal(refs[t]["electronics"]["force"][s],
-                                               results[t]["electronics"]["force"][s],
-                                               decimal=8)
+                if available[s]:
+                    np.testing.assert_almost_equal(refs[t]["electronics"]["force"][s],
+                                                   results[t]["electronics"]["force"][s],
+                                                   decimal=8)
 
         for t in ref_times:
             np.testing.assert_almost_equal(refs[t]["density_matrix"], results[t]["density_matrix"], decimal=8)

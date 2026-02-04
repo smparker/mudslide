@@ -103,14 +103,16 @@ class TestTMModel(unittest.TestCase):
         states = [0, 1, 2, 3]
 
         for t in ref_times:
+            available = results[1][t]["electronics"]["forces_available"]
             for s in states:
                 self.assertAlmostEqual(refs[t]["electronics"]["hamiltonian"][s][s],
                                        results[1][t]["electronics"]["hamiltonian"][s][s],
                                        places=8)
 
-                np.testing.assert_almost_equal(refs[t]["electronics"]["force"][s],
-                                               results[1][t]["electronics"]["force"][s],
-                                               decimal=8)
+                if available[s]:
+                    np.testing.assert_almost_equal(refs[t]["electronics"]["force"][s],
+                                                   results[1][t]["electronics"]["force"][s],
+                                                   decimal=8)
 
         for t in ref_times:
             np.testing.assert_almost_equal(refs[t]["density_matrix"], results[1][t]["density_matrix"], decimal=8)

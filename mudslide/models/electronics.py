@@ -309,7 +309,8 @@ class ElectronicModel_:
             "ndof": self.ndof,
             "position": self._position.tolist(),
             "hamiltonian": self._hamiltonian.tolist(),
-            "force": self._force.tolist()
+            "force": self._force.tolist(),
+            "forces_available": self._forces_available.tolist()
         }
 
         for key in [ "_derivative_coupling", "_force_matrix" ]:
