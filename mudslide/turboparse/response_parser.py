@@ -234,6 +234,15 @@ class EgradEscfParser(ParseSection):
             GradientDataParser(EXCITED_STATE_GRADIENT_HEAD),
         ]
 
+    def clean(self, liter, out):
+        exopt = out.get("exopt")
+        gradients = out.get("gradient")
+        if not exopt or not gradients or len(exopt) != len(gradients):
+            return
+        for i, grad in enumerate(gradients):
+            if "index" not in grad:
+                grad["index"] = exopt[i]
+
 
 class EgradParser(EgradEscfParser):
     name = "egrad"
