@@ -105,25 +105,25 @@ class TestTMModel(unittest.TestCase):
         for t in ref_times:
             available = results[1][t]["electronics"]["forces_available"]
             for s in states:
-                self.assertAlmostEqual(refs[t]["electronics"]["hamiltonian"][s][s],
-                                       results[1][t]["electronics"]["hamiltonian"][s][s],
+                self.assertAlmostEqual(results[1][t]["electronics"]["hamiltonian"][s][s],
+                                       refs[t]["electronics"]["hamiltonian"][s][s],
                                        places=8)
 
                 if available[s]:
-                    np.testing.assert_almost_equal(refs[t]["electronics"]["force"][s],
-                                                   results[1][t]["electronics"]["force"][s],
+                    np.testing.assert_almost_equal(results[1][t]["electronics"]["force"][s],
+                                                   refs[t]["electronics"]["force"][s],
                                                    decimal=8)
 
         for t in ref_times:
-            np.testing.assert_almost_equal(refs[t]["density_matrix"], results[1][t]["density_matrix"], decimal=8)
-            np.testing.assert_almost_equal(refs[t]["position"], results[1][t]["position"], decimal=8)
-            np.testing.assert_almost_equal(refs[t]["velocity"], results[1][t]["velocity"], decimal=8)
+            np.testing.assert_almost_equal(results[1][t]["density_matrix"], refs[t]["density_matrix"],  decimal=8)
+            np.testing.assert_almost_equal(results[1][t]["position"], refs[t]["position"], decimal=8)
+            np.testing.assert_almost_equal(results[1][t]["velocity"], refs[t]["velocity"], decimal=8)
 
         for t in ref_times:
             for s1 in states:
                 for s2 in range(s1, 3):
-                    np.testing.assert_almost_equal(refs[t]["electronics"]["derivative_coupling"][s1][s2],
-                                                   results[1][t]["electronics"]["derivative_coupling"][s1][s2],
+                    np.testing.assert_almost_equal(results[1][t]["electronics"]["derivative_coupling"][s1][s2],
+                                                   refs[t]["electronics"]["derivative_coupling"][s1][s2],
                                                    decimal=6)
 
     def test_ridft_convergence_failure(self):
