@@ -479,17 +479,33 @@ class TMModel(ElectronicModel_):
 
         # Now add results to model
 
-    def call_turbomole(self, outname: Union[str, Path] = "tm.current") -> None:
-        """Call Turbomole to run the calculation"""
+    def call_turbomole(self, outname: Union[str, Path] = "tm.current",
+                       gradients: Any = None) -> None:
+        """Call Turbomole to run the calculation.
+
+        Parameters
+        ----------
+        outname : str or Path, optional
+            Output file path, by default "tm.current"
+        gradients : list of int or None, optional
+            Which state forces to compute. None means all.
+            When a list is provided, only the specified states are
+            marked as available, but all modules still run to ensure
+            energies and couplings are complete.
+        """
         # which forces are actually found?
         self._force = np.zeros((self.nstates, self.ndof))
         self._forces_available = np.zeros(self.nstates, dtype=bool)
+
+        # determine which modules to run -- always run all modules
+        # to ensure complete energies and couplings
+        modules_to_run = dict(self.turbomole_modules)
 
         outpath = Path(outname)
         data_dict = {}
         module_outfiles = []
 
-        for turbomole_module in self.turbomole_modules.values():
+        for turbomole_module in modules_to_run.values():
             module_outpath = outpath.parent / f"tm.{turbomole_module}.current"
             module_data = self.control.run_single(turbomole_module, outname=module_outpath)
             data_dict.update(module_data)
@@ -503,15 +519,18 @@ class TMModel(ElectronicModel_):
                 mf.unlink()
 
         # Now add results to model
-        energy = data_dict[self.turbomole_modules["gs_energy"]]["energy"]
+        energy = data_dict[modules_to_run["gs_energy"]]["energy"]
         self.energies[:] = 0.0
         self.energies[0] = energy
-        dE0 = np.array(data_dict[self.turbomole_modules["gs_grads"]]["gradient"][0]["d/dR"])
-        self._force[0,:] = -dE0.flatten()
-        self._forces_available[0] = True
+
+        if "gs_grads" in modules_to_run:
+            dE0 = np.array(data_dict[modules_to_run["gs_grads"]]["gradient"][0]["d/dR"])
+            self._force[0,:] = -dE0.flatten()
+            if gradients is None or 0 in gradients:
+                self._forces_available[0] = True
 
         # Check for presence of egrad turbomole module
-        if "egrad" in self.turbomole_modules.values():
+        if "es_grads" in modules_to_run and "egrad" in data_dict:
             # egrad updates to energy
             excited_energies = [
                 data_dict["egrad"]["excited_state"][i]["energy"] + energy
@@ -539,11 +558,14 @@ class TMModel(ElectronicModel_):
                 self._derivative_couplings_available[i, j] = True
                 self._derivative_couplings_available[j, i] = True
 
-            # egrad updates to gradients
+            # egrad updates to gradients -- always store forces,
+            # but only mark as available if requested
             for i in range(len(data_dict["egrad"]["gradient"])):
                 dE = np.array(data_dict["egrad"]["gradient"][i]["d/dR"])
-                self._force[i+1,:] = -dE.flatten()
-                self._forces_available[i+1] = True
+                state_idx = i + 1
+                self._force[state_idx,:] = -dE.flatten()
+                if gradients is None or state_idx in gradients:
+                    self._forces_available[state_idx] = True
 
         self._manage_output(outpath)
 
@@ -584,13 +606,46 @@ class TMModel(ElectronicModel_):
         needs to know where the "original" files/data sit, so that they
         can get properly passed to Turbomole. (__init__() can get these
         file locations.)
+
+        Parameters
+        ----------
+        X : ArrayLike
+            Position at which to compute properties
+        couplings : list of tuple(int, int) or None, optional
+            Which coupling pairs to compute. None means all.
+        gradients : list of int or None, optional
+            Which state forces to compute. None means all.
+        reference : Any, optional
+            Reference state information.
         """
         self._position = X
         self.update_coords(X)
-        self.call_turbomole(outname = Path(self.control.workdir)/"tm.current")
+        self.call_turbomole(outname=Path(self.control.workdir)/"tm.current",
+                            gradients=gradients)
 
         self._hamiltonian = np.zeros([self.nstates, self.nstates])
         self._hamiltonian = np.diag(self.energies)
+
+    def compute_additional(self, couplings: Any = None, gradients: Any = None) -> None:
+        """Compute additional gradients at the current geometry.
+
+        Since all turbomole modules run during compute(), forces for all
+        states are already stored. This method just marks the newly
+        requested quantities as available.
+
+        Parameters
+        ----------
+        couplings : list of tuple(int, int) or None, optional
+            Coupling pairs to compute. None means all.
+        gradients : list of int or None, optional
+            State indices whose forces are needed. None means all.
+        """
+        needed_g = self._needed_gradients(gradients)
+        needed_c = self._needed_couplings(couplings)
+        for s in needed_g:
+            self._forces_available[s] = True
+        for (i, j) in needed_c:
+            self._derivative_couplings_available[i, j] = True
 
     def clone(self):
         model_clone = cp.deepcopy(self)
