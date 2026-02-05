@@ -72,13 +72,13 @@ class HarmonicModel(ElectronicModel_):
             model_dict: Dictionary with model data
         """
 
-        x0 = np.array(model_dict["x0"])
+        x0 = np.array(model_dict["x0"]).flatten()
         E0 = float(model_dict["E0"])
         H0 = np.array(model_dict["H0"])
         mass = np.array(model_dict["mass"])
         atom_types = model_dict.get("atom_types", None)
         nparticles = len(atom_types) if atom_types is not None else 1
-        ndims = len(x0) // nparticles
+        ndims = x0.size // nparticles
 
         return cls(x0, E0, H0, mass, atom_types=atom_types,
                    ndims=ndims, nparticles=nparticles)
