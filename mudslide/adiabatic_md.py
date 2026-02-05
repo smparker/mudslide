@@ -25,7 +25,7 @@ class AdiabaticMD:
     recognized_options = [
         "dt", "t0", "trace_every", "remove_com_every", "remove_angular_momentum_every",
         "max_steps", "max_time", "bounds", "propagator", "seed_sequence", "electronics",
-        "outcome_type", "weight"
+        "outcome_type", "weight", "last_velocity", "previous_steps", "restarting"
     ]
 
     def __init__(self,

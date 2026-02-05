@@ -248,3 +248,77 @@ def test_mode_kinetic_energy():
     # total KE >= any single-mode KE
     total_ke = traj.kinetic_energy()
     assert total_ke >= ke_mode
+
+
+def test_restart_options_recognized():
+    """restart-related options should be recognized with strict_option_check=True"""
+    x = np.array(water_model.x0)
+    v = np.zeros_like(x)
+    last_v = np.ones_like(x) * 0.001
+
+    # This should not raise ValueError with strict_option_check=True
+    traj = mudslide.AdiabaticMD(
+        water_model,
+        x,
+        v,
+        dt=20,
+        max_steps=5,
+        last_velocity=last_v,
+        previous_steps=10,
+        restarting=True,
+        strict_option_check=True
+    )
+    assert np.allclose(traj.last_velocity, last_v)
+    assert traj.nsteps == 10
+    assert traj.restarting is True
+
+
+def test_restart_classmethod():
+    """restart classmethod creates trajectory from log"""
+    x = np.array(water_model.x0)
+    v = mudslide.math.boltzmann_velocities(water_model.mass,
+                                           temperature=300.0,
+                                           remove_translation=False,
+                                           seed=42)
+
+    # Run initial trajectory
+    traj = mudslide.AdiabaticMD(water_model, x, v, dt=20, max_steps=5)
+    log = traj.simulate()
+    assert len(log) == 6  # 5 steps + initial
+
+    # Restart from log
+    restarted = mudslide.AdiabaticMD.restart(water_model, log, max_steps=10)
+
+    # Check that restarted trajectory has correct state
+    assert restarted.restarting is True
+    assert restarted.nsteps == len(log)
+    assert np.allclose(restarted.position, log[-1]["position"])
+    assert np.allclose(restarted.velocity, log[-1]["velocity"])
+    assert np.allclose(restarted.last_velocity, log[-2]["velocity"])
+    assert np.isclose(restarted.time, log[-1]["time"])
+
+
+def test_restart_continues_simulation():
+    """restarted trajectory continues from where it left off"""
+    x = np.array(water_model.x0)
+    v = mudslide.math.boltzmann_velocities(water_model.mass,
+                                           temperature=300.0,
+                                           remove_translation=False,
+                                           seed=42)
+
+    # Run initial trajectory
+    traj = mudslide.AdiabaticMD(water_model, x, v, dt=20, max_steps=5)
+    log = traj.simulate()
+    initial_len = len(log)
+    last_time = log[-1]["time"]
+
+    # Restart and continue
+    restarted = mudslide.AdiabaticMD.restart(water_model, log, max_steps=10)
+    continued_log = restarted.simulate()
+
+    # Log should have grown
+    assert len(continued_log) > initial_len
+    # Time should have advanced
+    assert continued_log[-1]["time"] > last_time
+    # Energy should be approximately conserved
+    assert np.isclose(continued_log[0]["energy"], continued_log[-1]["energy"], rtol=1e-3)
