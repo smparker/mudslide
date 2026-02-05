@@ -4,14 +4,22 @@ import re
 
 from .section_parser import ParseSection
 
+FLT = r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?"
+
+def try_to_fill_with_float(dict_obj, key, value):
+    """Try to fill a dict with a float, but do nothing if it fails."""
+    try:
+        dict_obj[key] = float(value)
+    except:
+        pass
 
 class FreeHData(ParseSection):
     name = ''
 
     start1st_re = re.compile(r"T\s+p\s+ln\(qtrans\)\s+ln\(qrot\)\s+ln\(qvib\)\s+chem\.pot\.\s+energy\s+entropy")
-    data1st_re = re.compile(r"(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)")
-    start2nd_re = re.compile(r"\(K\)\s+\(MPa\)\s+\(kJ/mol-K\)\s+\(kJ/mol-K\)\s+\(kJ/mol\)")
-    data2nd_re = re.compile(r"(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)")
+    data1st_re = re.compile(rf"({FLT})\s+({FLT})\s+({FLT})\s+({FLT})\s+({FLT})\s+({FLT})\s+({FLT})\s+({FLT})")
+    start2nd_re = re.compile(r"\(K\)\s+\(MPa\)\s+\(kJ/mol-K\)\s+\(kJ/mol-K\)(?:\s+\(kJ/mol\))?")
+    data2nd_re = re.compile(rf"({FLT})\s+({FLT})\s+({FLT})\s+({FLT})\s*({FLT})?")
     end_re = re.compile(r"\*{50}")
 
     def __init__(self):
@@ -39,16 +47,16 @@ class FreeHData(ParseSection):
                 while not done1st:
                     m1st = self.data1st_re.search(liter.top())
                     if m1st:
-                        data.append({
-                            'T': float(m1st.group(1)),
-                            'P': float(m1st.group(2)),
-                            'qtrans': float(m1st.group(3)),
-                            'qrot': float(m1st.group(4)),
-                            'qvib': float(m1st.group(5)),
-                            'chem.pot.': float(m1st.group(6)),
-                            'energy': float(m1st.group(7)),
-                            'entropy': float(m1st.group(8))
-                        })
+                        new_data = {}
+                        try_to_fill_with_float(new_data, 'T', m1st.group(1))
+                        try_to_fill_with_float(new_data, 'P', m1st.group(2))
+                        try_to_fill_with_float(new_data, 'qtrans', m1st.group(3))
+                        try_to_fill_with_float(new_data, 'qrot', m1st.group(4))
+                        try_to_fill_with_float(new_data, 'qvib', m1st.group(5))
+                        try_to_fill_with_float(new_data, 'chem.pot.', m1st.group(6))
+                        try_to_fill_with_float(new_data, 'energy', m1st.group(7))
+                        try_to_fill_with_float(new_data, 'entropy', m1st.group(8))
+                        data.append(new_data)
 
                     mend = self.start2nd_re.search(liter.top())
                     if mend:
@@ -66,13 +74,11 @@ class FreeHData(ParseSection):
                 while not done2nd:
                     m2nd = self.data2nd_re.search(liter.top())
                     if m2nd:
-                        data[i].update({
-                            'T': float(m2nd.group(1)),
-                            'P': float(m2nd.group(2)),
-                            'Cv': float(m2nd.group(3)),
-                            'Cp': float(m2nd.group(4)),
-                            'H': float(m2nd.group(5))
-                        })
+                        try_to_fill_with_float(data[i], 'T', m2nd.group(1))
+                        try_to_fill_with_float(data[i], 'P', m2nd.group(2))
+                        try_to_fill_with_float(data[i], 'Cv', m2nd.group(3))
+                        try_to_fill_with_float(data[i], 'Cp', m2nd.group(4))
+                        try_to_fill_with_float(data[i], 'H', m2nd.group(5))
                         i += 1
 
                     if self.test_tail(liter.top()):
