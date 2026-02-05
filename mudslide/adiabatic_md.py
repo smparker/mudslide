@@ -211,7 +211,7 @@ class AdiabaticMD:
         memo[id(self)] = result
         shallow_only = ["queue"]
         for k, v in self.__dict__.items():
-            setattr(result, k, cp.deepcopy(v, memo) if v not in shallow_only else cp.copy(v))
+            setattr(result, k, cp.deepcopy(v, memo) if k not in shallow_only else cp.copy(v))
         return result
 
     def clone(self) -> 'AdiabaticMD':
