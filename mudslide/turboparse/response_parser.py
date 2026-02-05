@@ -5,6 +5,30 @@ from .section_parser import ParseSection
 from .common_parser import GroundParser, NACParser, GradientDataParser, EXCITED_STATE_GRADIENT_HEAD, fortran_float
 
 
+class ExoptLineParser(LineParser):
+    """Parse lines specifying which excited states are being optimized.
+
+    Matches three formats:
+    - "Excited state no.    3 chosen for optimization" -> [3]
+    - "Default state chosen:   1" -> [1]
+    - "3 excited states specified in $exopt:     1     2     3" -> [1, 2, 3]
+    """
+
+    def __init__(self):
+        reg = (r"(?:Excited state no\.\s+(\d+)\s+chosen for optimization|"
+               r"Default state chosen:\s+(\d+)|"
+               r"\d+\s+excited states specified in \$exopt:\s+([\d\s]+))")
+        super().__init__(reg)
+
+    def process(self, m, out):
+        if m.group(1) is not None:
+            out["exopt"] = [int(m.group(1))]
+        elif m.group(2) is not None:
+            out["exopt"] = [int(m.group(2))]
+        elif m.group(3) is not None:
+            out["exopt"] = [int(x) for x in m.group(3).split()]
+
+
 class ExcitedDipoleParser(ParseSection):
     """Parser for excited state dipole moments"""
 
@@ -194,6 +218,7 @@ class EgradEscfParser(ParseSection):
     def __init__(self, head, tail):
         super().__init__(head, tail)
         self.parsers = [
+            ExoptLineParser(),
             DavidsonParser(),
             CPKSParser(),
             GroundParser(),
@@ -208,6 +233,15 @@ class EgradEscfParser(ParseSection):
             NACParser(),
             GradientDataParser(EXCITED_STATE_GRADIENT_HEAD),
         ]
+
+    def clean(self, liter, out):
+        exopt = out.get("exopt")
+        gradients = out.get("gradient")
+        if not exopt or not gradients or len(exopt) != len(gradients):
+            return
+        for i, grad in enumerate(gradients):
+            if "index" not in grad:
+                grad["index"] = exopt[i]
 
 
 class EgradParser(EgradEscfParser):

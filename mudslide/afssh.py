@@ -48,7 +48,8 @@ class AFSSHVVPropagator(Propagator_):
 
             # calculate electronics at new position
             traj.last_electronics, traj.electronics = traj.electronics, traj.model.update(
-                traj.position, electronics=traj.electronics)
+                traj.position, electronics=traj.electronics,
+                gradients=traj.needed_gradients(), couplings=traj.needed_couplings())
 
             # Update velocity using Velocity Verlet
             last_acceleration = traj._force(traj.last_electronics) / traj.mass
@@ -123,6 +124,10 @@ class AugmentedFSSH(SurfaceHoppingMD):
                 dtype=np.complex128)
 
         self.propagator = AFSSHPropagator(self.model, "vv")
+
+    def needed_gradients(self):
+        """A-FSSH needs all forces for force_matrix computation."""
+        return None
 
     def compute_delF(self, this_electronics):
         """Compute the difference in forces between states.

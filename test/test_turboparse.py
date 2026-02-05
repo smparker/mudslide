@@ -53,6 +53,10 @@ class TestHNAC:
         # Excitation energy from line 537: 0.4055087605608059
         assert np.isclose(ex4['energy'], 0.4055087605608059)
 
+    def test_exopt(self, parsed):
+        """'Excited state no.    3 chosen for optimization' -> [3]"""
+        assert parsed['egrad']['exopt'] == [3]
+
     def test_gradient_parsed(self, parsed):
         """Test that gradient section is parsed"""
         assert 'gradient' in parsed['egrad']
@@ -69,6 +73,10 @@ class TestHNAC:
         # Actual (broken): 4 atoms (gradient + NAC combined)
         assert len(gradient['atom_list']) == 2, \
             f"Expected 2 atoms, got {len(gradient['atom_list'])}: {gradient['atom_list']}"
+
+    def test_gradient_index_backfilled(self, parsed):
+        """Gradient header has no state number, index backfilled from exopt"""
+        assert parsed['egrad']['gradient'][0]['index'] == 3
 
     def test_gradient_values(self, parsed):
         """Test gradient values - should be all zeros for this case"""
@@ -181,6 +189,10 @@ class TestHHeS2S:
         assert 'diplen' in ex1
         assert np.isclose(ex1['diplen']['z'], -0.714838)
 
+    def test_exopt(self, parsed):
+        """'Excited state no.    2 chosen for optimization' -> [2]"""
+        assert parsed['egrad']['exopt'] == [2]
+
     def test_gradient_parsed(self, parsed):
         """Test that gradient section is parsed"""
         assert 'gradient' in parsed['egrad']
@@ -195,6 +207,10 @@ class TestHHeS2S:
         assert len(gradient['atom_list']) == 2
         assert '1 h' in gradient['atom_list'][0]
         assert '2 he' in gradient['atom_list'][1]
+
+    def test_gradient_index(self, parsed):
+        """Gradient header 'cartesian gradients of excited state    2' -> index 2"""
+        assert parsed['egrad']['gradient'][0]['index'] == 2
 
     def test_gradient_values(self, parsed):
         """Test gradient values for excited state 2"""
@@ -361,6 +377,14 @@ class TestAcroleinCIS:
         assert np.isclose(dipole['total'][1], -1.424067)
         assert np.isclose(dipole['total'][2], 0.0)
 
+    def test_no_exopt(self, parsed):
+        """No exopt line in this file"""
+        assert 'exopt' not in parsed['egrad']
+
+    def test_gradient_no_index(self, parsed):
+        """No header index and no exopt to backfill from"""
+        assert 'index' not in parsed['egrad']['gradient'][0]
+
     def test_gradient_atom_count(self, parsed):
         gradient = parsed['egrad']['gradient'][0]
         assert len(gradient['atom_list']) == 8
@@ -398,3 +422,27 @@ class TestAcroleinCIS:
             [-0.1751157e-01, -0.1079154e-01,  0.0],
         ]
         assert np.allclose(grad, expected)
+
+
+class TestBH:
+    """Test parsing of BH.b3lyp.txt egrad output (multi-state exopt with 3 gradients)"""
+
+    @pytest.fixture
+    def parsed(self):
+        filepath = os.path.join(exampledir, "BH.b3lyp.txt")
+        with open(filepath, 'r') as f:
+            return parse_turbo(f)
+
+    def test_exopt(self, parsed):
+        """'3 excited states specified in $exopt:     1     2     3' -> [1, 2, 3]"""
+        assert parsed['egrad']['exopt'] == [1, 2, 3]
+
+    def test_gradient_count(self, parsed):
+        assert len(parsed['egrad']['gradient']) == 3
+
+    def test_gradient_indices(self, parsed):
+        """Three gradient sections with indices from headers"""
+        gradients = parsed['egrad']['gradient']
+        assert gradients[0]['index'] == 1
+        assert gradients[1]['index'] == 2
+        assert gradients[2]['index'] == 3

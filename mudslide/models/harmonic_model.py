@@ -28,7 +28,7 @@ class HarmonicModel(ElectronicModel_):
             ndims: Number of dimensions (e.g. 3 for 3D)
             nparticles: Number of particles (e.g. 1 for a single particle)
         """
-        super().__init__(ndims=ndims, nparticles=nparticles,
+        super().__init__(nstates=1, ndims=ndims, nparticles=nparticles,
                          atom_types=atom_types, representation="adiabatic")
         self.x0 = np.array(x0)
 
@@ -62,7 +62,7 @@ class HarmonicModel(ElectronicModel_):
         self.energies = np.array([energy])
         self._hamiltonian = np.array([energy])
         self._force = -grad.reshape([1, self._ndof])
-        self._forces_available = [True]
+        self._forces_available = np.ones(self.nstates, dtype=bool)
 
     @classmethod
     def from_dict(cls, model_dict: dict) -> "HarmonicModel":

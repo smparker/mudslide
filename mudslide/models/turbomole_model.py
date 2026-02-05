@@ -479,17 +479,50 @@ class TMModel(ElectronicModel_):
 
         # Now add results to model
 
-    def call_turbomole(self, outname: Union[str, Path] = "tm.current") -> None:
-        """Call Turbomole to run the calculation"""
+    def call_turbomole(self, outname: Union[str, Path] = "tm.current",
+                       gradients: Any = None) -> None:
+        """Call Turbomole to run the calculation.
+
+        Parameters
+        ----------
+        outname : str or Path, optional
+            Output file path, by default "tm.current"
+        gradients : list of int or None, optional
+            Which state forces to compute. None means all.
+            When a list is provided, only the specified states are
+            marked as available. rdgrad is skipped when the ground
+            state gradient is not requested.
+        """
         # which forces are actually found?
         self._force = np.zeros((self.nstates, self.ndof))
         self._forces_available = np.zeros(self.nstates, dtype=bool)
+
+        gradients = range(self.nstates) if gradients is None else gradients
+
+        need_gs_grad = 0 in gradients
+
+        # determine which modules to run -- skip rdgrad when ground
+        # state gradient is not requested
+        modules_to_run = {}
+        modules_to_run["gs_energy"] = self.turbomole_modules["gs_energy"]
+        if need_gs_grad and "gs_grads" in self.turbomole_modules:
+            modules_to_run["gs_grads"] = self.turbomole_modules["gs_grads"]
+        if "es_grads" in self.turbomole_modules:
+            modules_to_run["es_grads"] = self.turbomole_modules["es_grads"]
 
         outpath = Path(outname)
         data_dict = {}
         module_outfiles = []
 
-        for turbomole_module in self.turbomole_modules.values():
+        # update control file to ensure requested gradients are computed
+        excited_grads = [ s for s in gradients if s > 0 ]
+        if not excited_grads:
+            excited_grads = [1]  # turbomole wants at least one excited state
+
+        grad_str = ",".join(str(s) for s in excited_grads)
+        self.control.adg("exopt", grad_str)
+
+        for turbomole_module in modules_to_run.values():
             module_outpath = outpath.parent / f"tm.{turbomole_module}.current"
             module_data = self.control.run_single(turbomole_module, outname=module_outpath)
             data_dict.update(module_data)
@@ -503,15 +536,18 @@ class TMModel(ElectronicModel_):
                 mf.unlink()
 
         # Now add results to model
-        energy = data_dict[self.turbomole_modules["gs_energy"]]["energy"]
+        energy = data_dict[modules_to_run["gs_energy"]]["energy"]
         self.energies[:] = 0.0
         self.energies[0] = energy
-        dE0 = np.array(data_dict[self.turbomole_modules["gs_grads"]]["gradient"][0]["d/dR"])
-        self._force[0,:] = -dE0.flatten()
-        self._forces_available[0] = True
+
+        if "gs_grads" in modules_to_run:
+            grad = data_dict[modules_to_run["gs_grads"]]["gradient"][0]
+            dE0 = np.array(grad["d/dR"]).flatten()
+            self._force[0,:] = -dE0.flatten()
+            self._forces_available[0] = True
 
         # Check for presence of egrad turbomole module
-        if "egrad" in self.turbomole_modules.values():
+        if "es_grads" in modules_to_run and "egrad" in data_dict:
             # egrad updates to energy
             excited_energies = [
                 data_dict["egrad"]["excited_state"][i]["energy"] + energy
@@ -540,10 +576,11 @@ class TMModel(ElectronicModel_):
                 self._derivative_couplings_available[j, i] = True
 
             # egrad updates to gradients
-            for i in range(len(data_dict["egrad"]["gradient"])):
-                dE = np.array(data_dict["egrad"]["gradient"][i]["d/dR"])
-                self._force[i+1,:] = -dE.flatten()
-                self._forces_available[i+1] = True
+            for g in data_dict["egrad"]["gradient"]:
+                state_idx = g["index"]
+                dE = np.array(g["d/dR"]).flatten()
+                self._force[state_idx,:] = -dE
+                self._forces_available[state_idx] = True
 
         self._manage_output(outpath)
 
@@ -584,13 +621,82 @@ class TMModel(ElectronicModel_):
         needs to know where the "original" files/data sit, so that they
         can get properly passed to Turbomole. (__init__() can get these
         file locations.)
+
+        Parameters
+        ----------
+        X : ArrayLike
+            Position at which to compute properties
+        couplings : list of tuple(int, int) or None, optional
+            Which coupling pairs to compute. None means all.
+        gradients : list of int or None, optional
+            Which state forces to compute. None means all.
+        reference : Any, optional
+            Reference state information.
         """
         self._position = X
         self.update_coords(X)
-        self.call_turbomole(outname = Path(self.control.workdir)/"tm.current")
+        self.call_turbomole(outname=Path(self.control.workdir)/"tm.current",
+                            gradients=gradients)
 
         self._hamiltonian = np.zeros([self.nstates, self.nstates])
         self._hamiltonian = np.diag(self.energies)
+
+    def compute_additional(self, couplings: Any = None, gradients: Any = None) -> None:
+        """Compute additional gradients at the current geometry.
+
+        Parameters
+        ----------
+        couplings : list of tuple(int, int) or None, optional
+            Coupling pairs to compute. None means all.
+        gradients : list of int or None, optional
+            State indices whose forces are needed. None means all.
+        """
+        needed_g = self._needed_gradients(gradients)
+        needed_c = self._needed_couplings(couplings)
+        if not needed_g and not needed_c:
+            return
+
+        # If ground state gradient is needed but was not computed, run rdgrad
+        if 0 in needed_g and "gs_grads" in self.turbomole_modules:
+            outpath = Path(self.control.workdir) / "tm.additional.current"
+            gs_module = self.turbomole_modules["gs_grads"]
+            module_outpath = outpath.parent / f"tm.{gs_module}.current"
+            module_data = self.control.run_single(gs_module, outname=module_outpath)
+            module_outpath.rename(outpath)
+
+            dE0 = np.array(module_data[gs_module]["gradient"][0]["d/dR"])
+            self._force[0,:] = -dE0.flatten()
+            self._forces_available[0] = True
+
+            self._manage_output(outpath)
+
+        needed_excited_g = [s for s in needed_g if s != 0]
+        # if any excited states needed but not computed, go back to egrad
+        if needed_excited_g:
+            # add additional excited states to exopt
+            # keep the already computed ones just for consistency (for now)
+            all_excited = set(needed_excited_g) | set(
+                s for s in range(1, self.nstates) if self._forces_available[s]
+            )
+            self.control.adg("exopt", ",".join(str(s) for s in sorted(all_excited)))
+
+            outpath = Path(self.control.workdir) / "tm.additional.current"
+            es_module = self.turbomole_modules["es_grads"]
+            module_outpath = outpath.parent / f"tm.{es_module}.current"
+            module_data = self.control.run_single(es_module, outname=module_outpath)
+            module_outpath.rename(outpath)
+
+            # egrad updates to gradients
+            for g in module_data[es_module]["gradient"]:
+                state_idx = g["index"]
+                if state_idx in needed_excited_g:
+                    dE = np.array(g["d/dR"]).flatten()
+                    self._force[state_idx,:] = -dE
+                    self._forces_available[state_idx] = True
+
+        # all couplings computed for now
+        for (i, j) in needed_c:
+            self._derivative_couplings_available[i, j] = True
 
     def clone(self):
         model_clone = cp.deepcopy(self)

@@ -189,6 +189,66 @@ class ElectronicModel_:
             raise ValueError("Force matrix needs all forces")
         return self._force_matrix
 
+    def _needed_gradients(self, gradients: Any) -> List[int]:
+        """Filter requested gradients to only those not yet available.
+
+        Parameters
+        ----------
+        gradients : list of int or None
+            Requested gradient state indices. None means all states.
+
+        Returns
+        -------
+        List[int]
+            State indices whose forces still need to be computed.
+        """
+        if gradients is None:
+            candidates = range(self.nstates)
+        else:
+            candidates = gradients
+        return [s for s in candidates if not self._forces_available[s]]
+
+    def _needed_couplings(self, couplings: Any) -> List[Tuple[int, int]]:
+        """Filter requested couplings to only those not yet available.
+
+        Parameters
+        ----------
+        couplings : list of tuple(int, int) or None
+            Requested coupling pairs. None means all pairs.
+
+        Returns
+        -------
+        List[Tuple[int, int]]
+            Coupling pairs that still need to be computed.
+        """
+        if couplings is None:
+            candidates = [(i, j) for i in range(self.nstates) for j in range(self.nstates)]
+        else:
+            candidates = couplings
+        return [(i, j) for (i, j) in candidates if not self._derivative_couplings_available[i, j]]
+
+    def compute_additional(self, couplings: Any = None, gradients: Any = None) -> None:
+        """Compute additional gradients/couplings at the current geometry.
+
+        Checks what's already available and only computes what's missing.
+        If everything requested is already available, returns immediately (no-op).
+        Subclasses that support selective computation should override this.
+
+        Parameters
+        ----------
+        couplings : list of tuple(int, int) or None, optional
+            Coupling pairs to compute. None means all.
+        gradients : list of int or None, optional
+            State indices whose forces are needed. None means all.
+        """
+        needed_g = self._needed_gradients(gradients)
+        needed_c = self._needed_couplings(couplings)
+        if not needed_g and not needed_c:
+            return
+        raise NotImplementedError(
+            f"compute_additional not implemented; missing gradients={needed_g}, couplings={needed_c}"
+        )
+
     def compute(self, X: "ArrayLike", couplings: Any = None, gradients: Any = None, reference: Any = None) -> None:
         """
         Central function for model objects. After the compute function exists, the following
@@ -197,12 +257,19 @@ class ElectronicModel_:
           - self.force -> n x ndof array containing the force on each diagonal
           - self._derivative_coupling -> n x n x ndof array containing derivative couplings
 
-        The couplings and gradients options are currently unimplemented, but are
-        intended to allow specification of which couplings and gradients are needed
-        so that computational cost can be reduced.
+        Parameters
+        ----------
+        X : ArrayLike
+            Position at which to compute properties
+        couplings : list of tuple(int, int) or None, optional
+            Which coupling pairs to compute. None means all.
+        gradients : list of int or None, optional
+            Which state forces to compute. None means all.
+        reference : Any, optional
+            Reference electronic state for phase fixing.
 
         Nothing is returned, but the model object should contain all the
-        necessary date.
+        necessary data.
         """
         raise NotImplementedError("ElectronicModel_ need a compute function")
 
@@ -242,7 +309,8 @@ class ElectronicModel_:
             "ndof": self.ndof,
             "position": self._position.tolist(),
             "hamiltonian": self._hamiltonian.tolist(),
-            "force": self._force.tolist()
+            "force": self._force.tolist(),
+            "forces_available": self._forces_available.tolist()
         }
 
         for key in [ "_derivative_coupling", "_force_matrix" ]:
@@ -288,10 +356,10 @@ class DiabaticModel_(ElectronicModel_):
         ----------
         X : ArrayLike
             Position at which to compute properties
-        couplings : Any, optional
-            Coupling information, by default None
-        gradients : Any, optional
-            Gradient information, by default None
+        couplings : list of tuple(int, int) or None, optional
+            Which coupling pairs to compute. None means all.
+        gradients : list of int or None, optional
+            Which state forces to compute. None means all.
         reference : Any, optional
             Reference state information, by default None
         """
@@ -301,12 +369,46 @@ class DiabaticModel_(ElectronicModel_):
         dV = self.dV(X)
 
         self._derivative_coupling = self._compute_derivative_coupling(self._reference, dV, np.diag(self._hamiltonian))
-        self._derivative_couplings_available[:,:] = True
+
+        # Create new availability arrays to avoid sharing with shallow copies
+        self._derivative_couplings_available = np.zeros((self.nstates, self.nstates), dtype=bool)
+        if couplings is None:
+            self._derivative_couplings_available[:,:] = True
+        else:
+            for (i, j) in couplings:
+                self._derivative_couplings_available[i, j] = True
 
         self._force = self._compute_force(dV, self._reference)
-        self._forces_available[:] = True
+
+        # Create new availability array to avoid sharing with shallow copies
+        self._forces_available = np.zeros(self.nstates, dtype=bool)
+        if gradients is None:
+            self._forces_available[:] = True
+        else:
+            for s in gradients:
+                self._forces_available[s] = True
 
         self._force_matrix = self._compute_force_matrix(dV, self._reference)
+
+    def compute_additional(self, couplings: Any = None, gradients: Any = None) -> None:
+        """Compute additional gradients/couplings at the current geometry.
+
+        Since diabatic models compute everything analytically, this just
+        marks the newly requested quantities as available.
+
+        Parameters
+        ----------
+        couplings : list of tuple(int, int) or None, optional
+            Coupling pairs to make available. None means all.
+        gradients : list of int or None, optional
+            State indices whose forces should be made available. None means all.
+        """
+        needed_g = self._needed_gradients(gradients)
+        needed_c = self._needed_couplings(couplings)
+        for s in needed_g:
+            self._forces_available[s] = True
+        for (i, j) in needed_c:
+            self._derivative_couplings_available[i, j] = True
 
     def _compute_basis_states(self, V: ArrayLike, reference: Any = None) -> Tuple[ArrayLike, ArrayLike]:
         """Computes coefficient matrix for basis states
@@ -412,10 +514,10 @@ class AdiabaticModel_(ElectronicModel_):
         ----------
         X : ArrayLike
             Position at which to compute properties
-        couplings : Any, optional
-            Coupling information, by default None
-        gradients : Any, optional
-            Gradient information, by default None
+        couplings : list of tuple(int, int) or None, optional
+            Which coupling pairs to compute. None means all.
+        gradients : list of int or None, optional
+            Which state forces to compute. None means all.
         reference : Any, optional
             Reference state information, by default None
         """
@@ -425,12 +527,46 @@ class AdiabaticModel_(ElectronicModel_):
         dV = self.dV(X)
 
         self._derivative_coupling = self._compute_derivative_coupling(self._reference, dV, np.diag(self._hamiltonian))
-        self._derivative_couplings_available[:,:] = True
+
+        # Create new availability arrays to avoid sharing with shallow copies
+        self._derivative_couplings_available = np.zeros((self.nstates, self.nstates), dtype=bool)
+        if couplings is None:
+            self._derivative_couplings_available[:,:] = True
+        else:
+            for (i, j) in couplings:
+                self._derivative_couplings_available[i, j] = True
 
         self._force = self._compute_force(dV, self._reference)
-        self._forces_available[:] = True
+
+        # Create new availability array to avoid sharing with shallow copies
+        self._forces_available = np.zeros(self.nstates, dtype=bool)
+        if gradients is None:
+            self._forces_available[:] = True
+        else:
+            for s in gradients:
+                self._forces_available[s] = True
 
         self._force_matrix = self._compute_force_matrix(dV, self._reference)
+
+    def compute_additional(self, couplings: Any = None, gradients: Any = None) -> None:
+        """Compute additional gradients/couplings at the current geometry.
+
+        Since adiabatic models compute everything analytically, this just
+        marks the newly requested quantities as available.
+
+        Parameters
+        ----------
+        couplings : list of tuple(int, int) or None, optional
+            Coupling pairs to make available. None means all.
+        gradients : list of int or None, optional
+            State indices whose forces should be made available. None means all.
+        """
+        needed_g = self._needed_gradients(gradients)
+        needed_c = self._needed_couplings(couplings)
+        for s in needed_g:
+            self._forces_available[s] = True
+        for (i, j) in needed_c:
+            self._derivative_couplings_available[i, j] = True
 
     def update(self, X: ArrayLike, electronics: Any = None, couplings: Any = None, gradients: Any = None) -> 'AdiabaticModel_':
         """Update the model with new position and electronic information.

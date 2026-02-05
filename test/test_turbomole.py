@@ -19,18 +19,22 @@ testdir = os.path.dirname(__file__)
 _refdir = os.path.join(testdir, "ref")
 _checkdir = os.path.join(testdir, "checks")
 
+
 def _turbomole_available():
-    return (turbomole_is_installed()
-            or "MUDSLIDE_TURBOMOLE_PREFIX" in os.environ
-            or get_config("turbomole.command_prefix") is not None)
+    return (turbomole_is_installed() or
+            "MUDSLIDE_TURBOMOLE_PREFIX" in os.environ or
+            get_config("turbomole.command_prefix") is not None)
+
 
 pytestmark = pytest.mark.skipif(not _turbomole_available(),
-                                     reason="Turbomole must be installed")
+                                reason="Turbomole must be installed")
+
 
 def test_raise_on_missing_control():
     """Test if an exception is raised if no control file is found"""
     with pytest.raises(RuntimeError):
         model = TMModel(states=[0])
+
 
 class _TestTM(unittest.TestCase):
     """Base class for TMModel class"""
@@ -56,6 +60,7 @@ class _TestTM(unittest.TestCase):
     def tearDown(self):
         os.chdir(self.origin)
 
+
 class TestTMGround(_TestTM):
     """Test ground state calculation"""
     testname = "tm-c2h4-ground"
@@ -69,8 +74,9 @@ class TestTMGround(_TestTM):
         Eref = -78.40037210973
         Fref = np.loadtxt("force.ref.txt")
 
-        assert np.isclose(model.hamiltonian[0,0], Eref)
+        assert np.isclose(model.hamiltonian[0, 0], Eref)
         assert np.allclose(model.force(0), Fref)
+
 
 class TestTMGroundPC(_TestTM):
     """Test ground state calculation with point charges"""
@@ -78,7 +84,7 @@ class TestTMGroundPC(_TestTM):
 
     def test_ridft_rdgrad_w_pc(self):
         model = TMModel(states=[0])
-        xyzpc = np.array([[3.0, 3.0, 3.0],[-3.0, -3.0, -3.0]])
+        xyzpc = np.array([[3.0, 3.0, 3.0], [-3.0, -3.0, -3.0]])
         pcharges = np.array([2, -2])
         model.control.add_point_charges(xyzpc, pcharges)
 
@@ -88,7 +94,7 @@ class TestTMGroundPC(_TestTM):
         Eref = -78.63405047062
         Fref = np.loadtxt("force.ref.txt")
 
-        assert np.isclose(model.hamiltonian[0,0], Eref)
+        assert np.isclose(model.hamiltonian[0, 0], Eref)
         assert np.allclose(model.force(0), Fref)
 
         xyzpc1, q1, dpc = model.control.read_point_charge_gradients()
@@ -98,6 +104,7 @@ class TestTMGroundPC(_TestTM):
         assert np.allclose(xyzpc, xyzpc1)
         assert np.allclose(pcharges, q1)
         assert np.allclose(dpc, forcepcref)
+
 
 class TestTMExDynamics(_TestTM):
     """Test short excited state dynamics"""
@@ -119,10 +126,19 @@ class TestTMExDynamics(_TestTM):
 
         velocities = np.array(mom) / model.mass
 
-        log = mudslide.YAMLTrace(base_name="TMtrace", location=self.rundir, log_pitch=8)
-        traj = mudslide.SurfaceHoppingMD(model, positions, velocities, 3, tracer=log, dt=20, max_time=81, t0=1,
-                                     seed_sequence=57892,
-                                     hopping_method="instantaneous")
+        log = mudslide.YAMLTrace(base_name="TMtrace",
+                                 location=self.rundir,
+                                 log_pitch=8)
+        traj = mudslide.SurfaceHoppingMD(model,
+                                         positions,
+                                         velocities,
+                                         3,
+                                         tracer=log,
+                                         dt=20,
+                                         max_time=81,
+                                         t0=1,
+                                         seed_sequence=57892,
+                                         hopping_method="instantaneous")
         results = traj.simulate()
 
         main_log = results.main_log
@@ -135,23 +151,38 @@ class TestTMExDynamics(_TestTM):
         states = [0, 1, 2, 3]
 
         for t in ref_times:
+            available = results[t]["electronics"]["forces_available"]
+            act_ham = results[t]["electronics"]["hamiltonian"]
+            ref_ham = refs[t]["electronics"]["hamiltonian"]
+            act_force = results[t]["electronics"]["force"]
+            ref_force = refs[t]["electronics"]["force"]
             for s in states:
-                np.testing.assert_almost_equal(refs[t]["electronics"]["hamiltonian"][s][s],
-                                       results[t]["electronics"]["hamiltonian"][s][s],
-                                       decimal=8)
-                np.testing.assert_almost_equal(refs[t]["electronics"]["force"][s],
-                                               results[t]["electronics"]["force"][s],
+                np.testing.assert_almost_equal(act_ham[s][s],
+                                               ref_ham[s][s],
                                                decimal=8)
+                if available[s]:
+                    np.testing.assert_almost_equal(act_force[s],
+                                                   ref_force[s],
+                                                   decimal=8)
 
         for t in ref_times:
-            np.testing.assert_almost_equal(refs[t]["density_matrix"], results[t]["density_matrix"], decimal=8)
-            np.testing.assert_almost_equal(refs[t]["position"], results[t]["position"], decimal=8)
-            np.testing.assert_almost_equal(refs[t]["velocity"], results[t]["velocity"], decimal=8)
+            act = results[t]
+            ref = refs[t]
+            np.testing.assert_almost_equal(act["density_matrix"],
+                                           ref["density_matrix"],
+                                           decimal=8)
+            np.testing.assert_almost_equal(act["position"],
+                                           ref["position"],
+                                           decimal=8)
+            np.testing.assert_almost_equal(act["velocity"],
+                                           ref["velocity"],
+                                           decimal=8)
 
         for t in ref_times:
+            act_tau = results[t]["electronics"]["derivative_coupling"]
+            ref_tau = refs[t]["electronics"]["derivative_coupling"]
             for s1 in states:
                 for s2 in range(s1, 3):
-                    np.testing.assert_almost_equal(refs[t]["electronics"]["derivative_coupling"][s1][s2],
-                                                   results[t]["electronics"]["derivative_coupling"][s1][s2],
+                    np.testing.assert_almost_equal(act_tau[s1][s2],
+                                                   ref_tau[s1][s2],
                                                    decimal=6)
-

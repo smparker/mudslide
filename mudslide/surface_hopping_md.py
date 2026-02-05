@@ -480,6 +480,23 @@ class SurfaceHoppingMD:
             electronics = self.electronics
         return electronics.force(self.state)
 
+    def needed_gradients(self) -> List[int]:
+        """States whose forces are needed during normal propagation.
+
+        Returns
+        -------
+        List[int]
+            List of state indices for which gradients are needed.
+        """
+        return [self.state]
+
+    def needed_couplings(self):
+        """Coupling pairs needed during normal propagation.
+
+        Returns None, meaning all couplings are needed.
+        """
+        return None
+
     def NAC_matrix(self, electronics: 'ElectronicModel_' = None,
                    velocity: ArrayLike = None) -> ArrayLike:
         """Calculate nonadiabatic coupling matrix.
@@ -699,7 +716,10 @@ class SurfaceHoppingMD:
 
         hop_targets = self.hopper(gkndt)
         if hop_targets:
+            old_state = self.state
             self.hop_to_it(hop_targets, this_electronics)
+            if self.state != old_state:
+                self.electronics.compute_additional(gradients=[self.state])
 
     def hopper(self, gkndt: np.ndarray) -> List[Dict[str, float]]:
         """
@@ -855,7 +875,8 @@ class SurfaceHoppingMD:
             return self.tracer
 
         if self.electronics is None:
-            self.electronics = self.model.update(self.position)
+            self.electronics = self.model.update(self.position,
+                gradients=self.needed_gradients(), couplings=self.needed_couplings())
 
         if not self.restarting:
             self.trace()

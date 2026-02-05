@@ -30,6 +30,10 @@ class Ehrenfest(SurfaceHoppingMD):
         """
         SurfaceHoppingMD.__init__(self, *args, **kwargs)
 
+    def needed_gradients(self):
+        """Ehrenfest needs all forces since it sums over all states."""
+        return None
+
     def potential_energy(self, electronics: 'ElectronicModel_' = None) -> np.floating:
         """Calculate Ehrenfest potential energy.
 

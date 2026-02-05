@@ -1,0 +1,1295 @@
+
+ egrad (Shanes-MacBook-Pro-2.local) : TURBOMOLE rev. compiled 27 Apr 2018 at 11:44:14
+ Copyright (C) 2018 TURBOMOLE GmbH, Karlsruhe
+
+
+    2018-05-01 00:53:42.084
+
+
+
+
+                               e g r a d
+
+                             TURBOMOLE GmbH
+
+
+             integral direct evaluation of excited state
+                     and polarizability gradients
+                 and first-order nonadiabatic couplings
+
+
+
+          references (see also programs escf, dscf and ridft)
+
+          review
+          F. Furche and D. Rappoport,
+          "Density functional methods for excited states:
+          equilibrium structure and electronic spectra",
+          ch. III of "Computational Photochemistry", ed. by
+          M. Olivucci, vol. 16 of "Theoretical and Computational
+          Chemistry", Elsevier, Amsterdam, 2005.
+
+          nonorthonormal Krylov space methods
+          F. Furche, B. T. Krull, B. D. Nguyen, J. Kwon,
+          J. Chem. Phys. 144 (2016), 174105.
+
+          RI-J method
+          D. Rappoport and F. Furche,
+          J. Chem. Phys. 122 (2005), 064105.
+
+          Lagrangian method, implementation, benchmarks
+          F. Furche and R. Ahlrichs,
+          J. Chem. Phys. 117 (2002), 7433;
+          J. Chem. Phys. 121 (2004), 12772 (E).
+
+          Polarizability derivatives, Raman intensities
+          D. Rappoport and F. Furche,
+          J. Chem. Phys. 126 (2007), 201104.
+
+          First-order nonadiabatic couplings
+          R. Send and F. Furche,
+          J. Chem. Phys. 132 (2010), 044107.
+
+
+
+
+
+              +--------------------------------------------------+
+              | Atomic coordinate, charge and isotop information |
+              +--------------------------------------------------+
+
+                    atomic coordinates            atom    charge  isotop
+          0.00000000    0.00000000    1.55000000    b      5.000     0
+          0.00000000    0.00000000   -0.55000000    h      1.000     0
+
+       center of nuclear mass  :    0.00000000    0.00000000    1.37090343
+       center of nuclear charge:    0.00000000    0.00000000    1.20000000
+
+   *************************************************************************
+   bh
+   *************************************************************************
+
+
+
+              +--------------------------------------------------+
+              |               basis set information              |
+              +--------------------------------------------------+
+
+              we will work with the 1s 3p 5d 7f 9g ... basis set
+              ...i.e. with spherical basis functions...
+
+   type   atoms  prim   cont   basis
+   ---------------------------------------------------------------------------
+    b        1     24     14   def2-SVP   [3s2p1d|7s4p1d]
+    h        1      7      5   def2-SVP   [2s1p|4s1p]
+   ---------------------------------------------------------------------------
+   total:    2     31     19
+   ---------------------------------------------------------------------------
+
+   total number of primitive shells          :   17
+   total number of contracted shells         :    9
+   total number of cartesian basis functions :   20
+   total number of SCF-basis functions       :   19
+
+
+ residuum convergence criterium   :  0.10E-08
+
+
+ integral neglect threshold       :  0.33E-14
+ integral storage threshold THIZE :  0.10E-04
+ integral storage threshold THIME :         5
+
+ RPA SINGLET-EXCITATION-CALCULATION
+
+             FOUND DFT-FLAG !
+
+
+ FOUND Nonadiabatic Coupling-FLAG !
+ Note: the sign convention for NACME changed
+ such that <0|d/dx|n> is now computed.
+ Using electron-translation factors
+ Will compute full NAC matrix
+
+ symmetry group of the molecule :   c1
+
+ the group has the following generators :
+   c1(z)
+
+    1 symmetry operations found
+
+ there are 1 real representations :   a
+
+ maximum number of shells which are related by symmetry :  1
+
+ IRREP of excited state :   a
+
+
+ determining totally symmetric integral contributions
+    - equivalent to irreducible tensor elements -
+ which can be formed within each triple of representations :
+
+             representation triple      contributions
+
+              a     a     a               1
+
+    mo occupation :
+   irrep   mo's   occupied
+    a       19        3
+
+ number of basis functions   :            19
+ number of occupied orbitals :             3
+
+
+           ------------------
+           density functional
+           ------------------
+ Becke-3-Parameter hybrid functional: B3-LYP
+ exchange:    0.8*LDA + 0.72*B88 + 0.2*HF
+ correlation: 0.19*LDA(VWN) + 0.81*LYP
+
+ iterations will be done with small grid
+
+ spherical integration : Lebedev's spherical grid
+ spherical gridsize    :            3
+    i.e. gridpoints    :          302
+ value for diffuse not defined
+ radial integration    : Chebyshev 2nd kind (scaling 3)
+ radial gridsize       :            3
+ integration cells     :            2
+ partition function    : becke
+ partition sharpness   :            3
+
+
+ Derivatives of quadrature weights will be included
+
+
+ biggest AO integral is expected to be     2.904162095
+  MOs are in ASCII format !
+
+
+ reading orbital data $scfmo  from file control
+ orbital characterization : scfconv=9
+ preparing numerical integration ....
+          Overall gridpoints after grid construction =          2680
+ Ordering of quadrature gridpoints disabled.
+
+ Calculating ground state density on molecular grid
+
+ Integral of ground state density: N =   6.000006414007540
+
+
+
+ number of non-frozen orbitals          :    19
+ number of non-frozen occupied orbitals :     3
+
+
+
+                        -------------------
+                         excitation vector
+                        -------------------
+
+
+          IRREP   tensor space dimension   number of roots
+
+           a                48                   3
+
+ dimension of super-tensorspace: 2
+
+ maximum number of Davidson iterations set to   25
+
+
+ machine precision:  2.22D-16
+
+
+ logfile sing_a    will be constructed
+
+
+                       Nonorthonormal Krylov Space Iteration
+
+
+ total number of roots to be determined:   3
+
+
+ maximum core memory set to   500 MB,
+ corresponding to    70017 vectors in CAO basis
+
+
+ maximum number of simultaneously treated vectors (including degeneracy):        6
+
+
+ Iteration IRREP Converged      Max. Euclidean
+                 roots          residual norm
+
+    1       a        0        6.041126615011723D-02
+
+    2       a        0        7.393468629710115D-03
+
+    3       a        0        1.298364679842016D-03
+
+    4       a        0        9.675491543129517D-05
+
+    5       a        0        5.410700970249370D-06
+
+    6       a        0        4.798352386126288D-07
+
+    7       a        2        2.531951380062627D-08
+
+    8       a        2        1.054108991466666D-09
+
+    9       a        3        4.898473430234584D-11
+
+
+ converged!
+
+
+ Switching to fine grid
+
+ preparing numerical integration ....
+          Overall gridpoints after grid construction =         10079
+ Ordering of quadrature gridpoints disabled.
+
+ Calculating ground state density on molecular grid
+
+ Integral of ground state density: N =   5.999998622751288
+
+
+
+ Iteration IRREP Converged      Max. Euclidean
+                 roots          residual norm
+
+   10       a        0        6.082549010795271D-05
+
+
+ NOTE: Residual norms are larger than 1.00D-09 due to mgrid option!
+
+ Eigenpairs written on logfile sing_a
+
+
+
+ IRREP   Vector     Eigenvalue           Euclidean residual norm
+
+  a         1    9.753817807727524D-02    2.998609845686156D-05
+            2    9.753817807727556D-02    2.998609846790477D-05
+            3    3.517212992008510D-01    6.082549010795271D-05
+
+
+ <geterg> : there is no data group $energy
+
+
+ Warning! Ground state energy set to zero.
+
+
+
+
+                    Selection rules for point group c1
+
+
+ Subduction with respect to c1  :
+
+    Polar vector representation: a
+
+    Axial vector representation: a
+
+    Symmetric second rank tensor representation: a
+
+
+
+
+                            Ground state
+
+
+ Total energy:                            0.000000000000000
+
+ Charge:
+
+               elec          nuc         total
+
+            -6.000000     6.000000     0.000000
+
+
+ Electric dipole moment:
+
+               elec          nuc         total
+
+    x        0.000000     0.000000     0.000000    Norm:              0.767094
+    y       -0.000000     0.000000    -0.000000
+    z       -7.967094     7.200000    -0.767094    Norm / debye:      1.949773
+
+
+ Electric quadrupole moment:
+
+               elec          nuc         total
+
+   xx       -4.891648     0.000000    -4.891648
+   yy       -4.891648     0.000000    -4.891648    1/3*trace:        -6.350768
+   zz      -21.584008    12.315000    -9.269008
+   xy       -0.000000     0.000000    -0.000000
+   xz        0.000000     0.000000     0.000000    Anisotropy:        4.377360
+   yz       -0.000000     0.000000    -0.000000
+
+
+
+ ==============================================================================
+
+                              I R R E P   a
+
+ ==============================================================================
+
+
+ Excitation is electric dipole allowed
+
+ Excitation is magnetic dipole allowed
+
+ Excitation is electric quadrupole allowed
+
+
+
+
+                         1 singlet a excitation
+
+
+ Total energy:                           0.9753817807727524E-01
+
+ Excitation energy:                      0.9753817807727524E-01
+
+ Excitation energy / eV:                  2.654150005360746
+
+ Excitation energy / nm:                  467.1335220543298
+
+ Excitation energy / cm^(-1):             21407.15561266082
+
+
+ Oscillator strength:
+
+    velocity representation:             0.7907615066591363E-01
+
+    length representation:               0.3578286734695289E-01
+
+    mixed representation:                0.5319371588436032E-01
+
+
+ Rotatory strength:
+
+    velocity representation:            -0.5898200164628295E-15
+
+    velocity rep. / 10^(-40)erg*cm^3:   -0.3810521387631245E-10
+
+    length representation:              -0.5212463263389441E-15
+
+    length rep. / 10^(-40)erg*cm^3:     -0.3367502321555976E-10
+
+
+ Dominant contributions:
+
+    occ. orbital  energy / eV   virt. orbital  energy / eV   |coeff.|^2*100
+       3 a          -6.19           5 a          -2.40           98.7
+
+
+ Change of electron number:
+
+            -0.000000
+
+
+ Electric transition dipole moment (velocity rep.):
+
+    x        0.953585        Norm:                  1.102760
+    y        0.553854
+    z        0.000000        Norm / debye:          2.802958
+
+
+ Electric transition dipole moment (length rep.):
+
+    x        0.641467        Norm:                  0.741815
+    y        0.372572
+    z        0.000000        Norm / debye:          1.885521
+
+
+ Magnetic transition dipole moment / i:
+
+    x       -0.002839        Norm:                  0.005652
+    y        0.004887
+    z       -0.000000        Norm / Bohr mag.:      1.549031
+
+
+ Electric quadrupole transition moment:
+
+   xx        0.000000
+   yy        0.000000        1/3*trace:             0.000000
+   zz        0.000000
+   xy        0.000000
+   xz        1.938214        Anisotropy:            3.882253
+   yz        1.125739
+
+
+
+
+                         2 singlet a excitation
+
+
+ Total energy:                           0.9753817807727556E-01
+
+ Excitation energy:                      0.9753817807727556E-01
+
+ Excitation energy / eV:                  2.654150005360754
+
+ Excitation energy / nm:                  467.1335220543282
+
+ Excitation energy / cm^(-1):             21407.15561266089
+
+
+ Oscillator strength:
+
+    velocity representation:             0.7907615066603539E-01
+
+    length representation:               0.3578286734703150E-01
+
+    mixed representation:                0.5319371588445971E-01
+
+
+ Rotatory strength:
+
+    velocity representation:            -0.2076785096158987E-14
+
+    velocity rep. / 10^(-40)erg*cm^3:   -0.1341703198525876E-09
+
+    length representation:              -0.2008789390898674E-14
+
+    length rep. / 10^(-40)erg*cm^3:     -0.1297774697978316E-09
+
+
+ Dominant contributions:
+
+    occ. orbital  energy / eV   virt. orbital  energy / eV   |coeff.|^2*100
+       3 a          -6.19           4 a          -2.40           98.7
+
+
+ Change of electron number:
+
+             0.000000
+
+
+ Electric transition dipole moment (velocity rep.):
+
+    x       -0.553854        Norm:                  1.102760
+    y        0.953585
+    z       -0.000000        Norm / debye:          2.802958
+
+
+ Electric transition dipole moment (length rep.):
+
+    x       -0.372572        Norm:                  0.741815
+    y        0.641467
+    z       -0.000000        Norm / debye:          1.885521
+
+
+ Magnetic transition dipole moment / i:
+
+    x       -0.004887        Norm:                  0.005652
+    y       -0.002839
+    z       -0.000000        Norm / Bohr mag.:      1.549031
+
+
+ Electric quadrupole transition moment:
+
+   xx        0.000000
+   yy        0.000000        1/3*trace:            -0.000000
+   zz       -0.000000
+   xy        0.000000
+   xz       -1.125739        Anisotropy:            3.882253
+   yz        1.938214
+
+
+
+
+                         3 singlet a excitation
+
+
+ Total energy:                           0.3517212992008510
+
+ Excitation energy:                      0.3517212992008510
+
+ Excitation energy / eV:                  9.570827613981463
+
+ Excitation energy / nm:                  129.5439109417737
+
+ Excitation energy / cm^(-1):             77193.90225143099
+
+
+ Oscillator strength:
+
+    velocity representation:             0.3839086520779823E-01
+
+    length representation:               0.4287589216574769E-01
+
+    mixed representation:                0.4057145051386888E-01
+
+
+ Rotatory strength:
+
+    velocity representation:            -0.1321839061369318E-27
+
+    velocity rep. / 10^(-40)erg*cm^3:   -0.8539716987837460E-23
+
+    length representation:              -0.1203997028094435E-27
+
+    length rep. / 10^(-40)erg*cm^3:     -0.7778400695371162E-23
+
+
+ Dominant contributions:
+
+    occ. orbital  energy / eV   virt. orbital  energy / eV   |coeff.|^2*100
+       3 a          -6.19           7 a           4.85           61.3
+       3 a          -6.19           6 a           4.69           38.2
+
+
+ Change of electron number:
+
+            -0.000000
+
+
+ Electric transition dipole moment (velocity rep.):
+
+    x        0.000000        Norm:                  0.404632
+    y       -0.000000
+    z        0.404632        Norm / debye:          1.028480
+
+
+ Electric transition dipole moment (length rep.):
+
+    x        0.000000        Norm:                  0.427615
+    y       -0.000000
+    z        0.427615        Norm / debye:          1.086897
+
+
+ Magnetic transition dipole moment / i:
+
+    x        0.000000        Norm:                  0.000000
+    y        0.000000
+    z        0.000000        Norm / Bohr mag.:      0.000000
+
+
+ Electric quadrupole transition moment:
+
+   xx        0.917278
+   yy        0.917278        1/3*trace:             0.587559
+   zz       -0.071881
+   xy       -0.000000
+   xz        0.000000        Anisotropy:            0.989159
+   yz       -0.000000
+
+
+ Data group $coupled states missing or empty
+ Defaulting to all states
+
+
+   3 excited states specified in $coupled states:     1     2     3
+
+   3 excited states specified in $exopt:     1     2     3
+
+ <geterg> : there is no data group $energy
+
+
+                       ----------------------
+                        CPKS right-hand side
+                       ----------------------
+
+ ismrhs:
+  1  1  1
+  2  2  2
+  3  3  3
+  0***  1
+*********
+*********
+
+          IRREP   tensor space dimension   number of roots
+
+           a                48                   6
+
+                          ----------------
+                           CPKS equations
+                          ----------------
+
+
+ logfile dipl_a    will be constructed
+
+ Switching to coarse grid
+
+ preparing numerical integration ....
+          Overall gridpoints after grid construction =          2680
+ Ordering of quadrature gridpoints disabled.
+
+
+                       Nonorthonormal Krylov Space Iteration
+
+
+ total number of roots to be determined:   6
+
+
+ maximum core memory set to   500 MB,
+ corresponding to   140034 vectors in CAO basis
+
+
+ maximum number of simultaneously treated vectors (including degeneracy):        6
+
+
+ Iteration IRREP Converged      Max. Euclidean
+                 roots          residual norm
+
+    1       a        0        1.345588773349404D-02
+
+    2       a        0        1.074736913336302D-03
+
+    3       a        2        8.381604426992148D-05
+
+    4       a        2        7.916400376376304D-06
+
+    5       a        2        2.304694015282199D-07
+
+    6       a        4        9.721263628827532D-09
+
+    7       a        6        5.033644620152701D-10
+
+
+ converged!
+
+
+ Switching to fine grid
+
+ preparing numerical integration ....
+          Overall gridpoints after grid construction =         10079
+ Ordering of quadrature gridpoints disabled.
+
+ Iteration IRREP Converged      Max. Euclidean
+                 roots          residual norm
+
+    8       a        0        2.169433939762289D-05
+
+
+ NOTE: Residual norms are larger than 1.00D-09 due to mgrid option!
+
+ Eigenpairs written on logfile dipl_a
+
+
+
+ IRREP   Vector     Frequency            Euclidean residual norm
+
+  a         1    0.000000000000000D+00    1.136277703064021D-05
+            2    0.000000000000000D+00    1.136277703066803D-05
+            3    0.000000000000000D+00    2.169433939762289D-05
+            4    0.000000000000000D+00    2.730200404519487D-06
+            5    0.000000000000000D+00    2.111050216407057D-06
+            6    0.000000000000000D+00    2.111050216410647D-06
+
+
+                          -------------------
+                           relaxed densities
+                          -------------------
+
+
+
+------------------------------------------------------------------------
+            <   1| W |   1>  - <0|W|0>  difference moments
+------------------------------------------------------------------------
+
+          Exc. Energy (   1)  Exc. Energy (   1)        Energy Diff.
+ Hartree           0.0975382           0.0975382           0.0000000
+      eV           2.6541490           2.6541490           0.0000000
+      nm         467.1335222         467.1335222                 Inf
+
+ Change of electron number:
+  relaxed:      -0.000000  unrelaxed:        -0.000000
+
+ Relaxed electric transition dipole moment (velocity rep.):
+    x             NaN        Norm:                       NaN
+    y             NaN
+    z             NaN        Norm / debye:               NaN
+ Unrelaxed electric transition dipole moment (velocity rep.):
+    x             NaN        Norm:                       NaN
+    y             NaN
+    z             NaN        Norm / debye:               NaN
+
+
+ Relaxed electric transition dipole moment (length rep.):
+    x        0.000000        Norm:                  0.449207
+    y        0.000000
+    z        0.449207        Norm / debye:          1.141769
+ Unrelaxed electric transition dipole moment (length rep.):
+    x       -0.000000        Norm:                  0.640214
+    y       -0.000000
+    z        0.640214        Norm / debye:          1.627262
+
+
+ Relaxed magnetic transition dipole moment / i:
+    x       -0.000000        Norm:                  0.000000
+    y       -0.000000
+    z       -0.000000        Norm / Bohr mag.:      0.000000
+ Unrelaxed magnetic transition dipole moment / i:
+    x       -0.000000        Norm:                  0.000000
+    y       -0.000000
+    z       -0.000000        Norm / Bohr mag.:      0.000000
+
+
+ Relaxed electric quadrupole transition moment:
+   xx       -1.709317
+   yy       -0.387369        1/3*trace:             0.318213
+   zz        3.051325
+   xy       -1.158653
+   xz        0.000000        Anisotropy:            4.705886
+   yz        0.000000
+ Unrelaxed electric quadrupole transition moment:
+   xx       -1.936275
+   yy       -0.587465        1/3*trace:             0.405127
+   zz        3.739122
+   xy       -1.182220
+   xz       -0.000000        Anisotropy:            5.528772
+   yz       -0.000000
+
+
+------------------------------------------------------------------------
+            <   2| W |   2>  - <0|W|0>  difference moments
+------------------------------------------------------------------------
+
+          Exc. Energy (   2)  Exc. Energy (   2)        Energy Diff.
+ Hartree           0.0975382           0.0975382           0.0000000
+      eV           2.6541490           2.6541490           0.0000000
+      nm         467.1335222         467.1335222                 Inf
+
+ Change of electron number:
+  relaxed:      -0.000000  unrelaxed:        -0.000000
+
+ Relaxed electric transition dipole moment (velocity rep.):
+    x             NaN        Norm:                       NaN
+    y             NaN
+    z             NaN        Norm / debye:               NaN
+ Unrelaxed electric transition dipole moment (velocity rep.):
+    x             NaN        Norm:                       NaN
+    y             NaN
+    z             NaN        Norm / debye:               NaN
+
+
+ Relaxed electric transition dipole moment (length rep.):
+    x       -0.000000        Norm:                  0.449207
+    y        0.000000
+    z        0.449207        Norm / debye:          1.141769
+ Unrelaxed electric transition dipole moment (length rep.):
+    x        0.000000        Norm:                  0.640214
+    y       -0.000000
+    z        0.640214        Norm / debye:          1.627262
+
+
+ Relaxed magnetic transition dipole moment / i:
+    x       -0.000000        Norm:                  0.000000
+    y       -0.000000
+    z       -0.000000        Norm / Bohr mag.:      0.000000
+ Unrelaxed magnetic transition dipole moment / i:
+    x       -0.000000        Norm:                  0.000000
+    y       -0.000000
+    z       -0.000000        Norm / Bohr mag.:      0.000000
+
+
+ Relaxed electric quadrupole transition moment:
+   xx       -0.387369
+   yy       -1.709317        1/3*trace:             0.318213
+   zz        3.051325
+   xy        1.158653
+   xz       -0.000000        Anisotropy:            4.705886
+   yz        0.000000
+ Unrelaxed electric quadrupole transition moment:
+   xx       -0.587465
+   yy       -1.936275        1/3*trace:             0.405127
+   zz        3.739122
+   xy        1.182220
+   xz       -0.000000        Anisotropy:            5.528772
+   yz        0.000000
+
+
+------------------------------------------------------------------------
+            <   3| W |   3>  - <0|W|0>  difference moments
+------------------------------------------------------------------------
+
+          Exc. Energy (   3)  Exc. Energy (   3)        Energy Diff.
+ Hartree           0.3517213           0.3517213           0.0000000
+      eV           9.5708240           9.5708240           0.0000000
+      nm         129.5439110         129.5439110                 Inf
+
+ Change of electron number:
+  relaxed:       0.000000  unrelaxed:         0.000000
+
+ Relaxed electric transition dipole moment (velocity rep.):
+    x             NaN        Norm:                       NaN
+    y             NaN
+    z             NaN        Norm / debye:               NaN
+ Unrelaxed electric transition dipole moment (velocity rep.):
+    x             NaN        Norm:                       NaN
+    y             NaN
+    z             NaN        Norm / debye:               NaN
+
+
+ Relaxed electric transition dipole moment (length rep.):
+    x       -0.000000        Norm:                  2.035060
+    y        0.000000
+    z        2.035060        Norm / debye:          5.172608
+ Unrelaxed electric transition dipole moment (length rep.):
+    x       -0.000000        Norm:                  2.482298
+    y        0.000000
+    z        2.482298        Norm / debye:          6.309373
+
+
+ Relaxed magnetic transition dipole moment / i:
+    x       -0.000000        Norm:                  0.000000
+    y       -0.000000
+    z       -0.000000        Norm / Bohr mag.:      0.000000
+ Unrelaxed magnetic transition dipole moment / i:
+    x       -0.000000        Norm:                  0.000000
+    y       -0.000000
+    z       -0.000000        Norm / Bohr mag.:      0.000000
+
+
+ Relaxed electric quadrupole transition moment:
+   xx       -2.025317
+   yy       -2.025317        1/3*trace:            -0.044838
+   zz        3.916118
+   xy       -0.000000
+   xz       -0.000000        Anisotropy:            5.941435
+   yz       -0.000000
+ Unrelaxed electric quadrupole transition moment:
+   xx       -2.598527
+   yy       -2.598527        1/3*trace:            -0.177710
+   zz        4.663923
+   xy        0.000000
+   xz       -0.000000        Anisotropy:            7.262449
+   yz        0.000000
+
+
+------------------------------------------------------------------------
+            <   1| W |   2>  transition moments
+------------------------------------------------------------------------
+
+          Exc. Energy (   1)  Exc. Energy (   2)        Energy Diff.
+ Hartree           0.0975382           0.0975382           0.0000000
+      eV           2.6541490           2.6541490           0.0000000
+      nm         467.1335222         467.1335222  ******************
+
+ Change of electron number:
+  relaxed:       0.000000  unrelaxed:         0.000000
+
+ Relaxed electric transition dipole moment (velocity rep.):
+    x        0.000000        Norm:                  0.000000
+    y        0.000000
+    z        0.000000        Norm / debye:          0.000000
+ Unrelaxed electric transition dipole moment (velocity rep.):
+    x        0.000000        Norm:                  0.000000
+    y        0.000000
+    z        0.000000        Norm / debye:          0.000000
+
+
+ Relaxed electric transition dipole moment (length rep.):
+    x       -0.000000        Norm:                  0.000000
+    y        0.000000
+    z        0.000000        Norm / debye:          0.000000
+ Unrelaxed electric transition dipole moment (length rep.):
+    x       -0.000000        Norm:                  0.000000
+    y       -0.000000
+    z        0.000000        Norm / debye:          0.000000
+
+
+ Relaxed magnetic transition dipole moment / i:
+    x       -0.000000        Norm:                  0.000000
+    y       -0.000000
+    z       -0.000000        Norm / Bohr mag.:      0.000000
+ Unrelaxed magnetic transition dipole moment / i:
+    x       -0.000000        Norm:                  0.000000
+    y       -0.000000
+    z       -0.000000        Norm / Bohr mag.:      0.000000
+
+
+ Relaxed electric quadrupole transition moment:
+   xx        1.158675
+   yy       -1.158675        1/3*trace:             0.000000
+   zz        0.000000
+   xy       -0.660961
+   xz        0.000000        Anisotropy:            2.310453
+   yz        0.000000
+ Unrelaxed electric quadrupole transition moment:
+   xx        1.182220
+   yy       -1.182220        1/3*trace:             0.000000
+   zz        0.000000
+   xy       -0.674405
+   xz        0.000000        Anisotropy:            2.357414
+   yz       -0.000000
+
+
+------------------------------------------------------------------------
+            <   1| W |   3>  transition moments
+------------------------------------------------------------------------
+
+          Exc. Energy (   1)  Exc. Energy (   3)        Energy Diff.
+ Hartree           0.0975382           0.3517213           0.2541831
+      eV           2.6541490           9.5708240           6.9166750
+      nm         467.1335222         129.5439110         179.2540452
+
+ Change of electron number:
+  relaxed:      -0.000000  unrelaxed:         0.000000
+
+ Relaxed electric transition dipole moment (velocity rep.):
+    x        0.000000        Norm:                  0.000000
+    y        0.000000
+    z        0.000000        Norm / debye:          0.000000
+ Unrelaxed electric transition dipole moment (velocity rep.):
+    x        0.000000        Norm:                  0.000000
+    y        0.000000
+    z        0.000000        Norm / debye:          0.000000
+
+
+ Relaxed electric transition dipole moment (length rep.):
+    x       -0.641659        Norm:                  0.742038
+    y       -0.372684
+    z       -0.000000        Norm / debye:          1.886071
+ Unrelaxed electric transition dipole moment (length rep.):
+    x       -0.671050        Norm:                  0.776026
+    y       -0.389754
+    z       -0.000000        Norm / debye:          1.972462
+
+
+ Relaxed magnetic transition dipole moment / i:
+    x       -0.000000        Norm:                  0.000000
+    y       -0.000000
+    z       -0.000000        Norm / Bohr mag.:      0.000000
+ Unrelaxed magnetic transition dipole moment / i:
+    x       -0.000000        Norm:                  0.000000
+    y       -0.000000
+    z       -0.000000        Norm / Bohr mag.:      0.000000
+
+
+ Relaxed electric quadrupole transition moment:
+   xx       -0.000000
+   yy       -0.000000        1/3*trace:            -0.000000
+   zz       -0.000000
+   xy       -0.000000
+   xz       -0.266917        Anisotropy:            0.534636
+   yz       -0.155029
+ Unrelaxed electric quadrupole transition moment:
+   xx       -0.000000
+   yy       -0.000000        1/3*trace:            -0.000000
+   zz       -0.000000
+   xy       -0.000000
+   xz       -0.348485        Anisotropy:            0.698018
+   yz       -0.202405
+
+
+------------------------------------------------------------------------
+            <   2| W |   3>  transition moments
+------------------------------------------------------------------------
+
+          Exc. Energy (   2)  Exc. Energy (   3)        Energy Diff.
+ Hartree           0.0975382           0.3517213           0.2541831
+      eV           2.6541490           9.5708240           6.9166750
+      nm         467.1335222         129.5439110         179.2540452
+
+ Change of electron number:
+  relaxed:      -0.000000  unrelaxed:        -0.000000
+
+ Relaxed electric transition dipole moment (velocity rep.):
+    x        0.000000        Norm:                  0.000000
+    y        0.000000
+    z        0.000000        Norm / debye:          0.000000
+ Unrelaxed electric transition dipole moment (velocity rep.):
+    x        0.000000        Norm:                  0.000000
+    y        0.000000
+    z        0.000000        Norm / debye:          0.000000
+
+
+ Relaxed electric transition dipole moment (length rep.):
+    x        0.372684        Norm:                  0.742038
+    y       -0.641659
+    z       -0.000000        Norm / debye:          1.886071
+ Unrelaxed electric transition dipole moment (length rep.):
+    x        0.389754        Norm:                  0.776026
+    y       -0.671050
+    z       -0.000000        Norm / debye:          1.972462
+
+
+ Relaxed magnetic transition dipole moment / i:
+    x       -0.000000        Norm:                  0.000000
+    y       -0.000000
+    z       -0.000000        Norm / Bohr mag.:      0.000000
+ Unrelaxed magnetic transition dipole moment / i:
+    x       -0.000000        Norm:                  0.000000
+    y       -0.000000
+    z       -0.000000        Norm / Bohr mag.:      0.000000
+
+
+ Relaxed electric quadrupole transition moment:
+   xx        0.000000
+   yy        0.000000        1/3*trace:             0.000000
+   zz       -0.000000
+   xy       -0.000000
+   xz        0.155029        Anisotropy:            0.534636
+   yz       -0.266917
+ Unrelaxed electric quadrupole transition moment:
+   xx        0.000000
+   yy        0.000000        1/3*trace:             0.000000
+   zz        0.000000
+   xy       -0.000000
+   xz        0.202405        Anisotropy:            0.698018
+   yz       -0.348485
+
+    ----------------------------------------
+     S+T+V CONTRIBUTIONS TO NACME GRADIENT
+    ----------------------------------------
+
+ 1e-integral 1st. derivatives will be neglected if expon. factor < 0.100000E-12
+
+
+    -----------------------------------------------
+     TWO ELECTRON CONTRIBUTIONS TO NACME GRADIENT
+    -----------------------------------------------
+
+ biggest 1-particle AO density matrix element is expected to be    2.9707283534
+
+ core memory to be involved in 2e-gradient :
+   symmetry shell pair data              :         1
+   two particle density+dens. estimates  :      1341
+   derivative integrals                  :      8498
+   derivative integral bound             :       135
+   totally                               :      8631
+
+
+ setting up bound for integral derivative estimation
+
+ increment for numerical differentiation : 0.00050000
+
+ biggest AO integral is expected to be     2.904162095
+ biggest cartesian 1st derivative AO integral is expected to be     4.121777420
+
+ 2e-integral 1st. derivatives will be neglected if expon. factor < 0.100000E-08
+ outer boundary for 2e-integral derivative neglection is 0.188853E-10
+
+ Integrated ground state density     :   5.999998622751288
+
+
+          --------------------------------------------------------
+          cartesian gradients of excited state    1 (Hartree/bohr)
+          --------------------------------------------------------
+
+  ATOM      1 b           2 h
+dE/dx  0.0000000D+00  0.0000000D+00
+dE/dy  0.0000000D+00  0.0000000D+00
+dE/dz -0.6023439D-01  0.6023439D-01
+
+
+ **********************************************************************
+  |maximum component of gradient| : 0.60234391E-01  (atom  2 h )
+   gradient norm                  : 0.85184292E-01
+ **********************************************************************
+
+          --------------------------------------------------------
+          cartesian gradients of excited state    2 (Hartree/bohr)
+          --------------------------------------------------------
+
+  ATOM      1 b           2 h
+dE/dx  0.0000000D+00  0.0000000D+00
+dE/dy  0.0000000D+00  0.0000000D+00
+dE/dz -0.6023439D-01  0.6023439D-01
+
+
+ **********************************************************************
+  |maximum component of gradient| : 0.60234391E-01  (atom  2 h )
+   gradient norm                  : 0.85184292E-01
+ **********************************************************************
+
+          --------------------------------------------------------
+          cartesian gradients of excited state    3 (Hartree/bohr)
+          --------------------------------------------------------
+
+  ATOM      1 b           2 h
+dE/dx  0.3750089D-12 -0.3756835D-12
+dE/dy  0.0000000D+00  0.0000000D+00
+dE/dz -0.2669341D-01  0.2669341D-01
+
+
+ **********************************************************************
+  |maximum component of gradient| : 0.26693407E-01  (atom  2 h )
+   gradient norm                  : 0.37750178E-01
+ **********************************************************************
+
+          --------------------------------------------------------
+          cartesian nonadiabatic coupling matrix elements (1/bohr)
+                          <   1 | d/dR |    2>
+          --------------------------------------------------------
+
+  ATOM      1 b           2 h
+ d/dx  0.0000000D+00  0.0000000D+00
+ d/dy  0.0000000D+00  0.0000000D+00
+ d/dz  0.2333170D+03 -0.2333074D+03
+
+
+ **********************************************************************
+  |maximum component of gradient| :  233.31702      (atom  1 b )
+   gradient norm                  :  329.95329
+ **********************************************************************
+
+          --------------------------------------------------------
+          cartesian nonadiabatic coupling matrix elements (1/bohr)
+                          <   1 | d/dR |    3>
+          --------------------------------------------------------
+
+  ATOM      1 b           2 h
+ d/dx -0.5298830D-01  0.5298830D-01
+ d/dy -0.3077627D-01  0.3077627D-01
+ d/dz -0.1849334D-12  0.1849380D-12
+
+
+ **********************************************************************
+  |maximum component of gradient| : 0.52988299E-01  (atom  1 b )
+   gradient norm                  : 0.86659550E-01
+ **********************************************************************
+
+          --------------------------------------------------------
+          cartesian nonadiabatic coupling matrix elements (1/bohr)
+                          <   2 | d/dR |    3>
+          --------------------------------------------------------
+
+  ATOM      1 b           2 h
+ d/dx  0.3077627D-01 -0.3077627D-01
+ d/dy -0.5298830D-01  0.5298830D-01
+ d/dz -0.6959343D-12  0.6959352D-12
+
+
+ **********************************************************************
+  |maximum component of gradient| : 0.52988299E-01  (atom  2 h )
+   gradient norm                  : 0.86659550E-01
+ **********************************************************************
+
+          --------------------------------------------------------
+          cartesian nonadiabatic coupling matrix elements (1/bohr)
+                          <   0 | d/dR |    1>
+          --------------------------------------------------------
+
+  ATOM      1 b           2 h
+ d/dx  0.4625820D+00 -0.4625820D+00
+ d/dy  0.2686734D+00 -0.2686734D+00
+ d/dz -0.6678327D-12  0.6678593D-12
+
+
+ **********************************************************************
+  |maximum component of gradient| : 0.46258196      (atom  1 b )
+   gradient norm                  : 0.75652823
+ **********************************************************************
+
+          --------------------------------------------------------
+          cartesian nonadiabatic coupling matrix elements (1/bohr)
+                          <   0 | d/dR |    2>
+          --------------------------------------------------------
+
+  ATOM      1 b           2 h
+ d/dx -0.2686734D+00  0.2686734D+00
+ d/dy  0.4625820D+00 -0.4625820D+00
+ d/dz  0.1112824D-11 -0.1112817D-11
+
+
+ **********************************************************************
+  |maximum component of gradient| : 0.46258196      (atom  2 h )
+   gradient norm                  : 0.75652823
+ **********************************************************************
+
+          --------------------------------------------------------
+          cartesian nonadiabatic coupling matrix elements (1/bohr)
+                          <   0 | d/dR |    3>
+          --------------------------------------------------------
+
+  ATOM      1 b           2 h
+ d/dx -0.2312233D-12  0.2311770D-12
+ d/dy  0.2453642D-12 -0.2454108D-12
+ d/dz -0.2191730D+00  0.2191730D+00
+
+
+ **********************************************************************
+  |maximum component of gradient| : 0.21917302      (atom  2 h )
+   gradient norm                  : 0.30995745
+ **********************************************************************
+
+   *** nonadiabatic coupling vector written onto file control ***
+
+
+   *** excited state energy gradient derivatives written onto file control ***
+
+
+ exx =       0.000000 eyy =       0.000000 ezz =      -0.126492
+ eyz =       0.000000 exz =       0.000000 exy =       0.000000
+
+
+ <geterg> : there is no data group $energy
+
+
+ <getgrd> : data group $grad  is missing
+
+   ***  cartesian gradients written onto <gradient>  ***
+
+
+
+
+ ==============================================================================
+                           electrostatic moments
+ ==============================================================================
+
+ reference point for electrostatic moments:    0.00000   0.00000   0.00000
+
+
+              nuc           gs,e       ->  gs,tot          excit     ->  total
+ ------------------------------------------------------------------------------
+                          charge
+ ------------------------------------------------------------------------------
+           6.000000      -6.000000       0.000000      -0.000000       0.000000
+
+ ------------------------------------------------------------------------------
+                       dipole moment
+ ------------------------------------------------------------------------------
+   x       0.000000       0.000000       0.000000       0.000000       0.000000
+   y       0.000000      -0.000000      -0.000000       0.000000       0.000000
+   z       7.200000      -7.967094      -0.767094       0.449207      -0.317887
+
+   | dipole moment | =     0.3179 a.u. =     0.8080 debye
+
+ ------------------------------------------------------------------------------
+                     quadrupole moment
+ ------------------------------------------------------------------------------
+  xx       0.000000      -4.891648      -4.891648      -1.709317      -6.600965
+  yy       0.000000      -4.891648      -4.891648      -0.387369      -5.279017
+  zz      12.315000     -21.584008      -9.269008       3.051325      -6.217683
+  xy       0.000000      -0.000000      -0.000000      -1.158653      -1.158653
+  xz       0.000000       0.000000       0.000000       0.000000       0.000000
+  yz       0.000000      -0.000000      -0.000000       0.000000       0.000000
+
+     1/3  trace=      -6.032555
+     anisotropy=       2.327058
+
+ ==============================================================================
+
+
+
+     --------------------------------------------------------------
+      status report for the unit numbers 0 - 199:
+     --------------------------------------------------------------
+      unit(s)  status     access        form          file name
+     --------------------------------------------------------------
+       0       connected  SEQUENTIAL    FORMATTED     "stderr"
+       1 -  4  free
+       5       connected  SEQUENTIAL    FORMATTED     "stdin"
+       6       connected  SEQUENTIAL    FORMATTED     "stdout"
+       7 -199  free
+     --------------------------------------------------------------
+
+
+
+
+    ------------------------------------------------------------------------
+         total  cpu-time :   0.71 seconds
+         total wall-time :   0.71 seconds
+    ------------------------------------------------------------------------
+
+   ****  egrad : all done  ****
+
+
+    2018-05-01 00:53:42.773
+

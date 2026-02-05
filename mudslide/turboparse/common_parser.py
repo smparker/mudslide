@@ -156,7 +156,7 @@ class NACParser(CoordParser):
 
 
 # Constants for the two gradient types
-EXCITED_STATE_GRADIENT_HEAD = (r"(?:cartesian\s+gradients\s+of\s+excited\s+state\s+[0-9 ]+|"
+EXCITED_STATE_GRADIENT_HEAD = (r"(?:cartesian\s+gradients\s+of\s+excited\s+state\s+(?P<index>\d+)|"
                                r"cartesian\s+gradient\s+of\s+the\s+energy)\s+\((\w+)/(\w+)\)")
 GROUND_STATE_GRADIENT_HEAD = r"cartesian\s+gradient\s+of\s+the\s+energy\s+\((\w+)/(\w+)\)"
 
@@ -170,3 +170,13 @@ class GradientDataParser(CoordParser):
         # "maximum component of gradient" (when no NAC), or start of NAC section
         tail = r"(?:resulting FORCE|maximum component of gradient|cartesian\s+nonadiabatic)"
         super().__init__(head, tail)
+
+    def prepare(self, out):
+        dest = super().prepare(out)
+        try:
+            index = self.lastsearch.group("index")
+            if index is not None:
+                dest["index"] = int(index)
+        except (IndexError, AttributeError):
+            pass
+        return dest

@@ -545,7 +545,10 @@ class EvenSamplingTrajectory(SurfaceHoppingMD):
             for hop in hop_targets:
                 stack = hop["stack"]
                 spawn = self.clone(stack)
+                old_state = spawn.state
                 SurfaceHoppingMD.hop_to_it(spawn, [hop], electronics=spawn.electronics)
+                if spawn.state != old_state:
+                    spawn.electronics.compute_additional(gradients=[spawn.state])
                 spawn.time+= spawn.dt
                 spawn.nsteps += 1
 
@@ -557,4 +560,7 @@ class EvenSamplingTrajectory(SurfaceHoppingMD):
             self.update_weight(self.spawn_stack.weight())
         else:
             self.prob_cum = 0.0
+            old_state = self.state
             SurfaceHoppingMD.hop_to_it(self, hop_targets, electronics=self.electronics)
+            if self.state != old_state:
+                self.electronics.compute_additional(gradients=[self.state])
