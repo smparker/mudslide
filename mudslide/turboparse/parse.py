@@ -10,7 +10,7 @@ from ..version import get_version_info
 from ..yaml_format import CompactDumper
 
 
-def parse():
+def parse(argv=None):
     ap = argparse.ArgumentParser(
         description=
         "Collects excited state information from an egrad run and prepares as JSON",
@@ -28,7 +28,7 @@ def parse():
                     default="yaml",
                     help="print format")
 
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
     with open(args.file, "r", encoding="utf-8") as f:
         data = parse_turbo(f)
