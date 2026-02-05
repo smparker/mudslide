@@ -52,6 +52,14 @@ def turbomole_is_installed():
 
     return has_turbodir and has_scripts and has_bin
 
+def turbomole_is_installed_or_prefixed():
+    """ Check if turbomole is installed or a command prefix is set.
+
+    :return: True if turbomole is installed or a command prefix is set, False otherwise
+    """
+    command_prefix = _resolve_command_prefix(None)
+    return turbomole_is_installed() or (command_prefix is not None)
+
 
 def verify_module_output(module: str, data_dict: dict, stderr: str) -> None:
     """Verify that a turbomole module ran through correctly.
@@ -105,7 +113,7 @@ class TurboControl:
                  control_file=None,
                  workdir=None,
                  command_prefix: Optional[str] = None):
-        self.command_prefix = command_prefix
+        self.command_prefix = _resolve_command_prefix(command_prefix)
         # workdir is directory of control file
         if control_file is not None:
             self.workdir = os.path.abspath(os.path.dirname(control_file))
