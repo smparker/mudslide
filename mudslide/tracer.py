@@ -665,7 +665,7 @@ class TraceManager:
 
     def counts(self) -> ArrayLike:
         """summarize outcomes from entire set of traces"""
-        out = np.sum((t.outcome() for t in self.traces))
+        out = sum(t.outcome() for t in self.traces)
         return out
 
     def event_list(self) -> List:
@@ -685,7 +685,7 @@ class TraceManager:
 
         nhops = np.array([len(t.hops) for t in self.traces])
         hop_stats = [
-            np.sum((t.weight for t in self.traces if len(t.hops) == i)) /
+            sum(t.weight for t in self.traces if len(t.hops) == i) /
             norm for i in range(max(nhops) + 1)
         ]
         print(f"{'nhops':5s} {'percentage':16s}", file=file)
