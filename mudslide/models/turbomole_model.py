@@ -101,7 +101,9 @@ class TurboControl:
     pcgrad_file = "pcgrad"
     control_file = "control"
 
-    def __init__(self, control_file=None, workdir=None,
+    def __init__(self,
+                 control_file=None,
+                 workdir=None,
                  command_prefix: Optional[str] = None):
         self.command_prefix = command_prefix
         # workdir is directory of control file
@@ -115,7 +117,8 @@ class TurboControl:
 
         # make sure control file exists
         if not os.path.exists(os.path.join(self.workdir, self.control_file)):
-            raise RuntimeError(f"control file not found in working directory {self.workdir:s}")
+            raise RuntimeError(
+                f"control file not found in working directory {self.workdir:s}")
 
         # list of data groups and which file they are in, used to avoid rerunning sdg too much
         self.dg_in_file = {}
@@ -179,8 +182,12 @@ class TurboControl:
 
         sdg_command += f" {dg}"
 
-        full_cmd, effective_cwd = self._build_command(sdg_command.split(), cwd=self.workdir)
-        result = subprocess.run(full_cmd, capture_output=True, text=True, cwd=effective_cwd,
+        full_cmd, effective_cwd = self._build_command(sdg_command.split(),
+                                                      cwd=self.workdir)
+        result = subprocess.run(full_cmd,
+                                capture_output=True,
+                                text=True,
+                                cwd=effective_cwd,
                                 check=False)
         return result.stdout.rstrip()
 
@@ -192,8 +199,12 @@ class TurboControl:
         if newline:
             lines = "\\n" + lines
         adg_command = f"adg {dg} {lines}"
-        full_cmd, effective_cwd = self._build_command(adg_command.split(), cwd=self.workdir)
-        result = subprocess.run(full_cmd, capture_output=True, text=True, cwd=effective_cwd,
+        full_cmd, effective_cwd = self._build_command(adg_command.split(),
+                                                      cwd=self.workdir)
+        result = subprocess.run(full_cmd,
+                                capture_output=True,
+                                text=True,
+                                cwd=effective_cwd,
                                 check=True)
         # check that the command ran successfully
         if "abnormal" in result.stderr:
@@ -201,40 +212,55 @@ class TurboControl:
 
     def cpc(self, dest):
         """Copy the control file and other files to a new directory"""
-        full_cmd, effective_cwd = self._build_command(["cpc", dest], cwd=self.workdir)
-        subprocess.run(full_cmd, cwd=effective_cwd, check=False,
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        file_list = ['ciss_a','exspectrum', 'statistics', 'dipl_a',
-                     'excitationlog.1', 'moments', 'vecsao', 'control',
-                     'gradient', 'energy', 'moments' ]
+        full_cmd, effective_cwd = self._build_command(["cpc", dest],
+                                                      cwd=self.workdir)
+        subprocess.run(full_cmd,
+                       cwd=effective_cwd,
+                       check=False,
+                       stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL)
+        file_list = [
+            'ciss_a', 'exspectrum', 'statistics', 'dipl_a', 'excitationlog.1',
+            'moments', 'vecsao', 'control', 'gradient', 'energy', 'moments'
+        ]
         for f in file_list:
             if os.path.exists(os.path.join(os.path.abspath(self.workdir), f)) and not \
                     os.path.exists(os.path.join(dest,f)):
-                shutil.copy(os.path.join(os.path.abspath(self.workdir), f), dest)
+                shutil.copy(os.path.join(os.path.abspath(self.workdir), f),
+                            dest)
 
     def use_weight_derivatives(self, use=True):
         """Check if weight derivatives are used in the control file"""
         sdg_dft = self.sdg("dft", show_body=True)
-        if use: # make sure weight derivatives turned on
+        if use:  # make sure weight derivatives turned on
             if "weight derivatives" not in sdg_dft:
                 current_dft = sdg_dft.split("\n")
-                self.adg("dft", current_dft + [" weight derivatives"], newline=True)
-        else: # remove weight derivatives
+                self.adg("dft",
+                         current_dft + [" weight derivatives"],
+                         newline=True)
+        else:  # remove weight derivatives
             if "weight derivatives" in sdg_dft:
                 current_dft = sdg_dft.split("\n")
-                self.adg("dft",
-                         [x for x in current_dft if "weight derivatives" not in x],
-                         newline=True)
+                self.adg(
+                    "dft",
+                    [x for x in current_dft if "weight derivatives" not in x],
+                    newline=True)
 
-    def run_single(self, module: str, outname: Optional[Union[str, Path]] = None) -> dict:
+    def run_single(self,
+                   module: str,
+                   outname: Optional[Union[str, Path]] = None) -> dict:
         """Run a single turbomole module, verify its output, and return parsed results.
 
         :param module: name of the turbomole module to run
         :param outname: optional path to write the module output
         :return: parsed output dictionary from turboparse
         """
-        full_cmd, effective_cwd = self._build_command([module], cwd=self.workdir)
-        output = subprocess.run(full_cmd, capture_output=True, text=True, cwd=effective_cwd,
+        full_cmd, effective_cwd = self._build_command([module],
+                                                      cwd=self.workdir)
+        output = subprocess.run(full_cmd,
+                                capture_output=True,
+                                text=True,
+                                cwd=effective_cwd,
                                 check=False)
         if outname is not None:
             with open(outname, "w", encoding='utf-8') as f:
@@ -268,7 +294,8 @@ class TurboControl:
 
     def get_masses(self, symbols):
         """Get the masses of the atoms in the system"""
-        atomic_masses = np.array([masses[s] for s in symbols for _ in range(3)], dtype=np.float64)
+        atomic_masses = np.array([masses[s] for s in symbols for _ in range(3)],
+                                 dtype=np.float64)
         atomic_masses *= amu_to_au
         return atomic_masses
 
@@ -304,10 +331,14 @@ class TurboControl:
         assert coords.shape == (nq, 3)
 
         self.adg("point_charges", ["file=point_charges"])
-        with open(os.path.join(self.workdir, "point_charges"), "w", encoding='utf-8') as f:
+        with open(os.path.join(self.workdir, "point_charges"),
+                  "w",
+                  encoding='utf-8') as f:
             print("$point_charges nocheck list pcgrad", file=f)
             for xyz, q in zip(coords, charges):
-                print(f"{xyz[0]:22.16g} {xyz[1]:22.16g} {xyz[2]:22.16g} {q:22.16f}", file=f)
+                print(
+                    f"{xyz[0]:22.16g} {xyz[1]:22.16g} {xyz[2]:22.16g} {q:22.16f}",
+                    file=f)
             print("$end", file=f)
 
         # make sure point charge gradients are requested
@@ -340,55 +371,73 @@ class TurboControl:
             charges[i] = float(p_list[3])
 
         # read point charge gradients
-        pcgrad = self.sdg("point_charge_gradients", show_body=True, show_keyword=False)
+        pcgrad = self.sdg("point_charge_gradients",
+                          show_body=True,
+                          show_keyword=False)
         pcgrad_list = pcgrad.rstrip().split("\n")
         gradients = np.zeros((nq, 3))
         for i, p in enumerate(pcgrad_list):
             p_list = p.split()
-            gradients[i, :] = [float(val.replace('D','e')) for val in p_list[:3]]
+            gradients[i, :] = [
+                float(val.replace('D', 'e')) for val in p_list[:3]
+            ]
 
         return coords, charges, gradients
 
+
 class TMModel(ElectronicModel_):
     """A class to handle the electronic model for excited state Turbomole calculations"""
+
     def __init__(
-        self,
-        states: ArrayLike,
-        run_turbomole_dir: str = ".",
-        workdir_stem: str = "run_turbomole",
-        representation: str = "adiabatic",
-        reference: Any = None,
-        expert: bool=False,  # when False, update turbomole parameters for NAMD
-        turbomole_modules: Dict=None,
-        command_prefix: Optional[str] = None,
-        keep_output: int = 0
-    ):
+            self,
+            states: ArrayLike,
+            run_turbomole_dir: str = ".",
+            workdir_stem: str = "run_turbomole",
+            representation: str = "adiabatic",
+            reference: Any = None,
+            expert:
+        bool = False,  # when False, update turbomole parameters for NAMD
+            turbomole_modules: Dict = None,
+            command_prefix: Optional[str] = None,
+            keep_output: int = 0,
+            exopt_all: bool = False):
         self.command_prefix = _resolve_command_prefix(command_prefix)
         self.keep_output = keep_output
         self.workdir_stem = workdir_stem
         self.run_turbomole_dir = run_turbomole_dir
-        unique_workdir = find_unique_name(self.workdir_stem, self.run_turbomole_dir,
+        unique_workdir = find_unique_name(self.workdir_stem,
+                                          self.run_turbomole_dir,
                                           always_enumerate=True)
         abs_run_dir = os.path.abspath(self.run_turbomole_dir)
         work = os.path.join(abs_run_dir, unique_workdir)
         if self.command_prefix:
             cmd_str = " ".join(shlex.quote(c) for c in ["cpc", work])
             shell_cmd = f"cd {shlex.quote(abs_run_dir)} && {self.command_prefix} {cmd_str}"
-            subprocess.run(["sh", "-c", shell_cmd], check=False,
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(["sh", "-c", shell_cmd],
+                           check=False,
+                           stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL)
         else:
-            subprocess.run(["cpc", work], cwd=self.run_turbomole_dir, check=False,
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        self.control = TurboControl(workdir=work, command_prefix=self.command_prefix)
+            subprocess.run(["cpc", work],
+                           cwd=self.run_turbomole_dir,
+                           check=False,
+                           stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL)
+        self.control = TurboControl(workdir=work,
+                                    command_prefix=self.command_prefix)
 
         # read coordinates and elements from the control file
         elements, X = self.control.read_coords()
         nparts, ndims = X.shape
         self._position = X.flatten()
         self.states = states
-        ElectronicModel_.__init__(self, nstates=len(self.states), ndims=ndims, nparticles=nparts,
-                                atom_types=elements,
-                                representation=representation, reference=reference)
+        ElectronicModel_.__init__(self,
+                                  nstates=len(self.states),
+                                  ndims=ndims,
+                                  nparticles=nparts,
+                                  atom_types=elements,
+                                  representation=representation,
+                                  reference=reference)
         self.mass = self.control.get_masses(elements)
 
         self.expert = expert
@@ -401,21 +450,22 @@ class TMModel(ElectronicModel_):
 
         if turbomole_modules is None:
             # always need energy and gradients
-            mod = { "gs_energy": "ridft", "gs_grads": "rdgrad" }
+            mod = {"gs_energy": "ridft", "gs_grads": "rdgrad"}
             if any(s != 0 for s in self.states):
                 mod["es_grads"] = "egrad"
             self.turbomole_modules = mod
         else:
             self.turbomole_modules = turbomole_modules
         if not self.command_prefix:
-            if not all(shutil.which(x) is not None for x in self.turbomole_modules.values()):
+            if not all(
+                    shutil.which(x) is not None
+                    for x in self.turbomole_modules.values()):
                 raise RuntimeError("Turbomole modules not found")
-
-        # self.turbomole_init()
 
         if not self.expert:
             self.apply_suggested_parameters()
 
+        self.exopt_all = exopt_all
 
     def apply_suggested_parameters(self):
         """ Apply suggested parameters for Turbomole to work well with NAMD
@@ -479,7 +529,8 @@ class TMModel(ElectronicModel_):
 
         # Now add results to model
 
-    def call_turbomole(self, outname: Union[str, Path] = "tm.current",
+    def call_turbomole(self,
+                       outname: Union[str, Path] = "tm.current",
                        gradients: Any = None) -> None:
         """Call Turbomole to run the calculation.
 
@@ -497,7 +548,8 @@ class TMModel(ElectronicModel_):
         self._force = np.zeros((self.nstates, self.ndof))
         self._forces_available = np.zeros(self.nstates, dtype=bool)
 
-        gradients = range(self.nstates) if gradients is None else gradients
+        gradients = range(self.nstates) if (gradients is None or
+                                            self.exopt_all) else gradients
 
         need_gs_grad = 0 in gradients
 
@@ -515,7 +567,7 @@ class TMModel(ElectronicModel_):
         module_outfiles = []
 
         # update control file to ensure requested gradients are computed
-        excited_grads = [ s for s in gradients if s > 0 ]
+        excited_grads = [s for s in gradients if s > 0]
         if not excited_grads:
             excited_grads = [1]  # turbomole wants at least one excited state
 
@@ -524,7 +576,8 @@ class TMModel(ElectronicModel_):
 
         for turbomole_module in modules_to_run.values():
             module_outpath = outpath.parent / f"tm.{turbomole_module}.current"
-            module_data = self.control.run_single(turbomole_module, outname=module_outpath)
+            module_data = self.control.run_single(turbomole_module,
+                                                  outname=module_outpath)
             data_dict.update(module_data)
             module_outfiles.append(module_outpath)
 
@@ -543,7 +596,7 @@ class TMModel(ElectronicModel_):
         if "gs_grads" in modules_to_run:
             grad = data_dict[modules_to_run["gs_grads"]]["gradient"][0]
             dE0 = np.array(grad["d/dR"]).flatten()
-            self._force[0,:] = -dE0.flatten()
+            self._force[0, :] = -dE0.flatten()
             self._forces_available[0] = True
 
         # Check for presence of egrad turbomole module
@@ -554,16 +607,17 @@ class TMModel(ElectronicModel_):
                 for i in range(len(data_dict["egrad"]["excited_state"]))
             ]
             for i, e in enumerate(excited_energies):
-                self.energies[i+1] = e
+                self.energies[i + 1] = e
 
             # egrad couplings
             parsed_nac_coupling = data_dict["egrad"]["coupling"]
-            self._derivative_coupling = np.zeros((self.nstates, self.nstates, self.ndof))
-            self._derivative_couplings_available = np.zeros((self.nstates, self.nstates),
-                                                            dtype=bool)
+            self._derivative_coupling = np.zeros(
+                (self.nstates, self.nstates, self.ndof))
+            self._derivative_couplings_available = np.zeros(
+                (self.nstates, self.nstates), dtype=bool)
             # Set diagonal elements to True since they are always zero
             for i in range(self.nstates):
-                self._derivative_couplings_available[i,i] = True
+                self._derivative_couplings_available[i, i] = True
 
             for dct in parsed_nac_coupling:
                 i = dct["bra_state"]
@@ -571,7 +625,8 @@ class TMModel(ElectronicModel_):
 
                 ddr = np.array(dct["d/dR"]).flatten()
                 self._derivative_coupling[i, j, :] = ddr
-                self._derivative_coupling[j, i, :] = -(self._derivative_coupling[i, j, :])
+                self._derivative_coupling[
+                    j, i, :] = -(self._derivative_coupling[i, j, :])
                 self._derivative_couplings_available[i, j] = True
                 self._derivative_couplings_available[j, i] = True
 
@@ -579,7 +634,7 @@ class TMModel(ElectronicModel_):
             for g in data_dict["egrad"]["gradient"]:
                 state_idx = g["index"]
                 dE = np.array(g["d/dR"]).flatten()
-                self._force[state_idx,:] = -dE
+                self._force[state_idx, :] = -dE
                 self._forces_available[state_idx] = True
 
         self._manage_output(outpath)
@@ -614,7 +669,11 @@ class TMModel(ElectronicModel_):
                 for n in sorted(numbers)[:-self.keep_output]:
                     (parent / f"tm.{n}").unlink(missing_ok=True)
 
-    def compute(self, X, couplings: Any=None, gradients: Any=None, reference: Any=None) -> None:
+    def compute(self,
+                X,
+                couplings: Any = None,
+                gradients: Any = None,
+                reference: Any = None) -> None:
         """
         Calls Turbomole/Turboparse to generate electronic properties including
         gradients, couplings, energies. For this to work, this class
@@ -635,13 +694,15 @@ class TMModel(ElectronicModel_):
         """
         self._position = X
         self.update_coords(X)
-        self.call_turbomole(outname=Path(self.control.workdir)/"tm.current",
+        self.call_turbomole(outname=Path(self.control.workdir) / "tm.current",
                             gradients=gradients)
 
         self._hamiltonian = np.zeros([self.nstates, self.nstates])
         self._hamiltonian = np.diag(self.energies)
 
-    def compute_additional(self, couplings: Any = None, gradients: Any = None) -> None:
+    def compute_additional(self,
+                           couplings: Any = None,
+                           gradients: Any = None) -> None:
         """Compute additional gradients at the current geometry.
 
         Parameters
@@ -661,11 +722,12 @@ class TMModel(ElectronicModel_):
             outpath = Path(self.control.workdir) / "tm.additional.current"
             gs_module = self.turbomole_modules["gs_grads"]
             module_outpath = outpath.parent / f"tm.{gs_module}.current"
-            module_data = self.control.run_single(gs_module, outname=module_outpath)
+            module_data = self.control.run_single(gs_module,
+                                                  outname=module_outpath)
             module_outpath.rename(outpath)
 
             dE0 = np.array(module_data[gs_module]["gradient"][0]["d/dR"])
-            self._force[0,:] = -dE0.flatten()
+            self._force[0, :] = -dE0.flatten()
             self._forces_available[0] = True
 
             self._manage_output(outpath)
@@ -676,14 +738,15 @@ class TMModel(ElectronicModel_):
             # add additional excited states to exopt
             # keep the already computed ones just for consistency (for now)
             all_excited = set(needed_excited_g) | set(
-                s for s in range(1, self.nstates) if self._forces_available[s]
-            )
-            self.control.adg("exopt", ",".join(str(s) for s in sorted(all_excited)))
+                s for s in range(1, self.nstates) if self._forces_available[s])
+            self.control.adg("exopt",
+                             ",".join(str(s) for s in sorted(all_excited)))
 
             outpath = Path(self.control.workdir) / "tm.additional.current"
             es_module = self.turbomole_modules["es_grads"]
             module_outpath = outpath.parent / f"tm.{es_module}.current"
-            module_data = self.control.run_single(es_module, outname=module_outpath)
+            module_data = self.control.run_single(es_module,
+                                                  outname=module_outpath)
             module_outpath.rename(outpath)
 
             # egrad updates to gradients
@@ -691,7 +754,7 @@ class TMModel(ElectronicModel_):
                 state_idx = g["index"]
                 if state_idx in needed_excited_g:
                     dE = np.array(g["d/dR"]).flatten()
-                    self._force[state_idx,:] = -dE
+                    self._force[state_idx, :] = -dE
                     self._forces_available[state_idx] = True
 
         # all couplings computed for now
@@ -700,11 +763,13 @@ class TMModel(ElectronicModel_):
 
     def clone(self):
         model_clone = cp.deepcopy(self)
-        unique_workdir = find_unique_name(self.workdir_stem, self.run_turbomole_dir,
+        unique_workdir = find_unique_name(self.workdir_stem,
+                                          self.run_turbomole_dir,
                                           always_enumerate=True)
-        workdir = os.path.join(os.path.abspath(self.run_turbomole_dir), unique_workdir)
+        workdir = os.path.join(os.path.abspath(self.run_turbomole_dir),
+                               unique_workdir)
         model_clone.control.workdir = workdir
-        os.makedirs(model_clone.control.workdir, exist_ok = True)
+        os.makedirs(model_clone.control.workdir, exist_ok=True)
         self.control.cpc(model_clone.control.workdir)
 
         # necessary?
