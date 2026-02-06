@@ -172,6 +172,7 @@ def main(argv=None, file=sys.stdout) -> None:
                            samples=args.samples,
                            nprocs=args.nprocs,
                            dt=dt,
+                           max_steps=args.nt,
                            bounds=[ -abs(args.bounds), abs(args.bounds) ],
                            tracemanager=TraceManager(trace_type, trace_kwargs=trace_options),
                            trace_every=args.every,
@@ -194,7 +195,10 @@ def main(argv=None, file=sys.stdout) -> None:
                     if i < len(t):
                         iact = t[i]["active"]
                         nswarm[iact] += 1
-                        print("{position:12.6f}".format(**t[i]), file=fils[iact])
+                        # Position is stored as a list; format each coordinate
+                        pos = t[i]["position"]
+                        pos_str = " ".join(f"{x:12.6f}" for x in pos)
+                        print(pos_str, file=fils[iact])
 
                 for ist in range(model.nstates):
                     if nswarm[ist] == 0:

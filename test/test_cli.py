@@ -143,3 +143,157 @@ class TestTurboparseCLI:
         with pytest.raises(SystemExit) as exc_info:
             parse([filepath, "--format", "invalid"])
         assert exc_info.value.code != 0
+
+
+class TestMainCLI:
+    """Tests for mudslide.__main__ CLI options.
+
+    These tests cover CLI argument paths that weren't previously exercised.
+    """
+
+    def test_published_simple_model(self, tmp_path):
+        """Test --published flag with simple model"""
+        import mudslide.__main__
+        outfile = tmp_path / "output.txt"
+        with open(outfile, "w") as f:
+            mudslide.__main__.main([
+                "-m", "simple", "--published", "-n", "1", "-s", "1",
+                "-T", "100", "-z", "42", "-o", "averaged"
+            ], file=f)
+        content = outfile.read_text()
+        assert len(content) > 0
+        # Check output has expected columns (momentum + state outcomes)
+        lines = [l for l in content.strip().split('\n') if not l.startswith('#')]
+        assert len(lines) == 1
+
+    def test_published_dual_model(self, tmp_path):
+        """Test --published flag with dual model"""
+        import mudslide.__main__
+        outfile = tmp_path / "output.txt"
+        with open(outfile, "w") as f:
+            mudslide.__main__.main([
+                "-m", "dual", "--published", "-n", "1", "-s", "1",
+                "-T", "100", "-z", "42", "-o", "averaged"
+            ], file=f)
+        content = outfile.read_text()
+        lines = [l for l in content.strip().split('\n') if not l.startswith('#')]
+        assert len(lines) == 1
+
+    def test_published_extended_model(self, tmp_path):
+        """Test --published flag with extended model"""
+        import mudslide.__main__
+        outfile = tmp_path / "output.txt"
+        with open(outfile, "w") as f:
+            mudslide.__main__.main([
+                "-m", "extended", "--published", "-n", "1", "-s", "1",
+                "-T", "100", "-z", "42", "-o", "averaged"
+            ], file=f)
+        content = outfile.read_text()
+        lines = [l for l in content.strip().split('\n') if not l.startswith('#')]
+        assert len(lines) == 1
+
+    def test_published_super_model(self, tmp_path):
+        """Test --published flag with super model"""
+        import mudslide.__main__
+        outfile = tmp_path / "output.txt"
+        with open(outfile, "w") as f:
+            mudslide.__main__.main([
+                "-m", "super", "--published", "-n", "1", "-s", "1",
+                "-T", "100", "-z", "42", "-o", "averaged"
+            ], file=f)
+        content = outfile.read_text()
+        lines = [l for l in content.strip().split('\n') if not l.startswith('#')]
+        assert len(lines) == 1
+
+    def test_published_unknown_model_warning(self, tmp_path, capsys):
+        """Test --published flag with model that has no published bounds"""
+        import mudslide.__main__
+        import sys
+        outfile = tmp_path / "output.txt"
+        with open(outfile, "w") as f:
+            mudslide.__main__.main([
+                "-m", "shin-metiu", "--published", "-n", "1", "-s", "1",
+                "-T", "100", "-z", "42", "-o", "averaged"
+            ], file=f)
+        captured = capsys.readouterr()
+        assert "Warning" in captured.err
+
+    def test_kspacing_log(self, tmp_path):
+        """Test --kspacing log option"""
+        import mudslide.__main__
+        outfile = tmp_path / "output.txt"
+        with open(outfile, "w") as f:
+            # Using log spacing with small range
+            mudslide.__main__.main([
+                "-m", "simple", "-n", "2", "-s", "1", "-l", "log",
+                "-k", "0.5", "1.0",  # log10 range
+                "-T", "100", "-z", "42", "-o", "averaged"
+            ], file=f)
+        content = outfile.read_text()
+        lines = [l for l in content.strip().split('\n') if not l.startswith('#')]
+        assert len(lines) == 2
+
+    def test_ksampling_normal(self, tmp_path):
+        """Test --ksampling normal option"""
+        import mudslide.__main__
+        outfile = tmp_path / "output.txt"
+        with open(outfile, "w") as f:
+            mudslide.__main__.main([
+                "-m", "simple", "-n", "1", "-s", "2",
+                "-K", "normal", "-f", "5.0",  # normal sampling with std dev
+                "-k", "10", "10", "-T", "100", "-z", "42", "-o", "averaged"
+            ], file=f)
+        content = outfile.read_text()
+        lines = [l for l in content.strip().split('\n') if not l.startswith('#')]
+        assert len(lines) == 1
+
+    def test_output_swarm(self, tmp_path, monkeypatch):
+        """Test --output swarm option"""
+        import mudslide.__main__
+        # Change to tmp_path so swarm files are written there
+        monkeypatch.chdir(tmp_path)
+        mudslide.__main__.main([
+            "-m", "simple", "-n", "1", "-s", "2",
+            "-k", "10", "10", "-T", "50", "-z", "42", "-o", "swarm"
+        ])
+        # Check that state files were created
+        assert (tmp_path / "state_0.trace").exists()
+        assert (tmp_path / "state_1.trace").exists()
+        # Verify content is valid (positions are formatted correctly)
+        content = (tmp_path / "state_0.trace").read_text()
+        lines = [l for l in content.strip().split('\n') if l.strip()]
+        assert len(lines) > 0
+        # Each line should be a valid float
+        for line in lines:
+            if float(line) != -9999999:  # Skip placeholder lines
+                float(line)  # Should not raise
+
+    def test_output_pickle(self, tmp_path):
+        """Test --output pickle option"""
+        import mudslide.__main__
+        import pickle
+        outfile = tmp_path / "output.txt"
+        pickle_file = tmp_path / "results.pickle"
+        with open(outfile, "w") as f:
+            mudslide.__main__.main([
+                "-m", "simple", "-n", "1", "-s", "1",
+                "-k", "10", "10", "-T", "100", "-z", "42",
+                "-o", "pickle", "-O", str(pickle_file)
+            ], file=f)
+        assert pickle_file.exists()
+        with open(pickle_file, "rb") as pf:
+            results = pickle.load(pf)
+        assert len(results) == 1
+        assert results[0][0] == 10.0  # momentum value
+
+    def test_output_hack(self, tmp_path, capsys):
+        """Test --output hack option"""
+        import mudslide.__main__
+        outfile = tmp_path / "output.txt"
+        with open(outfile, "w") as f:
+            mudslide.__main__.main([
+                "-m", "simple", "-n", "1", "-s", "1",
+                "-k", "10", "10", "-T", "100", "-z", "42", "-o", "hack"
+            ], file=f)
+        content = outfile.read_text()
+        assert "Hack something here" in content
