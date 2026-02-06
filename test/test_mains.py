@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import unittest
 import sys
 import os, shutil
+
+import pytest
 
 import mudslide
 import mudslide.__main__
@@ -54,8 +55,6 @@ def compare_line_by_line(f1, f2, typespec, tol=1e-3):
     types = {"f": float, "d": int, "s": str}
     typelist = [types[x] for x in typespec]
 
-    failed = False
-
     problems = []
 
     for l1, l2 in zip(f1, f2):
@@ -87,175 +86,128 @@ def compare_line_by_line(f1, f2, typespec, tol=1e-3):
     return problems
 
 
-class TrajectoryTest(object):
-    """Test base class"""
-    samples = 1
-    method = "fssh"
-    x = -10
-    dt = 5
-    n = 1
-    seed = 200
-    o = "single"
-    j = 1
-    electronic = "exp"
-    log = "memory"
+def capture_traj_problems(model, nstate, k, tol, method="fssh", x=-10, dt=5,
+                          n=1, seed=200, o="single", j=1, electronic="exp",
+                          log="memory", extra_options=None):
+    if extra_options is None:
+        extra_options = []
+    options = ("-s {0:d} -m {1:s} -k {2:f} {2:f} -x {3:f} --dt {4:f} -n {5:d} "
+               "-z {6:d} -o {7:s} -j {8:d} -a {9:s} --electronic {10:s} "
+               "--log {11:s}").format(
+        1, model, k, x, dt, n, seed, o, j, method, electronic, log).split()
+    options += extra_options
 
-    def capture_traj_problems(self, k, tol, extra_options=[]):
-        options = "-s {0:d} -m {1:s} -k {2:f} {2:f} -x {3:f} --dt {4:f} -n {5:d} -z {6:d} -o {7:s} -j {8:d} -a {9:s} --electronic {10:s} --log {11:s}".format(
-            self.samples, self.model, k, self.x, self.dt, self.n, self.seed, self.o, self.j, self.method,
-            self.electronic, self.log).split()
-        options += extra_options
+    checkdir = os.path.join(testdir, "checks", method)
+    options += "--logdir {}".format(checkdir).split()
 
-        checkdir = os.path.join(testdir, "checks", self.method)
-        options += "--logdir {}".format(checkdir).split()
+    os.makedirs(checkdir, exist_ok=True)
+    outfile = os.path.join(checkdir, f"{model:s}_k{k:d}.out")
+    with open(outfile, "w") as f:
+        mudslide.__main__.main(options, f)
 
-        # clean_directory(checkdir)
-        os.makedirs(checkdir, exist_ok=True)
-        outfile = os.path.join(checkdir, f"{self.model:s}_k{k:d}.out")
-        with open(outfile, "w") as f:
-            mudslide.__main__.main(options, f)
+    if o == "single":
+        form = "f" * (6 + 2 * nstate) + "df"
+    elif o == "averaged":
+        form = "ffff"
+    reffile = os.path.join(testdir, "ref", method, "{:s}_k{:d}.ref".format(model, k))
+    with open(reffile) as ref, open(outfile) as out:
+        problems = compare_line_by_line(ref, out, form, tol)
+        for p in problems:
+            print_problem(p)
 
-        if self.o == "single":
-            form = "f" * (6 + 2 * self.nstate) + "df"
-        elif self.o == "averaged":
-            form = "ffff"
-        reffile = os.path.join(testdir, "ref", self.method, "{:s}_k{:d}.ref".format(self.model, k))
-        with open(reffile) as ref, open(outfile) as out:
-            problems = compare_line_by_line(ref, out, form, tol)
-            for p in problems:
-                print_problem(p)
-
-        return problems
+    return problems
 
 
-class TestTSAC(unittest.TestCase, TrajectoryTest):
-    """Test Suite for tully simple avoided crossing"""
-    model = "simple"
-    nstate = 2
+# -- Tully Simple Avoided Crossing (FSSH) --
 
-    def test_tsac(self):
-        """Tully Simple Avoided Crossing"""
-        for k in [8, 14, 20]:
-            with self.subTest(k=k):
-                probs = self.capture_traj_problems(k, 1e-3)
-                self.assertEqual(len(probs), 0)
+@pytest.mark.parametrize("k", [8, 14, 20])
+def test_tsac(k):
+    """Tully Simple Avoided Crossing"""
+    probs = capture_traj_problems("simple", 2, k, 1e-3)
+    assert len(probs) == 0
 
 
-class TestDual(unittest.TestCase, TrajectoryTest):
-    """Test Suite for tully dual avoided crossing"""
-    model = "dual"
-    nstate = 2
+# -- Tully Dual Avoided Crossing (FSSH) --
 
-    def test_dual(self):
-        """Tully Dual Avoided Crossing"""
-        for k in [20, 50, 100]:
-            with self.subTest(k=k):
-                probs = self.capture_traj_problems(k, 1e-3)
-                self.assertEqual(len(probs), 0)
+@pytest.mark.parametrize("k", [20, 50, 100])
+def test_dual(k):
+    """Tully Dual Avoided Crossing"""
+    probs = capture_traj_problems("dual", 2, k, 1e-3)
+    assert len(probs) == 0
 
 
-class TestExtended(unittest.TestCase, TrajectoryTest):
-    """Test Suite for tully extended coupling"""
-    model = "extended"
-    nstate = 2
+# -- Tully Extended Coupling (FSSH) --
 
-    def test_extended(self):
-        """Tully Extended Coupling"""
-        for k in [10, 15, 20]:
-            with self.subTest(k=k):
-                probs = self.capture_traj_problems(k, 1e-3)
-                self.assertEqual(len(probs), 0)
+@pytest.mark.parametrize("k", [10, 15, 20])
+def test_extended(k):
+    """Tully Extended Coupling"""
+    probs = capture_traj_problems("extended", 2, k, 1e-3)
+    assert len(probs) == 0
 
 
-class TestTSACc(unittest.TestCase, TrajectoryTest):
-    """Test Suite for tully simple avoided crossing with cumulative hopping"""
-    model = "simple"
-    nstate = 2
-    seed = 756396545
-    method = "cumulative-sh"
-    electronic = "linear-rk4"
+# -- Tully Simple Avoided Crossing (cumulative-sh with linear-rk4) --
 
-    def test_tsac_c(self):
-        """Tully Simple Avoided Crossing (FSSH-c)"""
-        for k in [10, 20]:
-            with self.subTest(k=k):
-                probs = self.capture_traj_problems(k, 1e-3)
-                self.assertEqual(len(probs), 0)
+@pytest.mark.parametrize("k", [10, 20])
+def test_tsac_cumulative(k):
+    """Tully Simple Avoided Crossing (FSSH-c)"""
+    probs = capture_traj_problems("simple", 2, k, 1e-3,
+                                  method="cumulative-sh", seed=756396545,
+                                  electronic="linear-rk4")
+    assert len(probs) == 0
 
 
-class TestEhrenfest(unittest.TestCase, TrajectoryTest):
-    """Test suite for ehrenfest trajectory"""
-    model = "simple"
-    nstate = 2
-    method = "ehrenfest"
+# -- Ehrenfest --
 
-    def test_ehrenfest(self):
-        """Tully Simple Avoided Crossing (Ehrenfest)"""
-        k = 15
-        probs = self.capture_traj_problems(k, 1e-3)
-        self.assertEqual(len(probs), 0)
-
-class TestAFSSH(unittest.TestCase, TrajectoryTest):
-    """Test suite for AFSSH trajectory"""
-    model = "dual"
-    nstate = 2
-    method = "afssh"
-    seed = 78341
-
-    def test_afssh(self):
-        """Tully Dual Avoided Crossing (A-FSSH)"""
-        k = 14
-        probs = self.capture_traj_problems(k, 1e-3)
-        self.assertEqual(len(probs), 0)
-        print(probs)
-
-class TestES(unittest.TestCase, TrajectoryTest):
-    """Test Suite for tully simple avoided crossing with cumulative hopping"""
-    model = "simple"
-    nstate = 2
-    dt = 20
-    seed = 84329
-    method = "even-sampling"
-    o = "averaged"
-    log = "yaml"
-
-    def test_es_tsac(self):
-        """Even Sampling"""
-        for k in [10, 20]:
-            with self.subTest(k=k):
-                probs = self.capture_traj_problems(k, 1e-3, extra_options=["--sample-stack", "5"])
-                self.assertEqual(len(probs), 0)
+def test_ehrenfest():
+    """Tully Simple Avoided Crossing (Ehrenfest)"""
+    probs = capture_traj_problems("simple", 2, 15, 1e-3, method="ehrenfest")
+    assert len(probs) == 0
 
 
-class TestSurface(unittest.TestCase):
-    """Test Suite for surface writer"""
+# -- A-FSSH --
 
-    def test_surface(self):
-        """Surface Writer"""
-        tol = 1e-3
-        for m in ["simple", "extended", "dual", "super", "shin-metiu", "modelx", "models", "vibronic"]:
-            with self.subTest(m=m):
-                if m in ["vibronic"]:
-                    options = "-m {:s} --x0 0 0 0 0 0 -s 2 -r -5 5".format(m).split()
-                else:
-                    options = "-m {:s} -r -11 11 -n 200".format(m).split()
-                checkdir = os.path.join(testdir, "checks", "surface")
-                os.makedirs(checkdir, exist_ok=True)
-                outfile = os.path.join(checkdir, f"{m:s}.out")
-                options.append(f"--output={outfile}")
-                with open(outfile, "w") as f:
-                    mudslide.surface.main(options)
-
-                form = "f" * (8 if m in ["simple", "extended", "dual"] else 13)
-                if m in ["vibronic"]:
-                    form = "f" * 20
-                reffile = os.path.join(testdir, "ref", "surface", "{:s}.ref".format(m))
-                with open(reffile) as ref, open(outfile) as out:
-                    problems = compare_line_by_line(ref, out, form, tol)
-                    for p in problems:
-                        print_problem(p)
-                self.assertEqual(len(problems), 0)
+def test_afssh():
+    """Tully Dual Avoided Crossing (A-FSSH)"""
+    probs = capture_traj_problems("dual", 2, 14, 1e-3, method="afssh", seed=78341)
+    assert len(probs) == 0
 
 
-if __name__ == '__main__':
-    unittest.main()
+# -- Even Sampling --
+
+@pytest.mark.parametrize("k", [10, 20])
+def test_even_sampling(k):
+    """Even Sampling"""
+    probs = capture_traj_problems("simple", 2, k, 1e-3,
+                                  method="even-sampling", dt=20, seed=84329,
+                                  o="averaged", log="yaml",
+                                  extra_options=["--sample-stack", "5"])
+    assert len(probs) == 0
+
+
+# -- Surface Writer --
+
+@pytest.mark.parametrize("m", ["simple", "extended", "dual", "super",
+                                "shin-metiu", "modelx", "models", "vibronic"])
+def test_surface(m):
+    """Surface Writer"""
+    tol = 1e-3
+    if m in ["vibronic"]:
+        options = "-m {:s} --x0 0 0 0 0 0 -s 2 -r -5 5".format(m).split()
+    else:
+        options = "-m {:s} -r -11 11 -n 200".format(m).split()
+    checkdir = os.path.join(testdir, "checks", "surface")
+    os.makedirs(checkdir, exist_ok=True)
+    outfile = os.path.join(checkdir, f"{m:s}.out")
+    options.append(f"--output={outfile}")
+    with open(outfile, "w") as f:
+        mudslide.surface.main(options)
+
+    form = "f" * (8 if m in ["simple", "extended", "dual"] else 13)
+    if m in ["vibronic"]:
+        form = "f" * 20
+    reffile = os.path.join(testdir, "ref", "surface", "{:s}.ref".format(m))
+    with open(reffile) as ref, open(outfile) as out:
+        problems = compare_line_by_line(ref, out, form, tol)
+        for p in problems:
+            print_problem(p)
+    assert len(problems) == 0

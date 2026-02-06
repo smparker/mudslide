@@ -142,7 +142,7 @@ class SurfaceHoppingMD:
                 self.rho = np.zeros([model.nstates, model.nstates], dtype=np.complex128)
                 self.rho[state, state] = 1.0
                 self.state = state
-            except:
+            except (TypeError, ValueError):
                 raise ValueError("Initial state rho0 must be convertible to an integer state "
                                  "index")
         else:
@@ -480,20 +480,26 @@ class SurfaceHoppingMD:
             electronics = self.electronics
         return electronics.force(self.state)
 
-    def needed_gradients(self) -> List[int]:
+    def needed_gradients(self):
         """States whose forces are needed during normal propagation.
 
         Returns
         -------
-        List[int]
+        list of int, or None
             List of state indices for which gradients are needed.
+            None means all states are needed.
+            Standard FSSH only needs the active state gradient.
         """
         return [self.state]
 
     def needed_couplings(self):
         """Coupling pairs needed during normal propagation.
 
-        Returns None, meaning all couplings are needed.
+        Returns
+        -------
+        list of tuple(int, int), or None
+            List of (i, j) state pairs for which derivative couplings are needed.
+            None means all couplings are needed.
         """
         return None
 

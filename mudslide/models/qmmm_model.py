@@ -128,7 +128,7 @@ class QMMM(ElectronicModel_):
         a, b, qm_on_mm_force = self._qm_model.control.read_point_charge_gradients()
         self._force[:,self._ndof_qm:] -= qm_on_mm_force.reshape(1,-1)
 
-        def clone(self):
-            """Return a copy of the QMMM object"""
-            return QMMM(self._qm_model.clone(), self._mm_model.clone())
+    def clone(self):
+        """Return a copy of the QMMM object"""
+        return QMMM(self._qm_model.clone(), self._mm_model.clone())
 

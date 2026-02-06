@@ -251,11 +251,13 @@ class ElectronicModel_:
 
     def compute(self, X: "ArrayLike", couplings: Any = None, gradients: Any = None, reference: Any = None) -> None:
         """
-        Central function for model objects. After the compute function exists, the following
+        Central function for model objects. After the compute function exits, the following
         data must be provided:
-          - self._hamiltonian -> n x n array containing electronic hamiltonian
-          - self.force -> n x ndof array containing the force on each diagonal
-          - self._derivative_coupling -> n x n x ndof array containing derivative couplings
+          - self._hamiltonian -> nstates x nstates array containing electronic hamiltonian
+          - self._force -> nstates x ndof array containing the force on each state
+          - self._derivative_coupling -> nstates x nstates x ndof array containing derivative couplings
+          - self._forces_available -> boolean array of length nstates
+          - self._derivative_couplings_available -> nstates x nstates boolean array
 
         Parameters
         ----------
@@ -330,6 +332,11 @@ class DiabaticModel_(ElectronicModel_):
     - def dV(self, X: ArrayLike) -> ArrayLike
       dV(x) should return an ndarray of shape (nstates, nstates, ndof)
     """
+
+    #: Minimum energy gap threshold used when computing derivative couplings.
+    #: When the energy difference between two states is smaller than this value,
+    #: it is clamped to avoid division by near-zero. Override in subclasses if needed.
+    coupling_energy_threshold: float = 1.0e-14
 
     def __init__(self, representation: str = "adiabatic", reference: Any = None,
                  nstates:int = 0, ndof: int = 0):
@@ -450,17 +457,24 @@ class DiabaticModel_(ElectronicModel_):
         return out
 
     def _compute_derivative_coupling(self, coeff: ArrayLike, dV: ArrayLike, energies: ArrayLike) -> ArrayLike:
-        r"""returns :math:`\phi_{i} | \nabla_\alpha \phi_{j} = d^\alpha_{ij}`"""
+        r"""Compute derivative couplings :math:`d^\alpha_{ij} = \langle \phi_i | \nabla_\alpha \phi_j \rangle`.
+
+        Uses the Hellmann-Feynman relation to compute derivative couplings from
+        the energy gap. When the energy gap between two states is smaller than
+        :attr:`coupling_energy_threshold`, the gap is clamped to avoid numerical
+        instability.
+        """
         if self._representation == "diabatic":
             return np.zeros([self.nstates, self.nstates, self.ndof], dtype=np.float64)
 
         out = np.einsum("ip,xij,jq->pqx", coeff, dV, coeff)
 
+        thresh = self.coupling_energy_threshold
         for j in range(self.nstates):
             for i in range(j):
                 dE = energies[j] - energies[i]
-                if abs(dE) < 1.0e-10:
-                    dE = np.copysign(1.0e-10, dE)
+                if abs(dE) < thresh:
+                    dE = np.copysign(thresh, dE)
 
                 out[i, j, :] /= dE
                 out[j, i, :] /= -dE
@@ -481,6 +495,11 @@ class AdiabaticModel_(ElectronicModel_):
     This class handles model problems that have an auxiliary electronic problem admitting
     many electronic states that are truncated to just a few. Sort of a truncated DiabaticModel_.
     """
+
+    #: Minimum energy gap threshold used when computing derivative couplings.
+    #: When the energy difference between two states is smaller than this value,
+    #: it is clamped to avoid division by near-zero. Override in subclasses if needed.
+    coupling_energy_threshold: float = 1.0e-14
 
     def __init__(self, representation: str = "adiabatic", reference: Any = None,
                  nstates:int = 0, ndof: int = 0):
@@ -503,7 +522,7 @@ class AdiabaticModel_(ElectronicModel_):
             If representation is set to "diabatic"
         """
         if representation == "diabatic":
-            raise Exception('Adiabatic models can only be run in adiabatic mode')
+            raise ValueError('Adiabatic models can only be run in adiabatic mode')
         ElectronicModel_.__init__(self, representation=representation, reference=reference,
                                   nstates=nstates, ndof=ndof)
 
@@ -639,17 +658,24 @@ class AdiabaticModel_(ElectronicModel_):
         return out
 
     def _compute_derivative_coupling(self, coeff: ArrayLike, dV: ArrayLike, energies: ArrayLike) -> ArrayLike:
-        r"""returns :math:`\phi_{i} | \nabla_\alpha \phi_{j} = d^\alpha_{ij}`"""
+        r"""Compute derivative couplings :math:`d^\alpha_{ij} = \langle \phi_i | \nabla_\alpha \phi_j \rangle`.
+
+        Uses the Hellmann-Feynman relation to compute derivative couplings from
+        the energy gap. When the energy gap between two states is smaller than
+        :attr:`coupling_energy_threshold`, the gap is clamped to avoid numerical
+        instability.
+        """
         if self._representation == "diabatic":
             return np.zeros([self.nstates, self.nstates, self.ndof], dtype=np.float64)
 
         out = np.einsum("ip,xij,jq->pqx", coeff, dV, coeff)
 
+        thresh = self.coupling_energy_threshold
         for j in range(self.nstates):
             for i in range(j):
                 dE = energies[j] - energies[i]
-                if abs(dE) < 1.0e-14:
-                    dE = np.copysign(1.0e-14, dE)
+                if abs(dE) < thresh:
+                    dE = np.copysign(thresh, dE)
 
                 out[i, j, :] /= dE
                 out[j, i, :] /= -dE
@@ -657,7 +683,7 @@ class AdiabaticModel_(ElectronicModel_):
         return out
 
     def V(self, X: ArrayLike) -> ArrayLike:
-        raise NotImplementedError("Diabatic models must implement the function V")
+        raise NotImplementedError("Adiabatic models must implement the function V")
 
     def dV(self, X: ArrayLike) -> ArrayLike:
-        raise NotImplementedError("Diabatic models must implement the function dV")
+        raise NotImplementedError("Adiabatic models must implement the function dV")

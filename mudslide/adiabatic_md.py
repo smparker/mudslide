@@ -118,6 +118,8 @@ class AdiabaticMD:
         self.remove_angular_momentum_every = int(options.get("remove_angular_momentum_every", 0))
 
         # read out of options
+        if "dt" not in options:
+            raise ValueError("dt option is required for AdiabaticMD")
         self.dt = float(options["dt"])
         self.outcome_type = options.get("outcome_type", "state")
 

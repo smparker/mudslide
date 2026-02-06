@@ -16,6 +16,9 @@ class Ehrenfest(SurfaceHoppingMD):
     are treated quantum mechanically and the nuclear degrees of freedom are treated
     classically. The force on the nuclei is computed as the expectation value of the
     force operator over the electronic density matrix.
+
+    Surface hopping options (hopping_probability, hopping_method, forced_hop_threshold,
+    zeta_list) are not used in Ehrenfest dynamics.
     """
 
     def __init__(self, *args: Any, **kwargs: Any):
@@ -28,10 +31,17 @@ class Ehrenfest(SurfaceHoppingMD):
         **kwargs : Any
             Keyword arguments passed to SurfaceHoppingMD
         """
+        kwargs.setdefault("outcome_type", "populations")
         SurfaceHoppingMD.__init__(self, *args, **kwargs)
 
     def needed_gradients(self):
-        """Ehrenfest needs all forces since it sums over all states."""
+        """Ehrenfest needs all forces since it sums over all states.
+
+        Returns
+        -------
+        None
+            None means all state gradients are needed.
+        """
         return None
 
     def potential_energy(self, electronics: 'ElectronicModel_' = None) -> np.floating:

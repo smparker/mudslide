@@ -141,7 +141,7 @@ class TestAFSSHRK4Integration:
         # Manually set invalid integration method
         traj.augmented_integration = "invalid"
 
-        with pytest.raises(Exception, match="Unrecognized propagate delR"):
+        with pytest.raises(ValueError, match="Unrecognized augmented integration method"):
             step_trajectory(traj)
 
     def test_invalid_integration_method_delP_raises(self):
@@ -157,7 +157,7 @@ class TestAFSSHRK4Integration:
         # Then set invalid method
         traj.augmented_integration = "invalid"
 
-        with pytest.raises(Exception, match="Unrecognized propagate delP"):
+        with pytest.raises(ValueError, match="Unrecognized augmented integration method"):
             # Call advance_delP directly
             traj.advance_delP(traj.last_electronics, traj.electronics)
 

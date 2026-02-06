@@ -98,7 +98,7 @@ class AFSSHPropagator(Propagator_):
         if is_string(prop_options):
             prop_options = {"type": prop_options}
         elif not isinstance(prop_options, dict):
-            raise Exception("prop_options must be a string or a dictionary")
+            raise TypeError("prop_options must be a string or a dictionary")
 
         proptype = prop_options.get("type", "vv")
         if proptype.lower() == "vv":
@@ -126,7 +126,13 @@ class AugmentedFSSH(SurfaceHoppingMD):
         self.propagator = AFSSHPropagator(self.model, "vv")
 
     def needed_gradients(self):
-        """A-FSSH needs all forces for force_matrix computation."""
+        """A-FSSH needs all forces for force_matrix computation.
+
+        Returns
+        -------
+        None
+            None means all state gradients are needed.
+        """
         return None
 
     def compute_delF(self, this_electronics):
@@ -174,7 +180,6 @@ class AugmentedFSSH(SurfaceHoppingMD):
             self.delR = np.einsum("pi,xij,qj->xpq", co, Rt, co.conj())
         elif self.augmented_integration == "rk4":
             def ydot(RR: ArrayLike, t: np.floating) -> ArrayLike:
-                assert t >= 0.0 and t <= dt
                 HR = np.einsum("pr,xrq->xpq", H, RR)
                 RH = np.einsum("xpr,rq->xpq", RR, H)
 
@@ -184,7 +189,7 @@ class AugmentedFSSH(SurfaceHoppingMD):
             Rt = rk4(self.delR, ydot, 0.0, dt, nsteps)
             self.delR = Rt
         else:
-            raise Exception("Unrecognized propagate delR method")
+            raise ValueError(f"Unrecognized augmented integration method: {self.augmented_integration}")
 
     def advance_delP(self, last_electronics, this_electronics):
         """Propagate delP using Eq. (31) from Subotnik JCP 2011.
@@ -221,7 +226,6 @@ class AugmentedFSSH(SurfaceHoppingMD):
             dFrho_comm = np.einsum("prx,rq->xpq", delF, self.rho) + np.einsum("pr,rqx->xpq", self.rho, delF)
             dFrho_comm *= 0.5
             def ydot(PP: ArrayLike, t: np.floating) -> ArrayLike:
-                assert t >= 0.0 and t <= dt
                 HP = np.einsum("pr,xrq->xpq", H, PP)
                 PH = np.einsum("xpr,rq->xpq", PP, H)
 
@@ -231,7 +235,7 @@ class AugmentedFSSH(SurfaceHoppingMD):
             Pt = rk4(self.delP, ydot, 0.0, dt, nsteps)
             self.delP = Pt
         else:
-            raise Exception("Unrecognized propagate delP method")
+            raise ValueError(f"Unrecognized augmented integration method: {self.augmented_integration}")
         return
 
     def direction_of_rescale(self, source: int, target: int, electronics: 'ElectronicModel_'=None) -> np.ndarray:
@@ -254,7 +258,9 @@ class AugmentedFSSH(SurfaceHoppingMD):
             Unit vector pointing in direction of rescale.
         """
         out = self.delP[:, source, source] - self.delP[:, target, target]
-        assert np.linalg.norm(np.imag(out)) < 1e-8
+        if np.linalg.norm(np.imag(out)) >= 1e-8:
+            raise RuntimeError("Rescale direction has unexpectedly large imaginary component: "
+                               f"{np.linalg.norm(np.imag(out)):.2e}")
         return np.real(out)
 
     def gamma_collapse(self, electronics: 'ElectronicModel_'=None) -> np.ndarray:
@@ -318,7 +324,8 @@ class AugmentedFSSH(SurfaceHoppingMD):
             eta[i] = e
 
             if e < gamma[i]:
-                assert self.model.nstates == 2
+                if self.model.nstates != 2:
+                    raise NotImplementedError("A-FSSH collapse is only implemented for 2-state systems")
 
                 # reset the density matrix
                 self.rho[:,:] = 0.0
