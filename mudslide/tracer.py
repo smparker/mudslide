@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 """Collect results from single trajectories"""
 
+import bz2
 import copy as cp
+import gzip
+import lzma
 import os
 import sys
 import shutil
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Iterator, List
+from typing import Any, Dict, Iterator, List, Optional
 
 import yaml
 import numpy as np
@@ -17,6 +20,26 @@ from .util import find_unique_name, is_string
 from .math import RollingAverage
 from .version import __version__
 from .yaml_format import CompactSafeDumper
+
+_COMPRESSORS = {
+    "gzip": (gzip, ".gz"),
+    "bz2": (bz2, ".bz2"),
+    "xz": (lzma, ".xz"),
+}
+
+_COMPRESSION_EXTENSIONS = {
+    ".gz": gzip,
+    ".bz2": bz2,
+    ".xz": lzma,
+}
+
+
+def _open_log(path: str, mode: str = "rt"):
+    """Open a log file, automatically handling compression based on extension."""
+    for ext, module in _COMPRESSION_EXTENSIONS.items():
+        if path.endswith(ext):
+            return module.open(path, mode, encoding="utf-8")
+    return open(path, mode, encoding="utf-8")
 
 
 def _sanitize_for_yaml(data: Any) -> Any:
@@ -308,9 +331,10 @@ class YAMLTrace(Trace_):
     def __init__(self,
                  base_name: str = "traj",
                  weight: float = 1.0,
-                 log_pitch=512,
-                 location="",
-                 load_main_log=None):
+                 log_pitch: int = 512,
+                 location: str = "",
+                 load_main_log: Optional[str] = None,
+                 compression: Optional[str] = "xz"):
         """Initialize a YAML trace object.
 
         Parameters
@@ -325,6 +349,11 @@ class YAMLTrace(Trace_):
             Directory to store log files, by default ""
         load_main_log : str, optional
             Path to existing main log file to load from, by default None
+        compression : str, optional
+            Compression algorithm for completed log chunks.
+            Supported values: "gzip", "bz2", "xz", or None (no compression).
+            The active log file is always kept uncompressed; only completed
+            chunks are compressed when rolling over to a new log file.
 
         Notes
         -----
@@ -333,10 +362,16 @@ class YAMLTrace(Trace_):
         """
         super().__init__(weight=weight)
 
+        if compression is not None and compression not in _COMPRESSORS:
+            raise ValueError(
+                f"Unknown compression type: {compression}. "
+                f"Supported types: {list(_COMPRESSORS.keys())}")
+
         self.weight: float = weight
         self.log_pitch = log_pitch
         self.base_name = base_name
         self.location = location
+        self.compression = compression
 
         if not os.path.isdir(self.location) and self.location != "":
             os.makedirs(self.location, exist_ok=True)
@@ -438,11 +473,35 @@ class YAMLTrace(Trace_):
                       Dumper=CompactSafeDumper,
                       default_flow_style=False)
 
+    def _compress_log(self, log_index: int) -> None:
+        """Compress a completed log file in place.
+
+        Parameters
+        ----------
+        log_index : int
+            Index into self.logfiles of the log to compress
+        """
+        module, ext = _COMPRESSORS[self.compression]
+        old_name = self.logfiles[log_index]
+        new_name = old_name + ext
+        old_path = os.path.join(self.location, old_name)
+        new_path = os.path.join(self.location, new_name)
+
+        with open(old_path, "rb") as f_in:
+            with module.open(new_path, "wb") as f_out:
+                shutil.copyfileobj(f_in, f_out)
+
+        os.remove(old_path)
+        self.logfiles[log_index] = new_name
+
     def collect(self, snapshot: Any) -> None:
         """collect and optionally process data"""
         target_log = self.logsize // self.log_pitch
 
         if target_log != (self.nlogs - 1):
+            if self.compression is not None:
+                self._compress_log(self.nlogs - 1)
+
             # for zero based index, target_log == nlogs means we're out of logs
             self.active_logfile = f"{self.unique_name}-log_{self.nlogs}.yaml"
             self.logfiles.append(self.active_logfile)
@@ -493,18 +552,34 @@ class YAMLTrace(Trace_):
         out = YAMLTrace(base_name=self.base_name,
                         weight=float(self.weight),
                         location=self.location,
-                        log_pitch=self.log_pitch)
+                        log_pitch=self.log_pitch,
+                        compression=self.compression)
 
         out.logsize = self.logsize
         out.nlogs = self.nlogs
         out.active_logsize = self.active_logsize
 
-        out.logfiles = [
-            f"{out.unique_name}-log_{i}.yaml" for i in range(out.nlogs)
-        ]
-        for selflog, outlog in zip(self.logfiles, out.logfiles):
-            shutil.copy(os.path.join(self.location, selflog),
-                        os.path.join(self.location, outlog))
+        # Build logfile names preserving compression extensions from source
+        initial_log = out.logfiles[0]  # empty file created by __init__
+        out.logfiles = []
+        for i in range(out.nlogs):
+            src_name = self.logfiles[i]
+            suffix = ""
+            for ext in _COMPRESSION_EXTENSIONS:
+                if src_name.endswith(ext):
+                    suffix = ext
+                    break
+            out_name = f"{out.unique_name}-log_{i}.yaml{suffix}"
+            out.logfiles.append(out_name)
+            shutil.copy(os.path.join(self.location, src_name),
+                        os.path.join(self.location, out_name))
+
+        # Clean up initial empty log if replaced by compressed version
+        if out.logfiles[0] != initial_log:
+            initial_path = os.path.join(self.location, initial_log)
+            if os.path.exists(initial_path):
+                os.remove(initial_path)
+
         out.active_logfile = out.logfiles[-1]
 
         # Copy hop log
@@ -524,7 +599,7 @@ class YAMLTrace(Trace_):
 
     def __iter__(self) -> Iterator:
         for log in (os.path.join(self.location, l) for l in self.logfiles):
-            with open(log, "r", encoding='utf-8') as f:
+            with _open_log(log, "rt") as f:
                 chunk = yaml.safe_load(f)
                 for i in chunk:
                     yield self.form_data(i)
@@ -539,9 +614,9 @@ class YAMLTrace(Trace_):
 
         target_log = i // self.log_pitch
         target_snap = i - target_log * self.log_pitch
-        with open(os.path.join(self.location, self.logfiles[target_log]),
-                  "r",
-                  encoding='utf-8') as f:
+        with _open_log(
+                os.path.join(self.location, self.logfiles[target_log]),
+                "rt") as f:
             chunk = yaml.safe_load(f)
             return self.form_data(chunk[target_snap])
 

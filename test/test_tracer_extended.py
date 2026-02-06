@@ -9,7 +9,8 @@ import pytest
 
 import mudslide
 from mudslide.tracer import (_sanitize_for_yaml, InMemoryTrace, YAMLTrace,
-                             TraceManager, trace_factory, Trace, load_log)
+                             TraceManager, trace_factory, Trace, load_log,
+                             _COMPRESSORS, _COMPRESSION_EXTENSIONS)
 
 
 def _make_1d_snapshot(time, position, velocity, active=0, nstates=2):
@@ -452,3 +453,145 @@ def test_yaml_trace_load_and_reload(tmp_path):
     loaded = load_log(main_log_path)
     assert len(loaded) == 2
     assert loaded[0]["time"] == 0.0
+
+
+# --- YAMLTrace compression ---
+
+
+def test_yaml_trace_invalid_compression():
+    with pytest.raises(ValueError, match="Unknown compression type"):
+        YAMLTrace(base_name="test", compression="lz4")
+
+
+@pytest.mark.parametrize("compression", ["gzip", "bz2", "xz"])
+def test_yaml_trace_compression_basic(tmp_path, compression):
+    """Write enough snapshots to trigger rollover, verify compressed files."""
+    trace = YAMLTrace(base_name="test", location=str(tmp_path),
+                      log_pitch=4, compression=compression)
+    for i in range(6):
+        trace.collect({
+            "time": float(i),
+            "position": [float(i)],
+            "velocity": [0.0],
+            "energy": 0.0
+        })
+
+    assert len(trace) == 6
+
+    # First chunk (log_0) should be compressed
+    _, ext = _COMPRESSORS[compression]
+    assert trace.logfiles[0].endswith(ext)
+    assert os.path.exists(os.path.join(str(tmp_path), trace.logfiles[0]))
+
+    # Active log (log_1) should remain uncompressed
+    assert trace.logfiles[1].endswith(".yaml")
+    assert not any(trace.logfiles[1].endswith(e) for e in _COMPRESSION_EXTENSIONS)
+
+    # Data should be readable
+    first = trace[0]
+    assert first["time"] == 0.0
+
+    last = trace[-1]
+    assert last["time"] == 5.0
+
+    times = [s["time"] for s in trace]
+    assert times == [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
+
+
+@pytest.mark.parametrize("compression", ["gzip", "bz2", "xz"])
+def test_yaml_trace_compression_reload(tmp_path, compression):
+    """Verify compressed traces can be loaded from the main log."""
+    trace = YAMLTrace(base_name="test", location=str(tmp_path),
+                      log_pitch=4, compression=compression)
+    for i in range(6):
+        trace.collect({
+            "time": float(i),
+            "position": [float(i)],
+            "velocity": [0.0],
+            "energy": 0.0
+        })
+
+    main_log_path = os.path.join(str(tmp_path), trace.main_log)
+    loaded = load_log(main_log_path)
+    assert len(loaded) == 6
+    assert loaded[0]["time"] == 0.0
+    assert loaded[-1]["time"] == 5.0
+
+
+@pytest.mark.parametrize("compression", ["gzip", "bz2", "xz"])
+def test_yaml_trace_compression_clone(tmp_path, compression):
+    """Clone a trace with compressed chunks."""
+    trace = YAMLTrace(base_name="test", location=str(tmp_path),
+                      log_pitch=4, compression=compression)
+    for i in range(6):
+        trace.collect({
+            "time": float(i),
+            "position": [float(i)],
+            "velocity": [0.0],
+            "energy": 0.0
+        })
+    trace.record_event({"from": 0, "to": 1})
+
+    cloned = trace.clone()
+    assert len(cloned) == 6
+
+    # Cloned compressed files should exist with correct extensions
+    _, ext = _COMPRESSORS[compression]
+    assert cloned.logfiles[0].endswith(ext)
+
+    # Data should be intact
+    times = [s["time"] for s in cloned]
+    assert times == [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
+
+    # No orphaned empty log_0.yaml
+    orphan = os.path.join(str(tmp_path),
+                          f"{cloned.unique_name}-log_0.yaml")
+    assert not os.path.exists(orphan)
+
+
+def test_yaml_trace_no_compression_unchanged(tmp_path):
+    """Verify compression=None disables compression."""
+    trace = YAMLTrace(base_name="test", location=str(tmp_path),
+                      log_pitch=4, compression=None)
+    for i in range(6):
+        trace.collect({
+            "time": float(i),
+            "position": [float(i)],
+            "velocity": [0.0],
+            "energy": 0.0
+        })
+
+    # All log files should be plain .yaml
+    for lf in trace.logfiles:
+        assert lf.endswith(".yaml")
+        assert not any(lf.endswith(e) for e in _COMPRESSION_EXTENSIONS)
+
+
+@pytest.mark.parametrize("compression", ["gzip", "bz2", "xz"])
+def test_yaml_trace_compression_multiple_rollovers(tmp_path, compression):
+    """Verify multiple chunk rollovers all compress correctly."""
+    trace = YAMLTrace(base_name="test", location=str(tmp_path),
+                      log_pitch=3, compression=compression)
+    for i in range(10):
+        trace.collect({
+            "time": float(i),
+            "position": [float(i)],
+            "velocity": [0.0],
+            "energy": 0.0
+        })
+
+    # 10 snapshots / 3 per chunk = 4 chunks (0..2, 3..5, 6..8, 9)
+    assert trace.nlogs == 4
+    _, ext = _COMPRESSORS[compression]
+
+    # First 3 chunks should be compressed
+    for lf in trace.logfiles[:3]:
+        assert lf.endswith(ext)
+
+    # Last chunk (active) should be uncompressed
+    assert trace.logfiles[3].endswith(".yaml")
+    assert not any(trace.logfiles[3].endswith(e) for e in _COMPRESSION_EXTENSIONS)
+
+    # All data should be readable
+    times = [s["time"] for s in trace]
+    assert times == [float(i) for i in range(10)]
