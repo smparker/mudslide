@@ -43,7 +43,7 @@ class QMMM(ElectronicModel_):
         have at least the same elements listed in the QM model
         and the MM model.
         """
-        qm_elements = self._qm_model._elements
+        qm_elements = self._qm_model.atom_types
         qm_elements_in_mm = [ self._mm_model.atom_types[i] for i in qm_atoms ]
         return qm_elements == qm_elements_in_mm
 

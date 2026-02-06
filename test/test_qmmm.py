@@ -30,7 +30,7 @@ def h2o5_mm():
     return mm
 
 @pytest.mark.skipif(not (mudslide.models.openmm_model.openmm_is_installed()
-                         and mudslide.models.turbomole_model.turbomole_is_installed()), reason="Turbomole and OpenMM must be installed")
+                         and mudslide.models.turbomole_model.turbomole_is_installed_or_prefixed()), reason="Turbomole and OpenMM must be installed")
 class TestQMMM:
     """Test Suite for QMMM class"""
 
