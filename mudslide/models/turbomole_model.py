@@ -4,7 +4,6 @@
 import glob
 import io
 import os
-import sys
 import shlex
 import shutil
 import re
@@ -51,6 +50,7 @@ def turbomole_is_installed():
     has_bin = shutil.which("sdg") is not None
 
     return has_turbodir and has_scripts and has_bin
+
 
 def turbomole_is_installed_or_prefixed():
     """ Check if turbomole is installed or a command prefix is set.

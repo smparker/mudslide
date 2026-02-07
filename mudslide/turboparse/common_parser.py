@@ -25,12 +25,14 @@ class BasisParser(ParseSection):
     def __init__(self):
         super().__init__(r"basis set information", r"total:")
         self.parsers = [
-            SimpleLineParser(r"([a-z]+)\s+([0-9]+)\s+([0-9]+)\s+([0-9]+)\s+(\S+)\s+(\S+)",
-                             ["atom", "natom", "nprim", "ncont", "nick", "contraction"],
-                             types=[str, int, int, int, str, str],
-                             title="list",
-                             multi=True),
-            SimpleLineParser(r"total:\s+([0-9]+)\s+([0-9]+)\s+([0-9]+)", ["natoms", "nprim", "ncont"],
+            SimpleLineParser(
+                r"([a-z]+)\s+([0-9]+)\s+([0-9]+)\s+([0-9]+)\s+(\S+)\s+(\S+)",
+                ["atom", "natom", "nprim", "ncont", "nick", "contraction"],
+                types=[str, int, int, int, str, str],
+                title="list",
+                multi=True),
+            SimpleLineParser(r"total:\s+([0-9]+)\s+([0-9]+)\s+([0-9]+)",
+                             ["natoms", "nprim", "ncont"],
                              types=[int, int, int]),
         ]
 
@@ -48,10 +50,15 @@ class DFTParser(ParseSection):
     def __init__(self):
         super().__init__(r"^\s*density functional\s*$", r"partition sharpness")
         self.parsers = [
-            SimpleLineParser(r"spherical gridsize\s*:\s*(\S+)", ["gridsize"], types=[str]),
-            SimpleLineParser(r"iterations will be done with (small) grid", ["mgrid"], types=[str]),
-            SimpleLineParser(r"Derivatives of quadrature weights will be (included)", ["weightderivatives"],
+            SimpleLineParser(r"spherical gridsize\s*:\s*(\S+)", ["gridsize"],
                              types=[str]),
+            SimpleLineParser(r"iterations will be done with (small) grid",
+                             ["mgrid"],
+                             types=[str]),
+            SimpleLineParser(
+                r"Derivatives of quadrature weights will be (included)",
+                ["weightderivatives"],
+                types=[str]),
         ]
 
     def clean(self, liter, out):
@@ -65,7 +72,8 @@ class GroundDipole(ParseSection):
     name = "dipole"
 
     def __init__(self):
-        super().__init__(r"Electric dipole moment", r" z\s+\S+\s+\S+\s+\S+\s+Norm ")
+        super().__init__(r"Electric dipole moment",
+                         r" z\s+\S+\s+\S+\s+\S+\s+Norm ")
         self.parsers = [
             CompParser(r" x\s+(\S+)\s+(\S+)\s+(\S+)\s+Norm:"),
             CompParser(r" y\s+(\S+)\s+(\S+)\s+(\S+)"),
@@ -132,8 +140,13 @@ class CoordParser(ParseSection):
 
         # not always sure the d_dx, d_dy, d_dz exist, but if they do, combine them
         # into (natoms, 3) array with xyz contiguous per atom
-        components = [ x for x in [ "dE_dx", "dE_dy", "dE_dz", "d_dx", "d_dy", "d_dz"] if x in out ]
-        out["d/dR"] = [list(vals) for vals in zip(*[out[c] for c in components])]
+        components = [
+            x for x in ["dE_dx", "dE_dy", "dE_dz", "d_dx", "d_dy", "d_dz"]
+            if x in out
+        ]
+        out["d/dR"] = [
+            list(vals) for vals in zip(*[out[c] for c in components])
+        ]
         for component in components:
             del out[component]
 
@@ -152,12 +165,16 @@ class NACParser(CoordParser):
         tail = r"maximum component of gradient"
         super().__init__(head, tail)
         self.parsers.insert(
-            0, SimpleLineParser(self.coupled_states_reg, ["bra_state", "ket_state"], types=[int, int]))
+            0,
+            SimpleLineParser(self.coupled_states_reg,
+                             ["bra_state", "ket_state"],
+                             types=[int, int]))
 
 
 # Constants for the two gradient types
-EXCITED_STATE_GRADIENT_HEAD = (r"(?:cartesian\s+gradients\s+of\s+excited\s+state\s+(?P<index>\d+)|"
-                               r"cartesian\s+gradient\s+of\s+the\s+energy)\s+\((\w+)/(\w+)\)")
+EXCITED_STATE_GRADIENT_HEAD = (
+    r"(?:cartesian\s+gradients\s+of\s+excited\s+state\s+(?P<index>\d+)|"
+    r"cartesian\s+gradient\s+of\s+the\s+energy)\s+\((\w+)/(\w+)\)")
 GROUND_STATE_GRADIENT_HEAD = r"cartesian\s+gradient\s+of\s+the\s+energy\s+\((\w+)/(\w+)\)"
 
 

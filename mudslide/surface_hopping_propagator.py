@@ -6,6 +6,7 @@ from typing import Any
 from .util import is_string
 from .propagator import Propagator_
 
+
 class SHVVPropagator(Propagator_):
     """Velocity Verlet propagator for surface hopping dynamics.
 
@@ -43,8 +44,10 @@ class SHVVPropagator(Propagator_):
 
             # calculate electronics at new position
             traj.last_electronics, traj.electronics = traj.electronics, traj.model.update(
-                traj.position, electronics=traj.electronics,
-                gradients=traj.needed_gradients(), couplings=traj.needed_couplings())
+                traj.position,
+                electronics=traj.electronics,
+                gradients=traj.needed_gradients(),
+                couplings=traj.needed_couplings())
 
             # Update velocity using Velocity Verlet
             last_acceleration = traj._force(traj.last_electronics) / traj.mass
@@ -53,11 +56,13 @@ class SHVVPropagator(Propagator_):
             traj.velocity += 0.5 * (last_acceleration + this_acceleration) * dt
 
             # now propagate the electronic wavefunction to the new time
-            traj.propagate_electronics(traj.last_electronics, traj.electronics, dt)
+            traj.propagate_electronics(traj.last_electronics, traj.electronics,
+                                       dt)
             traj.surface_hopping(traj.last_electronics, traj.electronics)
 
             traj.time += dt
             traj.nsteps += 1
+
 
 class SHPropagator:
     """Surface Hopping propagator factory.
@@ -95,4 +100,5 @@ class SHPropagator:
         if proptype.lower() == "vv":
             return SHVVPropagator(**prop_options)
         else:
-            raise ValueError(f"Unrecognized surface hopping propagator type: {proptype}.")
+            raise ValueError(
+                f"Unrecognized surface hopping propagator type: {proptype}.")

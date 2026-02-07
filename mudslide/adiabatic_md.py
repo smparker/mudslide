@@ -16,6 +16,7 @@ from .constants import boltzmann
 from .tracer import Trace
 from .adiabatic_propagator import AdiabaticPropagator
 
+
 class AdiabaticMD:
     """Class to propagate a single adiabatic trajectory, like ground state MD.
 
@@ -23,9 +24,10 @@ class AdiabaticMD:
     adiabatic regime, similar to ground state molecular dynamics.
     """
     recognized_options = [
-        "dt", "t0", "trace_every", "remove_com_every", "remove_angular_momentum_every",
-        "max_steps", "max_time", "bounds", "propagator", "seed_sequence", "electronics",
-        "outcome_type", "weight", "last_velocity", "previous_steps", "restarting"
+        "dt", "t0", "trace_every", "remove_com_every",
+        "remove_angular_momentum_every", "max_steps", "max_time", "bounds",
+        "propagator", "seed_sequence", "electronics", "outcome_type", "weight",
+        "last_velocity", "previous_steps", "restarting"
     ]
 
     def __init__(self,
@@ -85,7 +87,9 @@ class AdiabaticMD:
             restarting : bool, optional
                 Whether this is a restarted trajectory. Default is False.
         """
-        check_options(options, self.recognized_options, strict=strict_option_check)
+        check_options(options,
+                      self.recognized_options,
+                      strict=strict_option_check)
 
         self.model = model
         self.tracer = Trace(tracer)
@@ -112,10 +116,12 @@ class AdiabaticMD:
         self.max_time = float(options.get("max_time", 1e25))
         self.trace_every = int(options.get("trace_every", 1))
 
-        self.propagator = AdiabaticPropagator(self.model, options.get("propagator", "VV"))
+        self.propagator = AdiabaticPropagator(self.model,
+                                              options.get("propagator", "VV"))
 
         self.remove_com_every = int(options.get("remove_com_every", 0))
-        self.remove_angular_momentum_every = int(options.get("remove_angular_momentum_every", 0))
+        self.remove_angular_momentum_every = int(
+            options.get("remove_angular_momentum_every", 0))
 
         # read out of options
         if "dt" not in options:
@@ -213,7 +219,9 @@ class AdiabaticMD:
         memo[id(self)] = result
         shallow_only = ["queue"]
         for k, v in self.__dict__.items():
-            setattr(result, k, cp.deepcopy(v, memo) if k not in shallow_only else cp.copy(v))
+            setattr(
+                result, k,
+                cp.deepcopy(v, memo) if k not in shallow_only else cp.copy(v))
         return result
 
     def clone(self) -> 'AdiabaticMD':
@@ -246,8 +254,9 @@ class AdiabaticMD:
         """
         if self.duration["box_bounds"] is None:
             return False
-        return np.all(self.duration["box_bounds"][0] < self.position) and np.all(
-            self.position < self.duration["box_bounds"][1])
+        return np.all(
+            self.duration["box_bounds"][0] < self.position) and np.all(
+                self.position < self.duration["box_bounds"][1])
 
     def duration_initialize(self, options: Dict[str, Any]) -> None:
         """Initialize variables related to continue_simulating.
@@ -279,7 +288,7 @@ class AdiabaticMD:
         bool
             True if trajectory should keep running, False if it should finish.
         """
-        if self.force_quit: # pylint: disable=no-else-return
+        if self.force_quit:  # pylint: disable=no-else-return
             return False
         elif self.max_steps >= 0 and self.nsteps >= self.max_steps:
             return False
@@ -315,14 +324,22 @@ class AdiabaticMD:
             Dictionary with all data from current time step.
         """
         out = {
-            "time": self.time,
-            "position": self.position.tolist(),
-            "velocity": self.velocity.tolist(),
-            "potential": self.potential_energy().item(),
-            "kinetic": self.kinetic_energy().item(),
-            "energy": self.total_energy().item(),
-            "temperature": 2 * self.kinetic_energy() / ( boltzmann * self.model.ndof),
-            "electronics": self.electronics.as_dict()
+            "time":
+                self.time,
+            "position":
+                self.position.tolist(),
+            "velocity":
+                self.velocity.tolist(),
+            "potential":
+                self.potential_energy().item(),
+            "kinetic":
+                self.kinetic_energy().item(),
+            "energy":
+                self.total_energy().item(),
+            "temperature":
+                2 * self.kinetic_energy() / (boltzmann * self.model.ndof),
+            "electronics":
+                self.electronics.as_dict()
         }
         return out
 
@@ -336,7 +353,8 @@ class AdiabaticMD:
         """
         return 0.5 * np.einsum('m,m,m', self.mass, self.velocity, self.velocity)
 
-    def potential_energy(self, electronics: 'ElectronicModel_' = None) -> np.floating:
+    def potential_energy(self,
+                         electronics: 'ElectronicModel_' = None) -> np.floating:
         """Calculate potential energy.
 
         Parameters
@@ -353,7 +371,8 @@ class AdiabaticMD:
             electronics = self.electronics
         return electronics.energies[0]
 
-    def total_energy(self, electronics: 'ElectronicModel_' = None) -> np.floating:
+    def total_energy(self,
+                     electronics: 'ElectronicModel_' = None) -> np.floating:
         """Calculate total energy (kinetic + potential).
 
         Parameters
@@ -425,7 +444,7 @@ class AdiabaticMD:
 
         # propagation
         while True:
-            self.propagator(self, 1) # pylint: disable=not-callable
+            self.propagator(self, 1)  # pylint: disable=not-callable
 
             # ending condition
             if not self.continue_simulating():

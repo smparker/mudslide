@@ -27,7 +27,14 @@ class LineParser:
 class SimpleLineParser(LineParser):
     """Parse a single line and return a list of all matched groups"""
 
-    def __init__(self, reg, names, converter=None, types=None, title="", multi=False, first_only=False):
+    def __init__(self,
+                 reg,
+                 names,
+                 converter=None,
+                 types=None,
+                 title="",
+                 multi=False,
+                 first_only=False):
         super().__init__(reg)
         self.names = names
         if converter is None and types is None:
@@ -44,7 +51,9 @@ class SimpleLineParser(LineParser):
             raise ValueError("SimpleLineParser in multi mode requires title")
 
     def process(self, m, out):
-        data = {n: self.types[i](m.group(i + 1)) for i, n in enumerate(self.names)}
+        data = {
+            n: self.types[i](m.group(i + 1)) for i, n in enumerate(self.names)
+        }
         if not self.multi:
             if self.title != "":
                 if not (self.first_only and self.title in out):
@@ -91,4 +100,3 @@ class BooleanLineParser(LineParser):
     def process(self, value, out):
         if not (self.first_only and self.key in out):
             out[self.key] = value
-

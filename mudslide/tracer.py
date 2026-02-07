@@ -363,9 +363,8 @@ class YAMLTrace(Trace_):
         super().__init__(weight=weight)
 
         if compression is not None and compression not in _COMPRESSORS:
-            raise ValueError(
-                f"Unknown compression type: {compression}. "
-                f"Supported types: {list(_COMPRESSORS.keys())}")
+            raise ValueError(f"Unknown compression type: {compression}. "
+                             f"Supported types: {list(_COMPRESSORS.keys())}")
 
         self.weight: float = weight
         self.log_pitch = log_pitch
@@ -614,9 +613,8 @@ class YAMLTrace(Trace_):
 
         target_log = i // self.log_pitch
         target_snap = i - target_log * self.log_pitch
-        with _open_log(
-                os.path.join(self.location, self.logfiles[target_log]),
-                "rt") as f:
+        with _open_log(os.path.join(self.location, self.logfiles[target_log]),
+                       "rt") as f:
             chunk = yaml.safe_load(f)
             return self.form_data(chunk[target_snap])
 

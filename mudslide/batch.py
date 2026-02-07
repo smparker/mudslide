@@ -1,16 +1,14 @@
 # -*- coding: utf-8 -*-
 """Code for running batches of trajectories."""
 
-from typing import Any, Iterator, Tuple
+from typing import Any, Iterator
 import logging
 import queue
-import sys
 
 import numpy as np
 from numpy.typing import ArrayLike
 
 from .constants import boltzmann
-from .exceptions import StillInteracting
 from .tracer import TraceManager
 
 logger = logging.getLogger("mudslide")
@@ -36,7 +34,11 @@ class TrajGenConst:
         Generator yielding tuples of (position, velocity, initial_state, params).
     """
 
-    def __init__(self, position: ArrayLike, velocity: ArrayLike, initial_state: Any, seed: Any = None):
+    def __init__(self,
+                 position: ArrayLike,
+                 velocity: ArrayLike,
+                 initial_state: Any,
+                 seed: Any = None):
         self.position = position
         self.velocity = velocity
         self.initial_state = initial_state
@@ -57,7 +59,9 @@ class TrajGenConst:
         """
         seedseqs = self.seed_sequence.spawn(nsamples)
         for i in range(nsamples):
-            yield (self.position, self.velocity, self.initial_state, {"seed_sequence": seedseqs[i]})
+            yield (self.position, self.velocity, self.initial_state, {
+                "seed_sequence": seedseqs[i]
+            })
 
 
 class TrajGenNormal:
@@ -231,9 +235,14 @@ class BatchedTraj:
     | seed               | None (date)                |
     """
 
-    batch_only_options = [ "samples", "nprocs" ]
+    batch_only_options = ["samples", "nprocs"]
 
-    def __init__(self, model: 'ElectronicModel_', traj_gen: Any, trajectory_type: Any, tracemanager: Any = None, **inp: Any):
+    def __init__(self,
+                 model: 'ElectronicModel_',
+                 traj_gen: Any,
+                 trajectory_type: Any,
+                 tracemanager: Any = None,
+                 **inp: Any):
         self.model = model
         if tracemanager is None:
             self.tracemanager = TraceManager()
@@ -244,8 +253,8 @@ class BatchedTraj:
         self.batch_options = {}
 
         # statistical parameters
-        self.batch_options["samples"]       = inp.get("samples", 2000)
-        self.batch_options["nprocs"]        = inp.get("nprocs", 1)
+        self.batch_options["samples"] = inp.get("samples", 2000)
+        self.batch_options["nprocs"] = inp.get("nprocs", 1)
 
         # other options get copied over
         self.traj_options = {}
@@ -266,7 +275,9 @@ class BatchedTraj:
         nprocs = self.batch_options["nprocs"]
 
         if nprocs > 1:
-            logger.warning('nprocs {} specified, but parallelism is not currently handled'.format(nprocs))
+            logger.warning(
+                'nprocs {} specified, but parallelism is not currently handled'.
+                format(nprocs))
 
         traj_queue: Any = queue.Queue()
         results_queue: Any = queue.Queue()

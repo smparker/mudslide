@@ -44,7 +44,8 @@ class Ehrenfest(SurfaceHoppingMD):
         """
         return None
 
-    def potential_energy(self, electronics: 'ElectronicModel_' = None) -> np.floating:
+    def potential_energy(self,
+                         electronics: 'ElectronicModel_' = None) -> np.floating:
         """Calculate Ehrenfest potential energy.
 
         The potential energy is computed as the trace of the product of the
@@ -85,7 +86,7 @@ class Ehrenfest(SurfaceHoppingMD):
 
         out = np.zeros([electronics.ndof])
         for i in range(electronics.nstates):
-            out += np.real(self.rho[i,i]) * electronics.force(i)
+            out += np.real(self.rho[i, i]) * electronics.force(i)
         return out
 
     def surface_hopping(self, last_electronics: 'ElectronicModel_',

@@ -7,7 +7,6 @@ from typing import Tuple, Any, List
 import numpy as np
 from numpy.typing import ArrayLike
 
-import math
 
 class ElectronicModel_:
     """Base class for handling electronic structure part of dynamics.
@@ -42,8 +41,14 @@ class ElectronicModel_:
     _derivative_coupling : "ArrayLike"
         The derivative coupling matrix.
     """
-    def __init__(self, representation: str = "adiabatic", reference: Any = None,
-                 nstates: int = 0, ndims: int = 1, nparticles: int = 1, ndof: int = None,
+
+    def __init__(self,
+                 representation: str = "adiabatic",
+                 reference: Any = None,
+                 nstates: int = 0,
+                 ndims: int = 1,
+                 nparticles: int = 1,
+                 ndof: int = None,
                  atom_types: List[str] = None):
         """Initialize the electronic model.
 
@@ -82,7 +87,8 @@ class ElectronicModel_:
         self._force: "ArrayLike"
         self._forces_available: "ArrayLike" = np.zeros(self.nstates, dtype=bool)
         self._derivative_coupling: "ArrayLike"
-        self._derivative_couplings_available: "ArrayLike" = np.zeros((self.nstates, self.nstates), dtype=bool)
+        self._derivative_couplings_available: "ArrayLike" = np.zeros(
+            (self.nstates, self.nstates), dtype=bool)
 
         self.atom_types: List[str] = atom_types
 
@@ -152,16 +158,18 @@ class ElectronicModel_:
         """
         return self._hamiltonian
 
-    def force(self, state: int=0) -> "ArrayLike":
+    def force(self, state: int = 0) -> "ArrayLike":
         """Return the force on a given state"""
         if not self._forces_available[state]:
             raise ValueError("Force on state %d not available" % state)
-        return self._force[state,:]
+        return self._force[state, :]
 
     def derivative_coupling(self, state1: int, state2: int) -> "ArrayLike":
         """Return the derivative coupling between two states"""
         if not self._derivative_couplings_available[state1, state2]:
-            raise ValueError("Derivative coupling between states %d and %d not available" % (state1, state2))
+            raise ValueError(
+                "Derivative coupling between states %d and %d not available" %
+                (state1, state2))
         return self._derivative_coupling[state1, state2, :]
 
     @property
@@ -169,8 +177,12 @@ class ElectronicModel_:
         """Return the derivative coupling tensor"""
         if not np.all(self._derivative_couplings_available):
             false_indices = np.argwhere(~self._derivative_couplings_available)
-            print(f"Derivative couplings not available for state pairs: {false_indices.tolist()}")
-            print(f"Full availability matrix:\n{self._derivative_couplings_available}")
+            print(
+                f"Derivative couplings not available for state pairs: {false_indices.tolist()}"
+            )
+            print(
+                f"Full availability matrix:\n{self._derivative_couplings_available}"
+            )
             raise ValueError("All derivative couplings not available")
         return self._derivative_coupling
 
@@ -222,12 +234,18 @@ class ElectronicModel_:
             Coupling pairs that still need to be computed.
         """
         if couplings is None:
-            candidates = [(i, j) for i in range(self.nstates) for j in range(self.nstates)]
+            candidates = [
+                (i, j) for i in range(self.nstates) for j in range(self.nstates)
+            ]
         else:
             candidates = couplings
-        return [(i, j) for (i, j) in candidates if not self._derivative_couplings_available[i, j]]
+        return [(i, j)
+                for (i, j) in candidates
+                if not self._derivative_couplings_available[i, j]]
 
-    def compute_additional(self, couplings: Any = None, gradients: Any = None) -> None:
+    def compute_additional(self,
+                           couplings: Any = None,
+                           gradients: Any = None) -> None:
         """Compute additional gradients/couplings at the current geometry.
 
         Checks what's already available and only computes what's missing.
@@ -249,7 +267,11 @@ class ElectronicModel_:
             f"compute_additional not implemented; missing gradients={needed_g}, couplings={needed_c}"
         )
 
-    def compute(self, X: "ArrayLike", couplings: Any = None, gradients: Any = None, reference: Any = None) -> None:
+    def compute(self,
+                X: "ArrayLike",
+                couplings: Any = None,
+                gradients: Any = None,
+                reference: Any = None) -> None:
         """
         Central function for model objects. After the compute function exits, the following
         data must be provided:
@@ -275,7 +297,11 @@ class ElectronicModel_:
         """
         raise NotImplementedError("ElectronicModel_ need a compute function")
 
-    def update(self, X: "ArrayLike", electronics: Any = None, couplings: Any = None, gradients: Any = None) -> 'ElectronicModel_':
+    def update(self,
+               X: "ArrayLike",
+               electronics: Any = None,
+               couplings: Any = None,
+               gradients: Any = None) -> 'ElectronicModel_':
         """
         Convenience function that copies the present object, updates the position,
         calls compute, and then returns the new object
@@ -287,7 +313,10 @@ class ElectronicModel_:
         else:
             reference = self._reference
 
-        out.compute(X, couplings=couplings, gradients=gradients, reference=reference)
+        out.compute(X,
+                    couplings=couplings,
+                    gradients=gradients,
+                    reference=reference)
         return out
 
     def clone(self):
@@ -315,7 +344,7 @@ class ElectronicModel_:
             "forces_available": self._forces_available.tolist()
         }
 
-        for key in [ "_derivative_coupling", "_force_matrix" ]:
+        for key in ["_derivative_coupling", "_force_matrix"]:
             if hasattr(self, key):
                 out[key.lstrip('_')] = getattr(self, key).tolist()
 
@@ -338,8 +367,11 @@ class DiabaticModel_(ElectronicModel_):
     #: it is clamped to avoid division by near-zero. Override in subclasses if needed.
     coupling_energy_threshold: float = 1.0e-14
 
-    def __init__(self, representation: str = "adiabatic", reference: Any = None,
-                 nstates:int = 0, ndof: int = 0):
+    def __init__(self,
+                 representation: str = "adiabatic",
+                 reference: Any = None,
+                 nstates: int = 0,
+                 ndof: int = 0):
         """Initialize the diabatic model.
 
         Parameters
@@ -353,10 +385,17 @@ class DiabaticModel_(ElectronicModel_):
         ndof : int, optional
             Number of classical degrees of freedom, by default 0
         """
-        ElectronicModel_.__init__(self, representation=representation, reference=reference,
-                                  nstates=nstates, ndof=ndof)
+        ElectronicModel_.__init__(self,
+                                  representation=representation,
+                                  reference=reference,
+                                  nstates=nstates,
+                                  ndof=ndof)
 
-    def compute(self, X: ArrayLike, couplings: Any = None, gradients: Any = None, reference: Any = None) -> None:
+    def compute(self,
+                X: ArrayLike,
+                couplings: Any = None,
+                gradients: Any = None,
+                reference: Any = None) -> None:
         """Compute electronic properties at position X.
 
         Parameters
@@ -372,15 +411,18 @@ class DiabaticModel_(ElectronicModel_):
         """
         self._position = X
 
-        self._reference, self._hamiltonian = self._compute_basis_states(self.V(X), reference=reference)
+        self._reference, self._hamiltonian = self._compute_basis_states(
+            self.V(X), reference=reference)
         dV = self.dV(X)
 
-        self._derivative_coupling = self._compute_derivative_coupling(self._reference, dV, np.diag(self._hamiltonian))
+        self._derivative_coupling = self._compute_derivative_coupling(
+            self._reference, dV, np.diag(self._hamiltonian))
 
         # Create new availability arrays to avoid sharing with shallow copies
-        self._derivative_couplings_available = np.zeros((self.nstates, self.nstates), dtype=bool)
+        self._derivative_couplings_available = np.zeros(
+            (self.nstates, self.nstates), dtype=bool)
         if couplings is None:
-            self._derivative_couplings_available[:,:] = True
+            self._derivative_couplings_available[:, :] = True
         else:
             for (i, j) in couplings:
                 self._derivative_couplings_available[i, j] = True
@@ -397,7 +439,9 @@ class DiabaticModel_(ElectronicModel_):
 
         self._force_matrix = self._compute_force_matrix(dV, self._reference)
 
-    def compute_additional(self, couplings: Any = None, gradients: Any = None) -> None:
+    def compute_additional(self,
+                           couplings: Any = None,
+                           gradients: Any = None) -> None:
         """Compute additional gradients/couplings at the current geometry.
 
         Since diabatic models compute everything analytically, this just
@@ -417,7 +461,10 @@ class DiabaticModel_(ElectronicModel_):
         for (i, j) in needed_c:
             self._derivative_couplings_available[i, j] = True
 
-    def _compute_basis_states(self, V: ArrayLike, reference: Any = None) -> Tuple[ArrayLike, ArrayLike]:
+    def _compute_basis_states(
+            self,
+            V: ArrayLike,
+            reference: Any = None) -> Tuple[ArrayLike, ArrayLike]:
         """Computes coefficient matrix for basis states
         if a diabatic representation is chosen, no transformation takes place
         :param V: potential matrix
@@ -431,8 +478,9 @@ class DiabaticModel_(ElectronicModel_):
                         if (np.dot(coeff[:, mo], reference[:, mo]) < 0.0):
                             coeff[:, mo] *= -1.0
                 except:
-                    raise Exception("Failed to regularize new ElectronicStates from a reference object %s" %
-                                    (reference))
+                    raise Exception(
+                        "Failed to regularize new ElectronicStates from a reference object %s"
+                        % (reference))
             return (coeff, np.diag(energies))
         elif self._representation == "diabatic":
             return (np.eye(self.nstates, dtype=np.float64), V)
@@ -451,12 +499,14 @@ class DiabaticModel_(ElectronicModel_):
             out[ist, :] += -np.einsum("i,ix->x", coeff[:, ist], half[:, ist, :])
         return out
 
-    def _compute_force_matrix(self, dV: ArrayLike, coeff: ArrayLike) -> ArrayLike:
+    def _compute_force_matrix(self, dV: ArrayLike,
+                              coeff: ArrayLike) -> ArrayLike:
         r"""returns :math:`F^\xi{ij} = \langle \phi_i | -\nabla_\xi H | \phi_j\rangle`"""
         out = -np.einsum("ip,xij,jq->pqx", coeff, dV, coeff)
         return out
 
-    def _compute_derivative_coupling(self, coeff: ArrayLike, dV: ArrayLike, energies: ArrayLike) -> ArrayLike:
+    def _compute_derivative_coupling(self, coeff: ArrayLike, dV: ArrayLike,
+                                     energies: ArrayLike) -> ArrayLike:
         r"""Compute derivative couplings :math:`d^\alpha_{ij} = \langle \phi_i | \nabla_\alpha \phi_j \rangle`.
 
         Uses the Hellmann-Feynman relation to compute derivative couplings from
@@ -465,7 +515,8 @@ class DiabaticModel_(ElectronicModel_):
         instability.
         """
         if self._representation == "diabatic":
-            return np.zeros([self.nstates, self.nstates, self.ndof], dtype=np.float64)
+            return np.zeros([self.nstates, self.nstates, self.ndof],
+                            dtype=np.float64)
 
         out = np.einsum("ip,xij,jq->pqx", coeff, dV, coeff)
 
@@ -483,10 +534,12 @@ class DiabaticModel_(ElectronicModel_):
         return out
 
     def V(self, X: ArrayLike) -> ArrayLike:
-        raise NotImplementedError("Diabatic models must implement the function V")
+        raise NotImplementedError(
+            "Diabatic models must implement the function V")
 
     def dV(self, X: ArrayLike) -> ArrayLike:
-        raise NotImplementedError("Diabatic models must implement the function dV")
+        raise NotImplementedError(
+            "Diabatic models must implement the function dV")
 
 
 class AdiabaticModel_(ElectronicModel_):
@@ -501,8 +554,11 @@ class AdiabaticModel_(ElectronicModel_):
     #: it is clamped to avoid division by near-zero. Override in subclasses if needed.
     coupling_energy_threshold: float = 1.0e-14
 
-    def __init__(self, representation: str = "adiabatic", reference: Any = None,
-                 nstates:int = 0, ndof: int = 0):
+    def __init__(self,
+                 representation: str = "adiabatic",
+                 reference: Any = None,
+                 nstates: int = 0,
+                 ndof: int = 0):
         """Initialize the adiabatic model.
 
         Parameters
@@ -522,11 +578,19 @@ class AdiabaticModel_(ElectronicModel_):
             If representation is set to "diabatic"
         """
         if representation == "diabatic":
-            raise ValueError('Adiabatic models can only be run in adiabatic mode')
-        ElectronicModel_.__init__(self, representation=representation, reference=reference,
-                                  nstates=nstates, ndof=ndof)
+            raise ValueError(
+                'Adiabatic models can only be run in adiabatic mode')
+        ElectronicModel_.__init__(self,
+                                  representation=representation,
+                                  reference=reference,
+                                  nstates=nstates,
+                                  ndof=ndof)
 
-    def compute(self, X: ArrayLike, couplings: Any = None, gradients: Any = None, reference: Any = None) -> None:
+    def compute(self,
+                X: ArrayLike,
+                couplings: Any = None,
+                gradients: Any = None,
+                reference: Any = None) -> None:
         """Compute electronic properties at position X.
 
         Parameters
@@ -542,15 +606,18 @@ class AdiabaticModel_(ElectronicModel_):
         """
         self._position = X
 
-        self._reference, self._hamiltonian = self._compute_basis_states(self.V(X), reference=reference)
+        self._reference, self._hamiltonian = self._compute_basis_states(
+            self.V(X), reference=reference)
         dV = self.dV(X)
 
-        self._derivative_coupling = self._compute_derivative_coupling(self._reference, dV, np.diag(self._hamiltonian))
+        self._derivative_coupling = self._compute_derivative_coupling(
+            self._reference, dV, np.diag(self._hamiltonian))
 
         # Create new availability arrays to avoid sharing with shallow copies
-        self._derivative_couplings_available = np.zeros((self.nstates, self.nstates), dtype=bool)
+        self._derivative_couplings_available = np.zeros(
+            (self.nstates, self.nstates), dtype=bool)
         if couplings is None:
-            self._derivative_couplings_available[:,:] = True
+            self._derivative_couplings_available[:, :] = True
         else:
             for (i, j) in couplings:
                 self._derivative_couplings_available[i, j] = True
@@ -567,7 +634,9 @@ class AdiabaticModel_(ElectronicModel_):
 
         self._force_matrix = self._compute_force_matrix(dV, self._reference)
 
-    def compute_additional(self, couplings: Any = None, gradients: Any = None) -> None:
+    def compute_additional(self,
+                           couplings: Any = None,
+                           gradients: Any = None) -> None:
         """Compute additional gradients/couplings at the current geometry.
 
         Since adiabatic models compute everything analytically, this just
@@ -587,7 +656,11 @@ class AdiabaticModel_(ElectronicModel_):
         for (i, j) in needed_c:
             self._derivative_couplings_available[i, j] = True
 
-    def update(self, X: ArrayLike, electronics: Any = None, couplings: Any = None, gradients: Any = None) -> 'AdiabaticModel_':
+    def update(self,
+               X: ArrayLike,
+               electronics: Any = None,
+               couplings: Any = None,
+               gradients: Any = None) -> 'AdiabaticModel_':
         """Update the model with new position and electronic information.
 
         Parameters
@@ -610,10 +683,16 @@ class AdiabaticModel_(ElectronicModel_):
         if electronics:
             self._reference = electronics._reference
         out._position = X
-        out.compute(X, couplings=couplings, gradients=gradients, reference=self._reference)
+        out.compute(X,
+                    couplings=couplings,
+                    gradients=gradients,
+                    reference=self._reference)
         return out
 
-    def _compute_basis_states(self, V: ArrayLike, reference: Any = None) -> Tuple[ArrayLike, ArrayLike]:
+    def _compute_basis_states(
+            self,
+            V: ArrayLike,
+            reference: Any = None) -> Tuple[ArrayLike, ArrayLike]:
         """Computes coefficient matrix for basis states
         if a diabatic representation is chosen, no transformation takes place
         :param V: potential matrix
@@ -631,11 +710,13 @@ class AdiabaticModel_(ElectronicModel_):
                         if (np.dot(coeff[:, mo], reference[:, mo]) < 0.0):
                             coeff[:, mo] *= -1.0
                 except:
-                    raise Exception("Failed to regularize new ElectronicStates from a reference object %s" %
-                                    (reference))
+                    raise Exception(
+                        "Failed to regularize new ElectronicStates from a reference object %s"
+                        % (reference))
             return coeff, np.diag(energies)
         elif self._representation == "diabatic":
-            raise Exception("Adiabatic models can only be run in adiabatic mode")
+            raise Exception(
+                "Adiabatic models can only be run in adiabatic mode")
             return None
         else:
             raise Exception("Unrecognized representation")
@@ -652,12 +733,14 @@ class AdiabaticModel_(ElectronicModel_):
             out[ist, :] += -np.einsum("i,ix->x", coeff[:, ist], half[:, ist, :])
         return out
 
-    def _compute_force_matrix(self, dV: ArrayLike, coeff: ArrayLike) -> ArrayLike:
+    def _compute_force_matrix(self, dV: ArrayLike,
+                              coeff: ArrayLike) -> ArrayLike:
         r"""returns :math:`F^\xi{ij} = \langle \phi_i | -\nabla_\xi H | \phi_j\rangle`"""
         out = -np.einsum("ip,xij,jq->pqx", coeff, dV, coeff)
         return out
 
-    def _compute_derivative_coupling(self, coeff: ArrayLike, dV: ArrayLike, energies: ArrayLike) -> ArrayLike:
+    def _compute_derivative_coupling(self, coeff: ArrayLike, dV: ArrayLike,
+                                     energies: ArrayLike) -> ArrayLike:
         r"""Compute derivative couplings :math:`d^\alpha_{ij} = \langle \phi_i | \nabla_\alpha \phi_j \rangle`.
 
         Uses the Hellmann-Feynman relation to compute derivative couplings from
@@ -666,7 +749,8 @@ class AdiabaticModel_(ElectronicModel_):
         instability.
         """
         if self._representation == "diabatic":
-            return np.zeros([self.nstates, self.nstates, self.ndof], dtype=np.float64)
+            return np.zeros([self.nstates, self.nstates, self.ndof],
+                            dtype=np.float64)
 
         out = np.einsum("ip,xij,jq->pqx", coeff, dV, coeff)
 
@@ -683,7 +767,9 @@ class AdiabaticModel_(ElectronicModel_):
         return out
 
     def V(self, X: ArrayLike) -> ArrayLike:
-        raise NotImplementedError("Adiabatic models must implement the function V")
+        raise NotImplementedError(
+            "Adiabatic models must implement the function V")
 
     def dV(self, X: ArrayLike) -> ArrayLike:
-        raise NotImplementedError("Adiabatic models must implement the function dV")
+        raise NotImplementedError(
+            "Adiabatic models must implement the function dV")

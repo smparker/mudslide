@@ -6,7 +6,10 @@ import sys
 
 import numpy as np
 
-def find_unique_name(name: str, location="", always_enumerate: bool = False,
+
+def find_unique_name(name: str,
+                     location="",
+                     always_enumerate: bool = False,
                      ending: str = "") -> str:
     """Generate a unique filename by adding a suffix if the file already exists.
 
@@ -33,7 +36,8 @@ def find_unique_name(name: str, location="", always_enumerate: bool = False,
     """
     name_yaml = f"{name}{ending}"
     name_yaml = f"{name}{ending}"
-    if not always_enumerate and not os.path.exists(os.path.join(location, name_yaml)):
+    if not always_enumerate and not os.path.exists(
+            os.path.join(location, name_yaml)):
         return name
     for i in range(sys.maxsize):
         out = f"{name}-{i:d}"
@@ -43,6 +47,7 @@ def find_unique_name(name: str, location="", always_enumerate: bool = False,
         if not os.path.exists(os.path.join(location, out_yaml)):
             return out
     raise FileExistsError(f"No unique name could be made from base {name}.")
+
 
 def is_string(x) -> bool:
     """Check if the input is a string type.
@@ -59,7 +64,9 @@ def is_string(x) -> bool:
     """
     return isinstance(x, str)
 
-def remove_center_of_mass_motion(velocities: np.ndarray, masses: np.ndarray) -> np.ndarray:
+
+def remove_center_of_mass_motion(velocities: np.ndarray,
+                                 masses: np.ndarray) -> np.ndarray:
     """Remove the center of mass motion from a set of velocities.
 
     Parameters
@@ -76,6 +83,7 @@ def remove_center_of_mass_motion(velocities: np.ndarray, masses: np.ndarray) -> 
     """
     com = np.sum(velocities * masses[:, np.newaxis], axis=0) / np.sum(masses)
     return velocities - com
+
 
 def remove_angular_momentum(velocities: np.ndarray, masses: np.ndarray,
                             coordinates: np.ndarray) -> np.ndarray:
@@ -102,7 +110,8 @@ def remove_angular_momentum(velocities: np.ndarray, masses: np.ndarray,
     momentum = np.einsum('ai,a->ai', velocities, masses, dtype=np.float64)
 
     # angular momentum
-    angular_momentum = np.cross(com_coord, momentum).sum(axis=0, dtype=np.float64)
+    angular_momentum = np.cross(com_coord, momentum).sum(axis=0,
+                                                         dtype=np.float64)
 
     # inertial tensor
     inertia = np.zeros((3, 3), dtype=np.float64)
@@ -119,6 +128,7 @@ def remove_angular_momentum(velocities: np.ndarray, masses: np.ndarray,
         corrected_velocities[i] -= np.cross(angular_velocity, com_coord[i])
 
     return corrected_velocities
+
 
 def check_options(options: dict, recognized: list, strict: bool = True) -> None:
     """Check whether the options dictionary contains only recognized options.
@@ -137,7 +147,7 @@ def check_options(options: dict, recognized: list, strict: bool = True) -> None:
     ValueError
         If strict is True and unrecognized options are found.
     """
-    problems = [ x for x in options if x not in recognized ]
+    problems = [x for x in options if x not in recognized]
 
     if problems:
         if strict:  # pylint: disable=no-else-raise

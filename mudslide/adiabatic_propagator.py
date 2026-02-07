@@ -6,13 +6,14 @@ including Velocity Verlet and Nose-Hoover Chain thermostats.
 """
 # pylint: disable=too-few-public-methods, too-many-arguments, invalid-name
 
-from typing import Any, Dict
+from typing import Any
 
 import numpy as np
 
 from .constants import fs_to_au, boltzmann, amu_to_au
 from .propagator import Propagator_
 from .util import remove_center_of_mass_motion, remove_angular_momentum
+
 
 class VVPropagator(Propagator_):
     """Velocity Verlet propagator.
@@ -55,7 +56,8 @@ class VVPropagator(Propagator_):
 
             # calculate electronics at new position
             traj.last_electronics = traj.electronics
-            traj.electronics = traj.model.update(traj.position, electronics=traj.electronics)
+            traj.electronics = traj.model.update(traj.position,
+                                                 electronics=traj.electronics)
 
             # update velocity
             last_acceleration = acceleration
@@ -65,10 +67,11 @@ class VVPropagator(Propagator_):
             traj.velocity += 0.5 * (last_acceleration + acceleration) * dt
 
             # optionally remove COM motion and total angular momentum
-            if traj.remove_com_every > 0 and (traj.nsteps % traj.remove_com_every) == 0:
+            if traj.remove_com_every > 0 and (traj.nsteps %
+                                              traj.remove_com_every) == 0:
                 d = traj.model.dimensionality
                 v = traj.velocity.reshape(d)
-                m = traj.mass.reshape(d)[:,0]
+                m = traj.mass.reshape(d)[:, 0]
                 vnew = remove_center_of_mass_motion(v, m)
                 traj.velocity = vnew.reshape(traj.velocity.shape)
 
@@ -76,13 +79,14 @@ class VVPropagator(Propagator_):
                    (traj.nsteps % traj.remove_angular_momentum_every) == 0:
                 d = traj.model.dimensionality
                 v = traj.velocity.reshape(d)
-                m = traj.mass.reshape(d)[:,0]
+                m = traj.mass.reshape(d)[:, 0]
                 x = traj.position.reshape(d)
                 vnew = remove_angular_momentum(v, m, x)
                 traj.velocity = vnew.reshape(traj.velocity.shape)
 
             traj.time += dt
             traj.nsteps += 1
+
 
 class NoseHooverChainPropagator(Propagator_):
     """Nose-Hoover Chain thermostat propagator.
@@ -112,8 +116,13 @@ class NoseHooverChainPropagator(Propagator_):
     Molecular Physics, 87, 1117-1157 (1996)
     """
 
-    def __init__(self, temperature: np.float64, timescale: np.float64 = 1e2 * fs_to_au,
-                 ndof: int = 3, nchains: int = 3, nys: int = 3, nc: int = 1):
+    def __init__(self,
+                 temperature: np.float64,
+                 timescale: np.float64 = 1e2 * fs_to_au,
+                 ndof: int = 3,
+                 nchains: int = 3,
+                 nys: int = 3,
+                 nc: int = 1):
         """Initialize the Nose-Hoover Chain thermostat.
 
         Parameters
@@ -141,7 +150,7 @@ class NoseHooverChainPropagator(Propagator_):
         assert self.temperature > 0.0
         assert self.timescale > 0.0
         assert self.nchains >= 1
-        assert self.nys in (3,5)
+        assert self.nys in (3, 5)
         assert self.nc >= 1
 
         self.nh_position = np.zeros(nchains, dtype=np.float64)
@@ -151,11 +160,11 @@ class NoseHooverChainPropagator(Propagator_):
         self.nh_mass[0] *= ndof
 
         if nys == 3:
-            tmp = 1 / (2 - 2**(1./3))
-            self.w = np.array([tmp, 1 - 2*tmp, tmp]) / nc
+            tmp = 1 / (2 - 2**(1. / 3))
+            self.w = np.array([tmp, 1 - 2 * tmp, tmp]) / nc
         elif nys == 5:
-            tmp = 1 / (4 - 4**(1./3))
-            self.w = np.array([tmp, tmp, 1 - 4*tmp, tmp, tmp]) / nc
+            tmp = 1 / (4 - 4**(1. / 3))
+            self.w = np.array([tmp, tmp, 1 - 4 * tmp, tmp, tmp]) / nc
         else:
             raise ValueError("nys must be either 3 or 5")
 
@@ -200,9 +209,9 @@ class NoseHooverChainPropagator(Propagator_):
         for _ in range(self.nc):
             for iys in range(self.nys):
                 wdt = self.w[iys] * dt
-                V[M-1] += G[M-1] * wdt / 4.0
+                V[M - 1] += G[M - 1] * wdt / 4.0
 
-                for kk in range(0, M-1):
+                for kk in range(0, M - 1):
                     AA = np.exp(-wdt * V[M - 1 - kk] / 8.0)
                     V[M - 2 - kk] *= AA * AA
                     V[M - 2 - kk] += 0.25 * wdt * G[M - 2 - kk] * AA
@@ -222,7 +231,8 @@ class NoseHooverChainPropagator(Propagator_):
                     AA = np.exp(-0.125 * wdt * V[kk + 1])
                     V[kk] = V[kk] * AA * AA \
                               + 0.25 * wdt * G[kk] * AA
-                    G[kk+1] = (self.nh_mass[kk] * V[kk]**2 - kt) / self.nh_mass[kk + 1]
+                    G[kk + 1] = (self.nh_mass[kk] * V[kk]**2 -
+                                 kt) / self.nh_mass[kk + 1]
                 V[M - 1] += 0.25 * G[M - 1] * wdt
 
         return scale
@@ -253,21 +263,23 @@ class NoseHooverChainPropagator(Propagator_):
 
             # calculate electronics at new position
             traj.last_electronics = traj.electronics
-            traj.electronics = traj.model.update(traj.position, electronics=traj.electronics)
+            traj.electronics = traj.model.update(traj.position,
+                                                 electronics=traj.electronics)
 
             acceleration = traj.force(traj.electronics) / traj.mass
 
-            v2p  = v1 + 0.5 * dt * acceleration
+            v2p = v1 + 0.5 * dt * acceleration
 
             vscale = self.nhc_step(v2p, traj.mass, dt)
             traj.last_velocity = traj.velocity
             traj.velocity = v2p * vscale
 
             # optionally remove COM motion and total angular momentum
-            if traj.remove_com_every > 0 and (traj.nsteps % traj.remove_com_every) == 0:
+            if traj.remove_com_every > 0 and (traj.nsteps %
+                                              traj.remove_com_every) == 0:
                 d = traj.model.dimensionality
                 v = traj.velocity.reshape(d)
-                m = traj.mass.reshape(d)[:,0]
+                m = traj.mass.reshape(d)[:, 0]
                 vnew = remove_center_of_mass_motion(v, m)
                 traj.velocity = vnew.reshape(traj.velocity.shape)
 
@@ -275,13 +287,14 @@ class NoseHooverChainPropagator(Propagator_):
                     (traj.nsteps % traj.remove_angular_momentum_every) == 0:
                 d = traj.model.dimensionality
                 v = traj.velocity.reshape(d)
-                m = traj.mass.reshape(d)[:,0]
+                m = traj.mass.reshape(d)[:, 0]
                 x = traj.position.reshape(d)
                 vnew = remove_angular_momentum(v, m, x)
                 traj.velocity = vnew.reshape(traj.velocity.shape)
 
             traj.time += dt
             traj.nsteps += 1
+
 
 class AdiabaticPropagator:
     """Factory class for creating propagator objects.
@@ -306,6 +319,7 @@ class AdiabaticPropagator:
     ValueError
         If the propagator type is unknown or if the propagator options are invalid.
     """
+
     def __new__(cls, model: Any, prop_options: Any = "vv") -> Propagator_:
         """Create a new propagator instance.
 
@@ -327,7 +341,7 @@ class AdiabaticPropagator:
             If the propagator type is unknown or if the propagator options are invalid.
         """
         if isinstance(prop_options, str):
-            prop_options = { "type": prop_options.lower() }
+            prop_options = {"type": prop_options.lower()}
 
         prop_options["ndof"] = model.ndof
 

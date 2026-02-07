@@ -99,9 +99,7 @@ recursive=no
 # source root.
 source-roots=
 
-# When enabled, pylint would attempt to guess common misconfiguration and emit
-# user-friendly hints instead of false-positive error messages.
-suggestion-mode=yes
+# suggestion-mode was removed in pylint 4.x
 
 # Allow loading of arbitrary C extensions. Extensions are imported into the
 # active Python interpreter and may run arbitrary code.
@@ -200,11 +198,34 @@ good-names=i,
            v,
            V,
            p,
-           P
+           P,
+           A,
+           B,
+           C,
+           D,
+           F,
+           G,
+           H,
+           L,
+           M,
+           N,
+           Q,
+           R,
+           T,
+           U,
+           W
 
 # Good variable names regexes, separated by a comma. If names match any regex,
 # they will always be accepted
-good-names-rgxs=
+# Scientific/mathematical naming conventions:
+#   ^[A-Z][a-z0-9]+$        - PascalWord: Hbar, Trace, Reff, Peff, Sij, V12
+#   ^[A-Z]+[0-9]+$          - UPPER+digits: W00, H0, TV00, E1
+#   ^[A-Z]{2}$              - two-letter uppercase: HI, AA
+#   ^[A-Z]+_\w+$            - UPPER_word: NAC_matrix, M_inv, V_nuc, T_window
+#   ^[a-z_]+[A-Z]\w*$       - mixed_Case: dV, delR, ddP, kbT2, compute_delF, avg_KE
+#   ^[A-Z]\w*_$             - trailing underscore: ElectronicModel_, DiabaticModel_
+#   ^[A-Z][a-z]+[A-Z]\w*$   - PascalCamel: LmR, LpR
+good-names-rgxs=^[A-Z][a-z0-9]+$,^[A-Z]+[0-9]+$,^[A-Z]{2}$,^[A-Z]+_\w+$,^[a-z_]+[A-Z]\w*$,^[A-Z]\w*_$,^[A-Z][a-z]+[A-Z]\w*$
 
 # Include a hint for the correct naming format with invalid-name.
 include-naming-hint=no
@@ -440,7 +461,8 @@ disable=raw-checker-failed,
         deprecated-pragma,
         use-symbolic-message-instead,
         use-implicit-booleaness-not-comparison-to-string,
-        use-implicit-booleaness-not-comparison-to-zero
+        use-implicit-booleaness-not-comparison-to-zero,
+        too-many-positional-arguments
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option

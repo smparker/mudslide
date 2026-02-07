@@ -10,7 +10,9 @@ class ThermoParser(ParseSection):
     def __init__(self):
         super().__init__(r"T H E R M O", r"thermo\s*:\s*all done")
         self.parsers = [
-            SimpleLineParser(r"(\S+)\s*VIB\.\s+\S+\s+\S+\s+\S+\s+\S+", names=['T'], types=[float]),
+            SimpleLineParser(r"(\S+)\s*VIB\.\s+\S+\s+\S+\s+\S+\s+\S+",
+                             names=['T'],
+                             types=[float]),
             SimpleLineParser(r"H\(T\)\s+(\S+)\s+(\S+)\s+(\S+)",
                              names=["H(au)", "H(kcal/mol)", "H(kJ/mol)"],
                              types=[float, float, float]),

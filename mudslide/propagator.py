@@ -2,7 +2,7 @@
 """Propagators for ODEs from quantum dynamics"""
 
 from typing import Any
-import numpy as np
+
 
 class Propagator_:
     """Base class for propagators.

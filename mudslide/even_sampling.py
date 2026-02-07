@@ -15,6 +15,7 @@ from .surface_hopping_md import SurfaceHoppingMD
 
 # pylint: disable=no-member
 
+
 class SpawnStack:
     """Data structure to inform how new traces are spawned and weighted.
 
@@ -36,7 +37,7 @@ class SpawnStack:
         if sample_stack:
             weights = np.array([s["dw"] for s in sample_stack])
             mw = np.ones(len(sample_stack))
-            mw[1:] -= np.cumsum(weights[: len(weights) - 1])
+            mw[1:] -= np.cumsum(weights[:len(weights) - 1])
             self.marginal_weights = mw
             self.last_dw = weights[0]
         else:
@@ -56,9 +57,10 @@ class SpawnStack:
         """
         return self.zeta_
 
-    def next_zeta(self,
-                  current_value: float,
-                  random_state: Optional[np.random.RandomState] = None) -> float:
+    def next_zeta(
+            self,
+            current_value: float,
+            random_state: Optional[np.random.RandomState] = None) -> float:
         """Calculate the next zeta value.
 
         Parameters
@@ -74,7 +76,8 @@ class SpawnStack:
             Next zeta value for determining hops.
         """
         if not self.sample_stack:
-            self.zeta_ = random_state.uniform() if random_state else np.random.uniform()
+            self.zeta_ = random_state.uniform(
+            ) if random_state else np.random.uniform()
             return self.zeta_
 
         izeta = self.izeta
@@ -84,13 +87,12 @@ class SpawnStack:
 
         if izeta != self.izeta:  # it means there was a hop, so update last_dw
             weights = np.array([s["dw"] for s in self.sample_stack])
-            self.last_dw = np.sum(weights[self.izeta : izeta])
+            self.last_dw = np.sum(weights[self.izeta:izeta])
             # should actually probably be a merge operation
             self.last_stack = self.sample_stack[self.izeta]
 
         self.marginal_weight = (self.marginal_weights[izeta]
-                              if izeta != len(self.sample_stack)
-                              else 0.0)
+                                if izeta != len(self.sample_stack) else 0.0)
         self.izeta = izeta
 
         if self.izeta < len(self.sample_stack):
@@ -132,7 +134,8 @@ class SpawnStack:
             samp = self.last_stack
             dw = self.last_dw
             if dw == 0:
-                raise ValueError("What happened? A hop with no differential weight?")
+                raise ValueError(
+                    "What happened? A hop with no differential weight?")
             weight = self.base_weight * dw * reweight
             next_stack = samp["children"]
         else:
@@ -164,15 +167,13 @@ class SpawnStack:
                 return samp["spawn_size"]
         return 1
 
-    def append_layer(
-        self,
-        zetas: list,
-        dws: list,
-        stack=None,
-        node=None,
-        nodes=None,
-        adj_matrix=None
-    ):
+    def append_layer(self,
+                     zetas: list,
+                     dws: list,
+                     stack=None,
+                     node=None,
+                     nodes=None,
+                     adj_matrix=None):
         """Append a layer to all leaves in the sample stack tree.
 
         A depth-first traversal of a sample_stack tree to append a layer to all leaves.
@@ -221,7 +222,12 @@ class SpawnStack:
                 adj_matrix[node].append(next(nodes))
         if l == 0:
             for z, dw in zip(zetas, dws):
-                stack.append({"zeta": z, "dw": dw, "children": [], "spawn_size": 1})
+                stack.append({
+                    "zeta": z,
+                    "dw": dw,
+                    "children": [],
+                    "spawn_size": 1
+                })
         else:
             for i in range(l):
                 self.append_layer(
@@ -261,8 +267,10 @@ class SpawnStack:
             zeta_list.append((depth, stack["zeta"]))
             dw_list.append((depth, stack["dw"]))
             if stack["children"] != []:
-                self.unpack(zeta_list, dw_list, stack["children"], depth=depth + 1)
-
+                self.unpack(zeta_list,
+                            dw_list,
+                            stack["children"],
+                            depth=depth + 1)
 
     def unravel(self):
         """Unravel the sample stack into points and weights.
@@ -315,7 +323,9 @@ class SpawnStack:
                 main_list.append((tuple(coords), tuple(weights)))
 
         # Return product of weights
-        points_weights = [(points, np.prod(weights)) for (points, weights) in main_list]
+        points_weights = [
+            (points, np.prod(weights)) for (points, weights) in main_list
+        ]
 
         return points_weights
 
@@ -356,12 +366,15 @@ class SpawnStack:
 
         for ns in reversed(nsamples):
             leaves = cp.copy(forest)
-            samples, weights = quadrature(ns, 0.0, 1.0, method=method) # type: ignore
+            samples, weights = quadrature(ns, 0.0, 1.0,
+                                          method=method)  # type: ignore
             spawnsize = spawn_size.pop(0)
-            forest = [
-                {"zeta": s, "dw": dw, "children": cp.deepcopy(leaves), "spawn_size": spawnsize}
-                for s, dw in zip(samples, weights)
-            ]  # type: ignore
+            forest = [{
+                "zeta": s,
+                "dw": dw,
+                "children": cp.deepcopy(leaves),
+                "spawn_size": spawnsize
+            } for s, dw in zip(samples, weights)]  # type: ignore
 
         return cls(forest, weight)
 
@@ -387,7 +400,7 @@ class EvenSamplingTrajectory(SurfaceHoppingMD):
     """
 
     recognized_options = (SurfaceHoppingMD.recognized_options +
-                         ["spawn_stack", "quadrature", "mcsamples"])
+                          ["spawn_stack", "quadrature", "mcsamples"])
 
     def __init__(self, *args, **options):
         """Initialize the EvenSamplingTrajectory.
@@ -415,14 +428,17 @@ class EvenSamplingTrajectory(SurfaceHoppingMD):
             quadrature = options.get("quadrature", "gl")
             mcsamples = options.get("mcsamples", 1)
             self.spawn_stack = SpawnStack.from_quadrature(
-                ss, method=quadrature, mcsamples=mcsamples, random_state=self.random_state
-            )
+                ss,
+                method=quadrature,
+                mcsamples=mcsamples,
+                random_state=self.random_state)
         else:
             self.spawn_stack = SpawnStack(ss)
 
         self.zeta = self.spawn_stack.next_zeta(0.0, self.random_state)
 
-    def clone(self, spawn_stack: Optional[Any] = None) -> "EvenSamplingTrajectory":
+    def clone(self,
+              spawn_stack: Optional[Any] = None) -> "EvenSamplingTrajectory":
         """Create a clone of the current trajectory.
 
         Parameters
@@ -482,36 +498,38 @@ class EvenSamplingTrajectory(SurfaceHoppingMD):
         accumulated = 1 - (1 - accumulated) * np.exp(-gkdt)
         if accumulated > self.zeta:  # then hop
             zeta = self.zeta
-            next_zeta = self.spawn_stack.next_zeta(accumulated, self.random_state)
+            next_zeta = self.spawn_stack.next_zeta(accumulated,
+                                                   self.random_state)
 
             # where to hop
             hop_choice = gkndt / gkdt
             if self.spawn_stack.do_spawn():
                 nspawn = self.spawn_stack.spawn_size()
                 spawn_weight = 1.0 / nspawn
-                targets = [
-                    {
-                        "target": i,
-                        "weight": hop_choice[i],
-                        "zeta": zeta,
-                        "prob": accumulated,
-                        "stack": self.spawn_stack.spawn(spawn_weight * hop_choice[i]),
-                    }
-                    for i in range(self.model.nstates)
-                    if i != self.state
-                    for j in range(nspawn)
-                ]
+                targets = [{
+                    "target":
+                        i,
+                    "weight":
+                        hop_choice[i],
+                    "zeta":
+                        zeta,
+                    "prob":
+                        accumulated,
+                    "stack":
+                        self.spawn_stack.spawn(spawn_weight * hop_choice[i]),
+                } for i in range(self.model.nstates) if i != self.state
+                           for j in range(nspawn)]
             else:
-                target = self.random_state.choice(list(range(self.model.nstates)), p=hop_choice)
-                targets = [
-                    {
-                        "target": target,
-                        "weight": 1.0,
-                        "zeta": zeta,
-                        "prob": accumulated,
-                        "stack": self.spawn_stack.spawn(),
-                    }
-                ]
+                target = self.random_state.choice(list(range(
+                    self.model.nstates)),
+                                                  p=hop_choice)
+                targets = [{
+                    "target": target,
+                    "weight": 1.0,
+                    "zeta": zeta,
+                    "prob": accumulated,
+                    "stack": self.spawn_stack.spawn(),
+                }]
 
             # reset probabilities and random
             self.zeta = next_zeta
@@ -546,10 +564,12 @@ class EvenSamplingTrajectory(SurfaceHoppingMD):
                 stack = hop["stack"]
                 spawn = self.clone(stack)
                 old_state = spawn.state
-                SurfaceHoppingMD.hop_to_it(spawn, [hop], electronics=spawn.electronics)
+                SurfaceHoppingMD.hop_to_it(spawn, [hop],
+                                           electronics=spawn.electronics)
                 if spawn.state != old_state:
-                    spawn.electronics.compute_additional(gradients=[spawn.state])
-                spawn.time+= spawn.dt
+                    spawn.electronics.compute_additional(
+                        gradients=[spawn.state])
+                spawn.time += spawn.dt
                 spawn.nsteps += 1
 
                 # trigger hop
@@ -561,6 +581,8 @@ class EvenSamplingTrajectory(SurfaceHoppingMD):
         else:
             self.prob_cum = 0.0
             old_state = self.state
-            SurfaceHoppingMD.hop_to_it(self, hop_targets, electronics=self.electronics)
+            SurfaceHoppingMD.hop_to_it(self,
+                                       hop_targets,
+                                       electronics=self.electronics)
             if self.state != old_state:
                 self.electronics.compute_additional(gradients=[self.state])

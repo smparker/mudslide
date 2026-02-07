@@ -6,7 +6,8 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 
-def propagate_exponential(rho0: ArrayLike, H: ArrayLike, dt: np.floating) -> None:
+def propagate_exponential(rho0: ArrayLike, H: ArrayLike,
+                          dt: np.floating) -> None:
     """Propagate density matrix in place using exponential of Hamiltonian.
 
     Propagates rho0 in place by exponentiating exp(-i H dt).
@@ -28,11 +29,16 @@ def propagate_exponential(rho0: ArrayLike, H: ArrayLike, dt: np.floating) -> Non
     """
     diags, coeff = np.linalg.eigh(H)
 
-    U = np.linalg.multi_dot([ coeff, np.diag(np.exp(-1j * diags * dt)), coeff.T.conj() ])
+    U = np.linalg.multi_dot(
+        [coeff, np.diag(np.exp(-1j * diags * dt)),
+         coeff.T.conj()])
     np.dot(U, np.dot(rho0, U.T.conj()), out=rho0)
 
-def propagate_interpolated_rk4(rho0: ArrayLike, h0: ArrayLike, tau0: ArrayLike, vel0: ArrayLike,
-        h1: ArrayLike, tau1: ArrayLike, vel1: ArrayLike, dt: np.floating, nsteps: int) -> None:
+
+def propagate_interpolated_rk4(rho0: ArrayLike, h0: ArrayLike, tau0: ArrayLike,
+                               vel0: ArrayLike, h1: ArrayLike, tau1: ArrayLike,
+                               vel1: ArrayLike, dt: np.floating,
+                               nsteps: int) -> None:
     """Propagate density matrix using linearly interpolated quantities and RK4.
 
     Propagate density matrix forward by linearly interpolating all quantities
@@ -67,12 +73,13 @@ def propagate_interpolated_rk4(rho0: ArrayLike, h0: ArrayLike, tau0: ArrayLike, 
     """
     TV00 = np.einsum("ijx,x->ij", tau0, vel0)
     TV11 = np.einsum("ijx,x->ij", tau1, vel1)
-    TV01 = np.einsum("ijx,x->ij", tau0, vel1) + np.einsum("ijx,x->ij", tau1, vel0)
+    TV01 = np.einsum("ijx,x->ij", tau0, vel1) + np.einsum(
+        "ijx,x->ij", tau1, vel0)
 
     eigs, vecs = np.linalg.eigh(h0)
 
-    H0  = np.linalg.multi_dot([vecs.T, h0, vecs])
-    H1  = np.linalg.multi_dot([vecs.T, h1, vecs])
+    H0 = np.linalg.multi_dot([vecs.T, h0, vecs])
+    H1 = np.linalg.multi_dot([vecs.T, h1, vecs])
     W00 = np.linalg.multi_dot([vecs.T, TV00, vecs])
     W11 = np.linalg.multi_dot([vecs.T, TV11, vecs])
     W01 = np.linalg.multi_dot([vecs.T, TV01, vecs])
@@ -93,17 +100,17 @@ def propagate_interpolated_rk4(rho0: ArrayLike, h0: ArrayLike, tau0: ArrayLike, 
             Time derivative of density matrix
         """
         assert t >= 0.0 and t <= dt
-        w0 = 1.0 - t/dt
-        w1 = t/dt
+        w0 = 1.0 - t / dt
+        w1 = t / dt
 
         ergs = np.exp(1j * eigs * t).reshape([1, -1])
         phases = np.dot(ergs.T, ergs.conj())
 
         H = H0 * (w0 - 1.0) + H1 * w1
-        Hbar = H - 1j * (w0*w0*W00 + w1*w1*W11 + w0*w1*W01)
+        Hbar = H - 1j * (w0 * w0 * W00 + w1 * w1 * W11 + w0 * w1 * W01)
         HI = Hbar * phases
 
-        out = -1j * ( np.dot(HI, rho) - np.dot(rho, HI) )
+        out = -1j * (np.dot(HI, rho) - np.dot(rho, HI))
         return out
 
     tmprho = np.linalg.multi_dot([vecs.T, rho0, vecs])
@@ -111,9 +118,11 @@ def propagate_interpolated_rk4(rho0: ArrayLike, h0: ArrayLike, tau0: ArrayLike, 
     ergs = np.exp(1j * eigs * dt).reshape([1, -1])
     phases = np.dot(ergs.T.conj(), ergs)
 
-    rho0[:,:] = np.linalg.multi_dot([vecs, tmprho * phases, vecs.T])
+    rho0[:, :] = np.linalg.multi_dot([vecs, tmprho * phases, vecs.T])
 
-def rk4(y0: ArrayLike, ydot: Callable, t0: np.floating, tf: np.floating, nsteps: int) -> ArrayLike:
+
+def rk4(y0: ArrayLike, ydot: Callable, t0: np.floating, tf: np.floating,
+        nsteps: int) -> ArrayLike:
     """Propagate using 4th-order Runge-Kutta (RK4) method.
 
     Parameters

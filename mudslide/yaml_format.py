@@ -24,7 +24,8 @@ def _is_scalar(value: object) -> bool:
 SHORT_LIST_THRESHOLD = 5
 
 
-def _compact_represent_list(orig_represent_list):  # type: ignore[no-untyped-def]
+def _compact_represent_list(
+        orig_represent_list):  # type: ignore[no-untyped-def]
     """Create a compact list representer wrapping the given base representer."""
 
     def representer(dumper, data):  # type: ignore[no-untyped-def]

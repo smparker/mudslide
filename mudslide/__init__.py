@@ -26,4 +26,3 @@ from .ehrenfest import *
 from .afssh import *
 from .batch import *
 from .tracer import *
-
