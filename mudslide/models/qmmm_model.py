@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """QM/MM model using turbomole and OpenMM"""
 
+from __future__ import annotations
+
 from typing import Any
 
 import numpy as np
@@ -19,7 +21,8 @@ from .electronics import ElectronicModel_
 class QMMM(ElectronicModel_):
     """A QM/MM model"""
 
-    def __init__(self, qm_model, mm_model):
+    def __init__(self, qm_model: ElectronicModel_,
+                 mm_model: ElectronicModel_) -> None:
         self._qm_model = qm_model
         self._mm_model = mm_model
 
@@ -41,16 +44,17 @@ class QMMM(ElectronicModel_):
                 "QM atoms must have the same elements in the QM and MM models.")
         self.remove_qm_interactions(self._qm_atoms)
 
-    def check_qm_and_mm_regions(self, qm_atoms):
+    def check_qm_and_mm_regions(self, qm_atoms: list[int]) -> bool:
         """Check to make sure that the atoms labelled QM
         have at least the same elements listed in the QM model
         and the MM model.
         """
         qm_elements = self._qm_model.atom_types
+        assert self._mm_model.atom_types is not None
         qm_elements_in_mm = [self._mm_model.atom_types[i] for i in qm_atoms]
         return qm_elements == qm_elements_in_mm
 
-    def remove_qm_interactions(self, qm_atoms):
+    def remove_qm_interactions(self, qm_atoms: list[int]) -> None:
         """Remove bonded interactions of QM atoms from the MM model
 
         Args:
@@ -59,7 +63,7 @@ class QMMM(ElectronicModel_):
         num_bond_removed = 0
         num_angl_removed = 0
         num_tors_removed = 0
-        for force in self._mm_model._system.getForces():
+        for force in self._mm_model._system.getForces():  # type: ignore[attr-defined]
             if isinstance(force, openmm.HarmonicBondForce):
                 for n in range(force.getNumBonds()):
                     a, b, r, k = force.getBondParameters(n)
@@ -117,7 +121,7 @@ class QMMM(ElectronicModel_):
                 )
 
     def compute(self,
-                X: ArrayLike,
+                X: np.ndarray,
                 couplings: Any = None,
                 gradients: Any = None,
                 reference: Any = None) -> None:
@@ -128,9 +132,9 @@ class QMMM(ElectronicModel_):
         self._mm_model.compute(X)
 
         only_mm_xyz = X[self._ndof_qm:]
-        only_mm_charges = self._mm_model._charges[self._nqm:]
-        self._qm_model.control.add_point_charges(only_mm_xyz.reshape(-1, 3),
-                                                 only_mm_charges)
+        only_mm_charges = self._mm_model._charges[self._nqm:]  # type: ignore[attr-defined]
+        self._qm_model.control.add_point_charges(  # type: ignore[attr-defined]
+            only_mm_xyz.reshape(-1, 3), only_mm_charges)
         self._qm_model.compute(qmxyz)
 
         self._hamiltonian = self._mm_model.hamiltonian + self._qm_model.hamiltonian
@@ -143,10 +147,9 @@ class QMMM(ElectronicModel_):
         self._force[:, :self._ndof_qm] += qmforce
         self._forces_available = self._qm_model._forces_available
 
-        a, b, qm_on_mm_force = self._qm_model.control.read_point_charge_gradients(
-        )
+        a, b, qm_on_mm_force = self._qm_model.control.read_point_charge_gradients()  # type: ignore[attr-defined]
         self._force[:, self._ndof_qm:] -= qm_on_mm_force.reshape(1, -1)
 
-    def clone(self):
+    def clone(self) -> QMMM:
         """Return a copy of the QMMM object"""
         return QMMM(self._qm_model.clone(), self._mm_model.clone())

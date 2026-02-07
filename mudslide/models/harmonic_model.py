@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Harmonic model"""
 
+from __future__ import annotations
+
 from typing import Any, List
 import json
 import yaml
@@ -17,11 +19,11 @@ class HarmonicModel(ElectronicModel_):
     """
 
     def __init__(self,
-                 x0: ArrayLike,
+                 x0: np.ndarray,
                  E0: float,
-                 H0: ArrayLike,
-                 mass: ArrayLike,
-                 atom_types: List[str] = None,
+                 H0: np.ndarray,
+                 mass: np.ndarray,
+                 atom_types: List[str] | None = None,
                  ndims: int = 1,
                  nparticles: int = 1):
         """Constructor
@@ -55,7 +57,7 @@ class HarmonicModel(ElectronicModel_):
             raise ValueError("Incorrect shape of mass")
 
     def compute(self,
-                X: ArrayLike,
+                X: np.ndarray,
                 couplings: Any = None,
                 gradients: Any = None,
                 reference: Any = None) -> None:
@@ -80,7 +82,7 @@ class HarmonicModel(ElectronicModel_):
         self._forces_available = np.ones(self.nstates, dtype=bool)
 
     @classmethod
-    def from_dict(cls, model_dict: dict) -> "HarmonicModel":
+    def from_dict(cls, model_dict: dict) -> HarmonicModel:
         """Create a harmonic model from a dictionary
 
         Args:
@@ -104,7 +106,7 @@ class HarmonicModel(ElectronicModel_):
                    nparticles=nparticles)
 
     @classmethod
-    def from_file(cls, filename: str) -> "HarmonicModel":
+    def from_file(cls, filename: str) -> HarmonicModel:
         """Create a harmonic model from a file
 
         Args:

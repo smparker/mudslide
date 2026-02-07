@@ -6,13 +6,18 @@ including Velocity Verlet and Nose-Hoover Chain thermostats.
 """
 # pylint: disable=too-few-public-methods, too-many-arguments, invalid-name
 
-from typing import Any
+from __future__ import annotations
+
+from typing import Any, Dict, TYPE_CHECKING
 
 import numpy as np
 
 from .constants import fs_to_au, boltzmann, amu_to_au
 from .propagator import Propagator_
 from .util import remove_center_of_mass_motion, remove_angular_momentum
+
+if TYPE_CHECKING:
+    from .adiabatic_md import AdiabaticMD
 
 
 class VVPropagator(Propagator_):
@@ -117,8 +122,8 @@ class NoseHooverChainPropagator(Propagator_):
     """
 
     def __init__(self,
-                 temperature: np.float64,
-                 timescale: np.float64 = 1e2 * fs_to_au,
+                 temperature: float,
+                 timescale: float = 1e2 * fs_to_au,
                  ndof: int = 3,
                  nchains: int = 3,
                  nys: int = 3,
@@ -176,7 +181,7 @@ class NoseHooverChainPropagator(Propagator_):
         print(f"  Timescale: {timescale / fs_to_au:.2f} fs")
         print(f"  Thermostat mass: {self.nh_mass / amu_to_au} amu")
 
-    def nhc_step(self, velocity, mass, dt: float):
+    def nhc_step(self, velocity: np.ndarray, mass: np.ndarray, dt: float) -> float:
         """Move forward one step in the extended system variables.
 
         Parameters
@@ -320,7 +325,7 @@ class AdiabaticPropagator:
         If the propagator type is unknown or if the propagator options are invalid.
     """
 
-    def __new__(cls, model: Any, prop_options: Any = "vv") -> Propagator_:
+    def __new__(cls, model: Any, prop_options: Any = "vv") -> Propagator_:  # type: ignore[misc]
         """Create a new propagator instance.
 
         Parameters

@@ -4,6 +4,7 @@
 Extracts thermochemical quantities: enthalpy H(T), entropy contribution
 T*S, and Gibbs free energy G(T) in atomic units, kcal/mol, and kJ/mol.
 """
+from __future__ import annotations
 
 from .section_parser import ParseSection
 from .line_parser import SimpleLineParser
@@ -13,7 +14,7 @@ class ThermoParser(ParseSection):
     """Parser for the thermo module output (H, T*S, G at given temperature)."""
     name = "thermo"
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(r"T H E R M O", r"thermo\s*:\s*all done")
         self.parsers = [
             SimpleLineParser(r"(\S+)\s*VIB\.\s+\S+\s+\S+\s+\S+\s+\S+",

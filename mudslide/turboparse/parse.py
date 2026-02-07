@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 """CLI entry point for the turboparse command."""
+from __future__ import annotations
 
 import argparse
 import json
@@ -11,7 +12,7 @@ from ..version import get_version_info
 from ..yaml_format import CompactDumper
 
 
-def parse(argv=None):
+def parse(argv: list[str] | None = None) -> None:
     """CLI entry point for the turboparse command.
 
     Parses a Turbomole output file and prints the extracted data as

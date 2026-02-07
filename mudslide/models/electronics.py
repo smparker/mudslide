@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Handle storage and computation of electronic degrees of freedom"""
 
+from __future__ import annotations
+
 import copy as cp
 from typing import Tuple, Any, List
 
@@ -30,15 +32,15 @@ class ElectronicModel_:
         The number of particles in the system.
     atom_types : List[str]
         The types of atoms in the system.
-    _position : "ArrayLike"
+    _position : np.ndarray
         The position of the system.
-    _hamiltonian : "ArrayLike"
+    _hamiltonian : np.ndarray
         The electronic Hamiltonian.
-    _force : "ArrayLike"
+    _force : np.ndarray
         The force on the system.
-    _forces_available : "ArrayLike"
+    _forces_available : np.ndarray
         A boolean array indicating which forces are available.
-    _derivative_coupling : "ArrayLike"
+    _derivative_coupling : np.ndarray
         The derivative coupling matrix.
     """
 
@@ -48,8 +50,8 @@ class ElectronicModel_:
                  nstates: int = 0,
                  ndims: int = 1,
                  nparticles: int = 1,
-                 ndof: int = None,
-                 atom_types: List[str] = None):
+                 ndof: int | None = None,
+                 atom_types: List[str] | None = None):
         """Initialize the electronic model.
 
         Parameters
@@ -80,18 +82,19 @@ class ElectronicModel_:
         self._nstates = nstates
 
         self._representation = representation
-        self._position: "ArrayLike"
+        self._position: np.ndarray
         self._reference = reference
 
-        self._hamiltonian: "ArrayLike"
-        self._force: "ArrayLike"
-        self._forces_available: "ArrayLike" = np.zeros(self.nstates, dtype=bool)
-        self._derivative_coupling: "ArrayLike"
-        self._derivative_couplings_available: "ArrayLike" = np.zeros(
+        self._hamiltonian: np.ndarray
+        self.energies: np.ndarray
+        self._force: np.ndarray
+        self._forces_available: np.ndarray = np.zeros(self.nstates, dtype=bool)
+        self._derivative_coupling: np.ndarray
+        self._derivative_couplings_available: np.ndarray = np.zeros(
             (self.nstates, self.nstates), dtype=bool)
-        self._force_matrix: "ArrayLike" = np.array([])
+        self._force_matrix: np.ndarray
 
-        self.atom_types: List[str] = atom_types
+        self.atom_types: List[str] | None = atom_types
 
     @property
     def ndof(self) -> int:
@@ -149,23 +152,23 @@ class ElectronicModel_:
         return self._nstates
 
     @property
-    def hamiltonian(self) -> "ArrayLike":
+    def hamiltonian(self) -> np.ndarray:
         """Get the electronic Hamiltonian.
 
         Returns
         -------
-        ArrayLike
+        np.ndarray
             The electronic Hamiltonian matrix
         """
         return self._hamiltonian
 
-    def force(self, state: int = 0) -> "ArrayLike":
+    def force(self, state: int = 0) -> np.ndarray:
         """Return the force on a given state"""
         if not self._forces_available[state]:
             raise ValueError(f"Force on state {state} not available")
         return self._force[state, :]
 
-    def derivative_coupling(self, state1: int, state2: int) -> "ArrayLike":
+    def derivative_coupling(self, state1: int, state2: int) -> np.ndarray:
         """Return the derivative coupling between two states"""
         if not self._derivative_couplings_available[state1, state2]:
             raise ValueError(
@@ -174,7 +177,7 @@ class ElectronicModel_:
         return self._derivative_coupling[state1, state2, :]
 
     @property
-    def derivative_coupling_tensor(self) -> "ArrayLike":
+    def derivative_coupling_tensor(self) -> np.ndarray:
         """Return the derivative coupling tensor"""
         if not np.all(self._derivative_couplings_available):
             false_indices = np.argwhere(~self._derivative_couplings_available)
@@ -187,7 +190,7 @@ class ElectronicModel_:
             raise ValueError("All derivative couplings not available")
         return self._derivative_coupling
 
-    def NAC_matrix(self, velocity: "ArrayLike") -> "ArrayLike":
+    def NAC_matrix(self, velocity: np.ndarray) -> np.ndarray:
         """Return the non-adiabatic coupling matrix
         for a given velocity vector
         """
@@ -196,7 +199,7 @@ class ElectronicModel_:
         return np.einsum("ijk,k->ij", self._derivative_coupling, velocity)
 
     @property
-    def force_matrix(self) -> "ArrayLike":
+    def force_matrix(self) -> np.ndarray:
         """Return the force matrix"""
         if not np.all(self._forces_available):
             raise ValueError("Force matrix needs all forces")
@@ -269,7 +272,7 @@ class ElectronicModel_:
         )
 
     def compute(self,
-                X: "ArrayLike",
+                X: np.ndarray,
                 couplings: Any = None,
                 gradients: Any = None,
                 reference: Any = None) -> None:
@@ -299,10 +302,10 @@ class ElectronicModel_:
         raise NotImplementedError("ElectronicModel_ need a compute function")
 
     def update(self,
-               X: "ArrayLike",
+               X: np.ndarray,
                electronics: Any = None,
                couplings: Any = None,
-               gradients: Any = None) -> 'ElectronicModel_':
+               gradients: Any = None) -> ElectronicModel_:
         """
         Convenience function that copies the present object, updates the position,
         calls compute, and then returns the new object
@@ -320,7 +323,7 @@ class ElectronicModel_:
                     reference=reference)
         return out
 
-    def clone(self):
+    def clone(self) -> ElectronicModel_:
         """Create a copy of the electronics object that
         owns its own resources, including disk
 
@@ -334,7 +337,7 @@ class ElectronicModel_:
         """
         return cp.deepcopy(self)
 
-    def as_dict(self):
+    def as_dict(self) -> dict[str, Any]:
         """Return a dictionary representation of the model"""
         out = {
             "nstates": self.nstates,
@@ -357,9 +360,9 @@ class DiabaticModel_(ElectronicModel_):
 
     To derive from DiabaticModel_, the following functions must be implemented:
 
-    - def V(self, X: ArrayLike) -> ArrayLike
+    - def V(self, X: np.ndarray) -> ArrayLike
       V(x) should return an ndarray of shape (nstates, nstates)
-    - def dV(self, X: ArrayLike) -> ArrayLike
+    - def dV(self, X: np.ndarray) -> ArrayLike
       dV(x) should return an ndarray of shape (nstates, nstates, ndof)
     """
 
@@ -393,7 +396,7 @@ class DiabaticModel_(ElectronicModel_):
                                   ndof=ndof)
 
     def compute(self,
-                X: ArrayLike,
+                X: np.ndarray,
                 couplings: Any = None,
                 gradients: Any = None,
                 reference: Any = None) -> None:
@@ -464,8 +467,8 @@ class DiabaticModel_(ElectronicModel_):
 
     def _compute_basis_states(
             self,
-            V: ArrayLike,
-            reference: Any = None) -> Tuple[ArrayLike, ArrayLike]:
+            V: np.ndarray,
+            reference: Any = None) -> Tuple[np.ndarray, np.ndarray]:
         """Computes coefficient matrix for basis states
         if a diabatic representation is chosen, no transformation takes place
         :param V: potential matrix
@@ -488,7 +491,7 @@ class DiabaticModel_(ElectronicModel_):
         else:
             raise ValueError("Unrecognized run mode")
 
-    def _compute_force(self, dV: ArrayLike, coeff: ArrayLike) -> ArrayLike:
+    def _compute_force(self, dV: np.ndarray, coeff: np.ndarray) -> np.ndarray:
         r""":math:`-\langle \phi_{\mbox{state}} | \nabla H | \phi_{\mbox{state}} \rangle`"""
         nst = self.nstates
         ndof = self.ndof
@@ -500,14 +503,14 @@ class DiabaticModel_(ElectronicModel_):
             out[ist, :] += -np.einsum("i,ix->x", coeff[:, ist], half[:, ist, :])
         return out
 
-    def _compute_force_matrix(self, dV: ArrayLike,
-                              coeff: ArrayLike) -> ArrayLike:
+    def _compute_force_matrix(self, dV: np.ndarray,
+                              coeff: np.ndarray) -> np.ndarray:
         r"""returns :math:`F^\xi{ij} = \langle \phi_i | -\nabla_\xi H | \phi_j\rangle`"""
         out = -np.einsum("ip,xij,jq->pqx", coeff, dV, coeff)
         return out
 
-    def _compute_derivative_coupling(self, coeff: ArrayLike, dV: ArrayLike,
-                                     energies: ArrayLike) -> ArrayLike:
+    def _compute_derivative_coupling(self, coeff: np.ndarray, dV: np.ndarray,
+                                     energies: np.ndarray) -> np.ndarray:
         r"""Compute derivative couplings :math:`d^\alpha_{ij} = \langle \phi_i | \nabla_\alpha \phi_j \rangle`.
 
         Uses the Hellmann-Feynman relation to compute derivative couplings from
@@ -534,12 +537,12 @@ class DiabaticModel_(ElectronicModel_):
 
         return out
 
-    def V(self, X: ArrayLike) -> ArrayLike:
+    def V(self, X: np.ndarray) -> np.ndarray:
         """Return the diabatic potential matrix V(X)."""
         raise NotImplementedError(
             "Diabatic models must implement the function V")
 
-    def dV(self, X: ArrayLike) -> ArrayLike:
+    def dV(self, X: np.ndarray) -> np.ndarray:
         """Return the gradient of the diabatic potential matrix dV/dX."""
         raise NotImplementedError(
             "Diabatic models must implement the function dV")
@@ -590,7 +593,7 @@ class AdiabaticModel_(ElectronicModel_):
                                   ndof=ndof)
 
     def compute(self,
-                X: ArrayLike,
+                X: np.ndarray,
                 couplings: Any = None,
                 gradients: Any = None,
                 reference: Any = None) -> None:
@@ -660,10 +663,10 @@ class AdiabaticModel_(ElectronicModel_):
             self._derivative_couplings_available[i, j] = True
 
     def update(self,
-               X: ArrayLike,
+               X: np.ndarray,
                electronics: Any = None,
                couplings: Any = None,
-               gradients: Any = None) -> 'AdiabaticModel_':
+               gradients: Any = None) -> AdiabaticModel_:
         """Update the model with new position and electronic information.
 
         Parameters
@@ -694,8 +697,8 @@ class AdiabaticModel_(ElectronicModel_):
 
     def _compute_basis_states(
             self,
-            V: ArrayLike,
-            reference: Any = None) -> Tuple[ArrayLike, ArrayLike]:
+            V: np.ndarray,
+            reference: Any = None) -> Tuple[np.ndarray, np.ndarray]:
         """Computes coefficient matrix for basis states
         if a diabatic representation is chosen, no transformation takes place
         :param V: potential matrix
@@ -723,7 +726,7 @@ class AdiabaticModel_(ElectronicModel_):
         else:
             raise ValueError("Unrecognized representation")
 
-    def _compute_force(self, dV: ArrayLike, coeff: ArrayLike) -> ArrayLike:
+    def _compute_force(self, dV: np.ndarray, coeff: np.ndarray) -> np.ndarray:
         r""":math:`-\langle \phi_{\mbox{state}} | \nabla H | \phi_{\mbox{state}} \rangle`"""
         nst = self.nstates
         ndof = self.ndof
@@ -735,14 +738,14 @@ class AdiabaticModel_(ElectronicModel_):
             out[ist, :] += -np.einsum("i,ix->x", coeff[:, ist], half[:, ist, :])
         return out
 
-    def _compute_force_matrix(self, dV: ArrayLike,
-                              coeff: ArrayLike) -> ArrayLike:
+    def _compute_force_matrix(self, dV: np.ndarray,
+                              coeff: np.ndarray) -> np.ndarray:
         r"""returns :math:`F^\xi{ij} = \langle \phi_i | -\nabla_\xi H | \phi_j\rangle`"""
         out = -np.einsum("ip,xij,jq->pqx", coeff, dV, coeff)
         return out
 
-    def _compute_derivative_coupling(self, coeff: ArrayLike, dV: ArrayLike,
-                                     energies: ArrayLike) -> ArrayLike:
+    def _compute_derivative_coupling(self, coeff: np.ndarray, dV: np.ndarray,
+                                     energies: np.ndarray) -> np.ndarray:
         r"""Compute derivative couplings :math:`d^\alpha_{ij} = \langle \phi_i | \nabla_\alpha \phi_j \rangle`.
 
         Uses the Hellmann-Feynman relation to compute derivative couplings from
@@ -768,12 +771,12 @@ class AdiabaticModel_(ElectronicModel_):
 
         return out
 
-    def V(self, X: ArrayLike) -> ArrayLike:
+    def V(self, X: np.ndarray) -> np.ndarray:
         """Return the full electronic Hamiltonian matrix V(X)."""
         raise NotImplementedError(
             "Adiabatic models must implement the function V")
 
-    def dV(self, X: ArrayLike) -> ArrayLike:
+    def dV(self, X: np.ndarray) -> np.ndarray:
         """Return the gradient of the electronic Hamiltonian dV/dX."""
         raise NotImplementedError(
             "Adiabatic models must implement the function dV")

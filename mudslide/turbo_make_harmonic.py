@@ -3,6 +3,8 @@
 Extract harmonic parameters from a vibrational analysis
 """
 
+from __future__ import annotations
+
 from typing import Any
 import argparse
 import sys
@@ -15,7 +17,8 @@ from .units import amu
 from .version import get_version_info
 
 
-def add_make_harmonic_parser(subparsers):
+
+def add_make_harmonic_parser(subparsers: Any) -> None:
     """Add make_harmonic subparser to an argument parser.
 
     Parameters
@@ -35,7 +38,8 @@ def add_make_harmonic_parser(subparsers):
     parser.set_defaults(func=make_harmonic_main)
 
 
-def add_make_harmonic_arguments(parser):
+
+def add_make_harmonic_arguments(parser: Any) -> None:
     """Add command line arguments for make_harmonic command.
 
     Parameters
@@ -63,7 +67,8 @@ def add_make_harmonic_arguments(parser):
                         help="Where to print output")
 
 
-def main(argv=None):
+
+def main(argv: list[str] | None = None) -> None:
     """Parse command line arguments and run make_harmonic command.
 
     Parameters
@@ -90,7 +95,8 @@ def main(argv=None):
     make_harmonic_wrapper(args)
 
 
-def make_harmonic_wrapper(args):
+
+def make_harmonic_wrapper(args: Any) -> None:
     """Wrapper function for make_harmonic command.
 
     Parameters
@@ -106,7 +112,8 @@ def make_harmonic_wrapper(args):
     make_harmonic_main(args.control, args.model_dest, args.output)
 
 
-def make_harmonic_main(control: str, model_dest: str, output: Any):
+
+def make_harmonic_main(control: str, model_dest: str, output: Any) -> None:
     """Main function for make_harmonic command.
 
     Parameters

@@ -1,12 +1,17 @@
 # -*- coding: utf-8 -*-
 """Propagating Ehrenfest trajectories"""
 
-from typing import Any
+from __future__ import annotations
+
+from typing import Any, TYPE_CHECKING
 
 import numpy as np
 from numpy.typing import ArrayLike
 
 from .surface_hopping_md import SurfaceHoppingMD
+
+if TYPE_CHECKING:
+    from .models.electronics import ElectronicModel_
 
 
 class Ehrenfest(SurfaceHoppingMD):
@@ -34,7 +39,7 @@ class Ehrenfest(SurfaceHoppingMD):
         kwargs.setdefault("outcome_type", "populations")
         SurfaceHoppingMD.__init__(self, *args, **kwargs)
 
-    def needed_gradients(self):
+    def needed_gradients(self) -> list[int] | None:
         """Ehrenfest needs all forces since it sums over all states.
 
         Returns
@@ -45,7 +50,7 @@ class Ehrenfest(SurfaceHoppingMD):
         return None
 
     def potential_energy(self,
-                         electronics: 'ElectronicModel_' = None) -> np.floating:
+                         electronics: ElectronicModel_ | None = None) -> float:
         """Calculate Ehrenfest potential energy.
 
         The potential energy is computed as the trace of the product of the
@@ -63,9 +68,10 @@ class Ehrenfest(SurfaceHoppingMD):
         """
         if electronics is None:
             electronics = self.electronics
+        assert electronics is not None
         return np.real(np.trace(np.dot(self.rho, electronics.hamiltonian)))
 
-    def _force(self, electronics: 'ElectronicModel_' = None) -> ArrayLike:
+    def _force(self, electronics: ElectronicModel_ | None = None) -> np.ndarray:
         """Calculate Ehrenfest force.
 
         The force is computed as the trace of the product of the density matrix
@@ -83,14 +89,15 @@ class Ehrenfest(SurfaceHoppingMD):
         """
         if electronics is None:
             electronics = self.electronics
+        assert electronics is not None
 
         out = np.zeros([electronics.ndof])
         for i in range(electronics.nstates):
             out += np.real(self.rho[i, i]) * electronics.force(i)
         return out
 
-    def surface_hopping(self, last_electronics: 'ElectronicModel_',
-                        this_electronics: 'ElectronicModel_'):
+    def surface_hopping(self, last_electronics: ElectronicModel_,
+                        this_electronics: ElectronicModel_) -> None:
         """Handle surface hopping.
 
         In Ehrenfest dynamics, surface hopping is not performed as the electronic

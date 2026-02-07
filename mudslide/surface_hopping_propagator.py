@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Propagate FSSH trajectory"""
 
+from __future__ import annotations
+
 from typing import Any
 
 from .util import is_string
@@ -71,7 +73,7 @@ class SHPropagator:
     used in surface hopping molecular dynamics simulations.
     """
 
-    def __new__(cls, model: Any, prop_options: Any = "vv") -> 'SHPropagator':
+    def __new__(cls, model: Any, prop_options: Any = "vv") -> Propagator_:  # type: ignore[misc]
         """Create a new surface hopping propagator instance.
 
         Parameters

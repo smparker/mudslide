@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Helper module for printing model surface"""
 
+from __future__ import annotations
+
 from typing import Any, List
 
 import argparse
@@ -9,7 +11,7 @@ import sys
 import numpy as np
 from numpy.typing import ArrayLike
 
-from .models import scattering_models as models
+from .models.scattering_models import scattering_models as models
 from .version import get_version_info
 
 
@@ -78,7 +80,7 @@ def surface_wrapper(args: Any) -> None:
                  output=args.output)
 
 
-def main(argv=None) -> None:
+def main(argv: List[str] | None = None) -> None:
     """ Main function for surface
 
     Deprecated
@@ -99,11 +101,13 @@ def main(argv=None) -> None:
     surface_wrapper(args)
 
 
-def surface_main(model: str, scan_range: List[float], n: int,
-                 scan_dimension: int, x0: List[float], output: Any) -> None:
+
+def surface_main(model_name: str, scan_range: List[float], n: int,
+                 scan_dimension: int, x0: List[float],
+                 output: Any) -> None:
     """ Main function for surface"""
-    if model in models:
-        model = models[model]()
+    if model_name in models:
+        model = models[model_name]()
     else:
         raise ValueError(
             "Unknown model chosen"
@@ -135,7 +139,7 @@ def surface_main(model: str, scan_range: List[float], n: int,
         diabats = [f"V_{i}" for i in range(nstates)]
         energies = [f"E_{i}" for i in range(nstates)]
         dc = [f"d_{j}{i}" for i in range(nstates) for j in range(i)]
-        if model == "vibronic":
+        if model_name == "vibronic":
             forces = [f"dE_{i}" for i in range(ndof * 2)]
         else:
             forces = [f"dE_{i}" for i in range(nstates)]
@@ -143,7 +147,7 @@ def surface_main(model: str, scan_range: List[float], n: int,
         plist = xn + diabats + energies + dc + forces
         return "#" + " ".join(f"{x:>16s}" for x in plist)
 
-    def lineprinter(x: ArrayLike, model: Any, estates: Any) -> str:
+    def lineprinter(x: np.ndarray, model: Any, estates: Any) -> str:
         V = model.V(x)
         ndof = estates.ndof
         diabats = [V[i, i] for i in range(nstates)]  # type: List[float]

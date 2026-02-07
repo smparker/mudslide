@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """Code for running batches of trajectories."""
 
-from typing import Any, Iterator
+from __future__ import annotations
+
+from typing import Any, Iterator, Tuple, TYPE_CHECKING
 import logging
 import queue
 
@@ -11,6 +13,9 @@ from numpy.typing import ArrayLike
 from .constants import boltzmann
 from .tracer import TraceManager
 
+if TYPE_CHECKING:
+    from .models.electronics import ElectronicModel_
+
 logger = logging.getLogger("mudslide")
 
 
@@ -19,9 +24,9 @@ class TrajGenConst:
 
     Parameters
     ----------
-    position : ArrayLike
+    position : np.ndarray
         Initial position.
-    velocity : ArrayLike
+    velocity : np.ndarray
         Initial velocity.
     initial_state : Any
         Initial state specification, should be either an integer or "ground".
@@ -35,8 +40,8 @@ class TrajGenConst:
     """
 
     def __init__(self,
-                 position: ArrayLike,
-                 velocity: ArrayLike,
+                 position: np.ndarray,
+                 velocity: np.ndarray,
                  initial_state: Any,
                  seed: Any = None):
         self.position = position
@@ -69,13 +74,13 @@ class TrajGenNormal:
 
     Parameters
     ----------
-    position : ArrayLike
+    position : np.ndarray
         Center of normal distribution for position.
-    velocity : ArrayLike
+    velocity : np.ndarray
         Center of normal distribution for velocity.
     initial_state : Any
         Initial state designation.
-    sigma : ArrayLike
+    sigma : np.ndarray
         Standard deviation of distribution.
     seed : Any, optional
         Initial seed to give to trajectory, by default None.
@@ -84,10 +89,10 @@ class TrajGenNormal:
     """
 
     def __init__(self,
-                 position: ArrayLike,
-                 velocity: ArrayLike,
+                 position: np.ndarray,
+                 velocity: np.ndarray,
                  initial_state: Any,
-                 sigma: ArrayLike,
+                 sigma: np.ndarray,
                  seed: Any = None,
                  seed_traj: Any = None):
         self.position = position
@@ -98,12 +103,12 @@ class TrajGenNormal:
         self.seed_sequence = np.random.SeedSequence(seed)
         self.random_state = np.random.default_rng(seed_traj)
 
-    def vskip(self, vtest: float) -> bool:
+    def vskip(self, vtest: np.ndarray) -> bool:
         """Determine whether to skip given velocity.
 
         Parameters
         ----------
-        vtest : float
+        vtest : np.ndarray
             Velocity to test.
 
         Returns
@@ -111,7 +116,7 @@ class TrajGenNormal:
         bool
             True if velocity should be skipped, False otherwise.
         """
-        return np.any(vtest < 0.0)
+        return bool(np.any(vtest < 0.0))
 
     def __call__(self, nsamples: int) -> Iterator:
         """Generate initial conditions.
@@ -141,9 +146,9 @@ class TrajGenBoltzmann:
 
     Parameters
     ----------
-    position : ArrayLike
+    position : np.ndarray
         Initial positions.
-    mass : ArrayLike
+    mass : np.ndarray
         Array of particle masses.
     temperature : float
         Initial temperature to determine velocities.
@@ -158,8 +163,8 @@ class TrajGenBoltzmann:
     """
 
     def __init__(self,
-                 position: ArrayLike,
-                 mass: ArrayLike,
+                 position: np.ndarray,
+                 mass: np.ndarray,
                  temperature: float,
                  initial_state: Any,
                  scale: bool = True,
@@ -238,7 +243,7 @@ class BatchedTraj:
     batch_only_options = ["samples", "nprocs"]
 
     def __init__(self,
-                 model: 'ElectronicModel_',
+                 model: ElectronicModel_,
                  traj_gen: Any,
                  trajectory_type: Any,
                  tracemanager: Any = None,

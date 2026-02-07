@@ -5,7 +5,9 @@ This module provides functionality for propagating adiabatic molecular dynamics 
 similar to ground state molecular dynamics simulations.
 """
 
-from typing import Dict, Any
+from __future__ import annotations
+
+from typing import Dict, Any, TYPE_CHECKING
 import copy as cp
 
 import numpy as np
@@ -13,7 +15,11 @@ from numpy.typing import ArrayLike
 
 from .util import check_options
 from .constants import boltzmann
-from .tracer import Trace
+
+if TYPE_CHECKING:
+    from .models.electronics import ElectronicModel_
+from .tracer import Trace, Trace_
+from .propagator import Propagator_
 from .adiabatic_propagator import AdiabaticPropagator
 
 
@@ -32,8 +38,8 @@ class AdiabaticMD:
 
     def __init__(self,
                  model: Any,
-                 x0: ArrayLike,
-                 v0: ArrayLike,
+                 x0: np.ndarray,
+                 v0: np.ndarray,
                  tracer: Any = None,
                  queue: Any = None,
                  strict_option_check: bool = True,
@@ -44,9 +50,9 @@ class AdiabaticMD:
         ----------
         model : Any
             Model object defining problem.
-        x0 : ArrayLike
+        x0 : np.ndarray
             Initial position.
-        v0 : ArrayLike
+        v0 : np.ndarray
             Initial velocity.
         tracer : Any, optional
             Spawn from TraceManager to collect results.
@@ -116,8 +122,8 @@ class AdiabaticMD:
         self.max_time = float(options.get("max_time", 1e25))
         self.trace_every = int(options.get("trace_every", 1))
 
-        self.propagator = AdiabaticPropagator(self.model,
-                                              options.get("propagator", "VV"))
+        self.propagator: Propagator_ = AdiabaticPropagator(
+            self.model, options.get("propagator", "VV"))  # type: ignore[assignment]
 
         self.remove_com_every = int(options.get("remove_com_every", 0))
         self.remove_angular_momentum_every = int(
@@ -143,7 +149,7 @@ class AdiabaticMD:
         self.force_quit = False
 
     @classmethod
-    def restart(cls, model, log, **options) -> 'AdiabaticMD':
+    def restart(cls, model: Any, log: Any, **options: Any) -> 'AdiabaticMD':
         """Restart trajectory from log.
 
         Parameters
@@ -234,7 +240,7 @@ class AdiabaticMD:
         """
         return cp.deepcopy(self)
 
-    def random(self) -> np.float64:
+    def random(self) -> float:
         """Get random number for hopping decisions.
 
         Returns
@@ -254,9 +260,9 @@ class AdiabaticMD:
         """
         if self.duration["box_bounds"] is None:
             return False
-        return np.all(
-            self.duration["box_bounds"][0] < self.position) and np.all(
-                self.position < self.duration["box_bounds"][1])
+        return bool(
+            np.all(self.duration["box_bounds"][0] < self.position) and np.all(
+                self.position < self.duration["box_bounds"][1]))
 
     def duration_initialize(self, options: Dict[str, Any]) -> None:
         """Initialize variables related to continue_simulating.
@@ -323,6 +329,7 @@ class AdiabaticMD:
         Dict[str, Any]
             Dictionary with all data from current time step.
         """
+        assert self.electronics is not None
         out = {
             "time":
                 self.time,
@@ -331,11 +338,11 @@ class AdiabaticMD:
             "velocity":
                 self.velocity.tolist(),
             "potential":
-                self.potential_energy().item(),
+                float(self.potential_energy()),
             "kinetic":
-                self.kinetic_energy().item(),
+                float(self.kinetic_energy()),
             "energy":
-                self.total_energy().item(),
+                float(self.total_energy()),
             "temperature":
                 2 * self.kinetic_energy() / (boltzmann * self.model.ndof),
             "electronics":
@@ -354,7 +361,7 @@ class AdiabaticMD:
         return 0.5 * np.einsum('m,m,m', self.mass, self.velocity, self.velocity)
 
     def potential_energy(self,
-                         electronics: 'ElectronicModel_' = None) -> np.floating:
+                         electronics: ElectronicModel_ | None = None) -> float:
         """Calculate potential energy.
 
         Parameters
@@ -369,10 +376,11 @@ class AdiabaticMD:
         """
         if electronics is None:
             electronics = self.electronics
+        assert electronics is not None
         return electronics.energies[0]
 
     def total_energy(self,
-                     electronics: 'ElectronicModel_' = None) -> np.floating:
+                     electronics: ElectronicModel_ | None = None) -> float:
         """Calculate total energy (kinetic + potential).
 
         Parameters
@@ -389,7 +397,7 @@ class AdiabaticMD:
         kinetic = self.kinetic_energy()
         return potential + kinetic
 
-    def force(self, electronics: 'ElectronicModel_' = None) -> ArrayLike:
+    def force(self, electronics: ElectronicModel_ | None = None) -> np.ndarray:
         """Compute force on active state.
 
         Parameters
@@ -404,14 +412,15 @@ class AdiabaticMD:
         """
         if electronics is None:
             electronics = self.electronics
+        assert electronics is not None
         return electronics.force(0)
 
-    def mode_kinetic_energy(self, direction: ArrayLike) -> np.float64:
+    def mode_kinetic_energy(self, direction: np.ndarray) -> np.float64:
         """Calculate kinetic energy along given momentum mode.
 
         Parameters
         ----------
-        direction : ArrayLike
+        direction : np.ndarray
             Array defining direction.
 
         Returns
@@ -424,7 +433,7 @@ class AdiabaticMD:
         component = np.dot(u, momentum) * u
         return 0.5 * np.einsum('m,m,m', 1.0 / self.mass, component, component)
 
-    def simulate(self) -> 'Trace':
+    def simulate(self) -> Trace_:
         """Run the simulation.
 
         Returns

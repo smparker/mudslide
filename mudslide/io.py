@@ -1,10 +1,17 @@
 # -*- coding: utf-8 -*-
 """Util functions"""
 
+from __future__ import annotations
+
+from typing import Any, List, TextIO
+
 from .constants import bohr_to_angstrom
 
 
-def write_xyz(coords, atom_types, file, comment=""):
+def write_xyz(coords: Any,
+              atom_types: List[str],
+              file: TextIO,
+              comment: str = "") -> None:
     """Write coordinates to open file handle in XYZ format"""
     file.write(f"{len(coords)}\n")
     file.write(f"{comment}\n")
@@ -17,7 +24,7 @@ def write_xyz(coords, atom_types, file, comment=""):
         )
 
 
-def write_trajectory_xyz(model, trace, filename, every=1):
+def write_trajectory_xyz(model: Any, trace: Any, filename: str, every: int = 1) -> None:
     """Write trajectory to XYZ file"""
     natom, nd = model.dimensionality
     with open(filename, "w", encoding='utf-8') as file:

@@ -5,6 +5,9 @@ Used by the parsing framework to allow parsers to inspect the current
 line (via top()) without consuming it, since multiple parsers may need
 to test the same line.
 """
+from __future__ import annotations
+
+from typing import Iterable, Iterator
 
 
 class StackIterator:
@@ -21,28 +24,28 @@ class StackIterator:
             sets it to 0).
     """
 
-    def __init__(self, iterable, stacksize=1, current=-1):
+    def __init__(self, iterable: Iterable[str], stacksize: int = 1, current: int = -1) -> None:
         self.stacksize = stacksize
-        self.stack = []
+        self.stack: list[str] = []
         self.current = current
         self.iterable = iterable
-        self.it = self.iterable.__iter__()
+        self.it: Iterator[str] = self.iterable.__iter__()
 
-    def __iter__(self):
+    def __iter__(self) -> StackIterator:
         return self
 
-    def __next__(self):
+    def __next__(self) -> str:
         nx = next(self.it)
         self.add_to_stack(nx)
         self.current += 1
         return nx
 
-    def add_to_stack(self, item):
+    def add_to_stack(self, item: str) -> None:
         """Add item to the stack, evicting the oldest if at capacity."""
         self.stack.append(item)
         if len(self.stack) > self.stacksize:
             self.stack.pop(0)
 
-    def top(self):
+    def top(self) -> str:
         """Return the most recently yielded item without advancing."""
         return self.stack[-1]

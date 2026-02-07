@@ -4,14 +4,18 @@
 This setup is temporary until I fully remove the __main__ and replace it with this.
 """
 
+from __future__ import annotations
+
 import sys
 import argparse
+from typing import Any
 
 import mudslide
 from .version import get_version_info
 
 
-def mud_main(argv=None, file=sys.stdout) -> None:
+def mud_main(argv: list[str] | None = None,
+             file: Any = sys.stdout) -> None:
     """Mudslide CLI
     """
     parser = argparse.ArgumentParser(

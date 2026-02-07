@@ -1,14 +1,18 @@
 # -*- coding: utf-8 -*-
 """Utility functions for the mudslide package."""
 
+from __future__ import annotations
+
 import os
 import sys
+from typing import Any
 
 import numpy as np
 
 
+
 def find_unique_name(name: str,
-                     location="",
+                     location: str = "",
                      always_enumerate: bool = False,
                      ending: str = "") -> str:
     """Generate a unique filename by adding a suffix if the file already exists.
@@ -49,7 +53,8 @@ def find_unique_name(name: str,
     raise FileExistsError(f"No unique name could be made from base {name}.")
 
 
-def is_string(x) -> bool:
+
+def is_string(x: Any) -> bool:
     """Check if the input is a string type.
 
     Parameters

@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 """Propagators for ODEs from quantum dynamics"""
 
+from __future__ import annotations
+
 from typing import Callable
 import numpy as np
 from numpy.typing import ArrayLike
 
 
-def propagate_exponential(rho0: ArrayLike, H: ArrayLike,
-                          dt: np.floating) -> None:
+def propagate_exponential(rho0: np.ndarray, H: np.ndarray,
+                          dt: float) -> None:
     """Propagate density matrix in place using exponential of Hamiltonian.
 
     Propagates rho0 in place by exponentiating exp(-i H dt).
@@ -15,11 +17,11 @@ def propagate_exponential(rho0: ArrayLike, H: ArrayLike,
 
     Parameters
     ----------
-    rho0 : ArrayLike
+    rho0 : np.ndarray
         Initial density matrix
-    H : ArrayLike
+    H : np.ndarray
         Effective Hamiltonian for propagation
-    dt : np.floating
+    dt : float
         Time step for propagation
 
     Returns
@@ -35,9 +37,11 @@ def propagate_exponential(rho0: ArrayLike, H: ArrayLike,
     np.dot(U, np.dot(rho0, U.T.conj()), out=rho0)
 
 
-def propagate_interpolated_rk4(rho0: ArrayLike, h0: ArrayLike, tau0: ArrayLike,
-                               vel0: ArrayLike, h1: ArrayLike, tau1: ArrayLike,
-                               vel1: ArrayLike, dt: np.floating,
+
+def propagate_interpolated_rk4(rho0: np.ndarray, h0: np.ndarray,
+                               tau0: np.ndarray, vel0: np.ndarray,
+                               h1: np.ndarray, tau1: np.ndarray,
+                               vel1: np.ndarray, dt: float,
                                nsteps: int) -> None:
     """Propagate density matrix using linearly interpolated quantities and RK4.
 
@@ -47,21 +51,21 @@ def propagate_interpolated_rk4(rho0: ArrayLike, h0: ArrayLike, tau0: ArrayLike,
 
     Parameters
     ----------
-    rho0 : ArrayLike
+    rho0 : np.ndarray
         Input/output density matrix
-    h0 : ArrayLike
+    h0 : np.ndarray
         Hamiltonian from prior step
-    tau0 : ArrayLike
+    tau0 : np.ndarray
         Derivative coupling from prior step
-    vel0 : ArrayLike
+    vel0 : np.ndarray
         Velocity from prior step
-    h1 : ArrayLike
+    h1 : np.ndarray
         Hamiltonian from current step
-    tau1 : ArrayLike
+    tau1 : np.ndarray
         Derivative coupling from current step
-    vel1 : ArrayLike
+    vel1 : np.ndarray
         Velocity from current step
-    dt : np.floating
+    dt : float
         Time step
     nsteps : int
         Number of inner time steps
@@ -84,14 +88,14 @@ def propagate_interpolated_rk4(rho0: ArrayLike, h0: ArrayLike, tau0: ArrayLike,
     W11 = np.linalg.multi_dot([vecs.T, TV11, vecs])
     W01 = np.linalg.multi_dot([vecs.T, TV01, vecs])
 
-    def ydot(rho: ArrayLike, t: np.floating) -> ArrayLike:
+    def ydot(rho: np.ndarray, t: float) -> np.ndarray:
         """Calculate time derivative of density matrix.
 
         Parameters
         ----------
-        rho : ArrayLike
+        rho : np.ndarray
             Current density matrix
-        t : np.floating
+        t : float
             Current time point
 
         Returns
@@ -121,19 +125,20 @@ def propagate_interpolated_rk4(rho0: ArrayLike, h0: ArrayLike, tau0: ArrayLike,
     rho0[:, :] = np.linalg.multi_dot([vecs, tmprho * phases, vecs.T])
 
 
-def rk4(y0: ArrayLike, ydot: Callable, t0: np.floating, tf: np.floating,
-        nsteps: int) -> ArrayLike:
+
+def rk4(y0: np.ndarray, ydot: Callable, t0: float, tf: float,
+        nsteps: int) -> np.ndarray:
     """Propagate using 4th-order Runge-Kutta (RK4) method.
 
     Parameters
     ----------
-    y0 : ArrayLike
+    y0 : np.ndarray
         Initial state vector
     ydot : Callable
         Function that computes the time derivative of y
-    t0 : np.floating
+    t0 : float
         Initial time
-    tf : np.floating
+    tf : float
         Final time
     nsteps : int
         Number of integration steps

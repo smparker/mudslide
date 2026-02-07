@@ -5,17 +5,21 @@ LineParser is the base class; SimpleLineParser handles the common case
 of extracting named groups with type conversion, and BooleanLineParser
 stores True/False based on which of two patterns matches.
 """
+from __future__ import annotations
 
 import re
+from typing import Any, Callable
+
+from .stack_iterator import StackIterator
 
 
 class LineParser:
     """Base class to parse a single line and return results. Implementations require a process function"""
 
-    def __init__(self, reg):
-        self.reg = re.compile(reg)
+    def __init__(self, reg: str) -> None:
+        self.reg: re.Pattern[str] = re.compile(reg)
 
-    def parse(self, liter, out):
+    def parse(self, liter: StackIterator, out: dict[str, Any]) -> tuple[bool, bool]:
         """
         Parse line found at liter.top()
 
@@ -26,7 +30,7 @@ class LineParser:
             self.process(result, out)
         return bool(result), False
 
-    def process(self, m, out):
+    def process(self, m: re.Match[str], out: dict[str, Any]) -> None:
         """Process a regex match and store results in out. Must be overridden."""
         raise NotImplementedError("Subclasses must implement process()")
 
@@ -54,17 +58,17 @@ class SimpleLineParser(LineParser):
     """
 
     def __init__(self,
-                 reg,
-                 names,
-                 converter=None,
-                 types=None,
-                 title="",
-                 multi=False,
-                 first_only=False):
+                 reg: str,
+                 names: list[str],
+                 converter: Callable[..., Any] | None = None,
+                 types: list[Callable[..., Any]] | None = None,
+                 title: str = "",
+                 multi: bool = False,
+                 first_only: bool = False) -> None:
         super().__init__(reg)
         self.names = names
         if converter is None and types is None:
-            self.types = [str] * len(names)
+            self.types: list[Callable[..., Any]] = [str] * len(names)
         elif types is not None:
             self.types = types
         elif converter is not None:
@@ -76,7 +80,7 @@ class SimpleLineParser(LineParser):
         if self.multi and self.title == "":
             raise ValueError("SimpleLineParser in multi mode requires title")
 
-    def process(self, m, out):
+    def process(self, m: re.Match[str], out: dict[str, Any]) -> None:
         data = {
             n: self.types[i](m.group(i + 1)) for i, n in enumerate(self.names)
         }
@@ -109,14 +113,14 @@ class BooleanLineParser(LineParser):
         first_only: If True, only the first match is stored.
     """
 
-    def __init__(self, success_reg, failure_reg, key, first_only=False):
-        super().__init__(success_reg)  # satisfy base class; self.reg is unused
-        self.success_reg = re.compile(success_reg)
-        self.failure_reg = re.compile(failure_reg)
+    def __init__(self, success_reg: str, failure_reg: str, key: str,
+                 first_only: bool = False) -> None:
+        self.success_reg: re.Pattern[str] = re.compile(success_reg)
+        self.failure_reg: re.Pattern[str] = re.compile(failure_reg)
         self.key = key
         self.first_only = first_only
 
-    def parse(self, liter, out):
+    def parse(self, liter: StackIterator, out: dict[str, Any]) -> tuple[bool, bool]:
         """
         Parse line found at liter.top()
 
@@ -135,6 +139,6 @@ class BooleanLineParser(LineParser):
 
         return False, False
 
-    def process(self, m, out):  # m is a boolean for BooleanLineParser
+    def process(self, value: bool, out: dict[str, Any]) -> None:  # type: ignore[override]
         if not (self.first_only and self.key in out):
-            out[self.key] = m
+            out[self.key] = value

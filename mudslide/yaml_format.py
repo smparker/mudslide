@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 """YAML formatting utilities for compact output."""
 
+from __future__ import annotations
+
+from typing import Any
+
 import yaml
 
 
@@ -25,7 +29,7 @@ SHORT_LIST_THRESHOLD = 5
 
 
 def _compact_represent_list(
-        orig_represent_list):  # type: ignore[no-untyped-def]
+        orig_represent_list: Any) -> Any:  # type: ignore[no-untyped-def]
     """Create a compact list representer wrapping the given base representer."""
 
     def representer(dumper, data):  # type: ignore[no-untyped-def]

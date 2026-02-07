@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """Propagate FSSH trajectory"""
 
+from __future__ import annotations
+
 import copy as cp
-from typing import List, Dict, Union, Any
+from typing import List, Dict, Union, Any, TYPE_CHECKING
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -10,9 +12,13 @@ from numpy.typing import ArrayLike
 from .util import check_options
 from .constants import boltzmann
 from .propagation import propagate_exponential, propagate_interpolated_rk4
-from .tracer import Trace
+from .tracer import Trace, Trace_
 from .math import poisson_prob_scale
+from .propagator import Propagator_
 from .surface_hopping_propagator import SHPropagator
+
+if TYPE_CHECKING:
+    from .models.electronics import ElectronicModel_
 
 
 class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
@@ -35,8 +41,8 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
     def __init__(self,
                  model: Any,
                  x0: np.ndarray,
-                 v0: ArrayLike,
-                 rho0: Union[ArrayLike, int, str],
+                 v0: np.ndarray,
+                 rho0: Union[np.ndarray, int, str],
                  tracer: Any = "default",
                  queue: Any = None,
                  strict_option_check: bool = True,
@@ -47,11 +53,11 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
         ----------
         model : Any
             Model object defining problem
-        x0 : ArrayLike
+        x0 : np.ndarray
             Initial position
-        v0 : ArrayLike
+        v0 : np.ndarray
             Initial velocity
-        rho0 : ArrayLike, int, or str
+        rho0 : np.ndarray, int, or str
             Initial density matrix or state index. If an integer, populates a single state.
             If a matrix, populates a density matrix (requires state0 for active state).
         tracer : Any, optional
@@ -134,7 +140,7 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
             self.last_velocity[:] = options["last_velocity"]
         if np.isscalar(rho0):
             try:
-                state = int(rho0)
+                state = int(rho0)  # type: ignore[arg-type]
                 self.rho = np.zeros([model.nstates, model.nstates],
                                     dtype=np.complex128)
                 self.rho[state, state] = 1.0
@@ -172,8 +178,8 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
         if "dt" not in options:
             raise KeyError("dt option is required for SurfaceHoppingMD")
         self.dt = float(options["dt"])
-        self.propagator = SHPropagator(self.model,
-                                       options.get("propagator", "vv"))
+        self.propagator: Propagator_ = SHPropagator(  # type: ignore[assignment]
+            self.model, options.get("propagator", "vv"))
 
         self.outcome_type = options.get("outcome_type", "state")
 
@@ -182,8 +188,8 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
             else np.random.SeedSequence(ss)
         self.random_state = np.random.default_rng(self.seed_sequence)
 
-        self.electronics = options.get("electronics", None)
-        self.last_electronics = options.get("last_electronics", None)
+        self.electronics: ElectronicModel_ | None = options.get("electronics", None)
+        self.last_electronics: ElectronicModel_ | None = options.get("last_electronics", None)
         self.hopping = 0.0
 
         self.electronic_integration = options.get("electronic_integration",
@@ -233,7 +239,7 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
                 self.zeta = -np.log(1.0 - self.zeta)
 
     @classmethod
-    def restart(cls, model, log, **options) -> 'SurfaceHoppingMD':
+    def restart(cls, model: Any, log: Any, **options: Any) -> 'SurfaceHoppingMD':
         """Restart a simulation from a previous trajectory log.
 
         Parameters
@@ -328,7 +334,7 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
         """
         return cp.deepcopy(self)
 
-    def random(self) -> np.float64:
+    def random(self) -> float:
         """Get random number for hopping decisions.
 
         Returns
@@ -348,9 +354,9 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
         """
         if self.duration["box_bounds"] is None:
             return False
-        return np.all(
-            self.duration["box_bounds"][0] < self.position) and np.all(
-                self.position < self.duration["box_bounds"][1])
+        return bool(
+            np.all(self.duration["box_bounds"][0] < self.position) and np.all(
+                self.position < self.duration["box_bounds"][1]))
 
     def duration_initialize(self, options: Dict[str, Any]) -> None:
         """Initialize variables related to continue_simulating.
@@ -416,6 +422,7 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
         Dict[str, Any]
             Dictionary with all data from current time step
         """
+        assert self.electronics is not None
         out = {
             "time":
                 float(self.time),
@@ -458,7 +465,8 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
         return 0.5 * np.sum(self.mass * self.velocity**2)
 
     def potential_energy(self,
-                         electronics: 'ElectronicModel_' = None) -> np.floating:
+                         electronics: ElectronicModel_ | None = None
+                        ) -> float:
         """Calculate potential energy.
 
         Parameters
@@ -473,10 +481,12 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
         """
         if electronics is None:
             electronics = self.electronics
+        assert electronics is not None
         return electronics.hamiltonian[self.state, self.state]
 
     def total_energy(self,
-                     electronics: 'ElectronicModel_' = None) -> np.floating:
+                     electronics: ElectronicModel_ | None = None
+                    ) -> float:
         """Calculate total energy (kinetic + potential).
 
         Parameters
@@ -493,7 +503,7 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
         kinetic = self.kinetic_energy()
         return potential + kinetic
 
-    def _force(self, electronics: 'ElectronicModel_' = None) -> ArrayLike:
+    def _force(self, electronics: ElectronicModel_ | None = None) -> np.ndarray:
         """Compute force on active state.
 
         Parameters
@@ -508,21 +518,22 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
         """
         if electronics is None:
             electronics = self.electronics
+        assert electronics is not None
         return electronics.force(self.state)
 
-    def needed_gradients(self):
+    def needed_gradients(self) -> list[int] | None:
         """States whose forces are needed during normal propagation.
 
         Returns
         -------
-        list of int, or None
+        list[int] | None
             List of state indices for which gradients are needed.
             None means all states are needed.
             Standard FSSH only needs the active state gradient.
         """
         return [self.state]
 
-    def needed_couplings(self):
+    def needed_couplings(self) -> list[tuple[int, int]] | None:
         """Coupling pairs needed during normal propagation.
 
         Returns
@@ -534,15 +545,15 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
         return None
 
     def NAC_matrix(self,
-                   electronics: 'ElectronicModel_' = None,
-                   velocity: ArrayLike = None) -> ArrayLike:
+                   electronics: ElectronicModel_ | None = None,
+                   velocity: np.ndarray | None = None) -> np.ndarray:
         """Calculate nonadiabatic coupling matrix.
 
         Parameters
         ----------
         electronics : ElectronicModel, optional
             electronic states from current step, by default None
-        velocity : ArrayLike, optional
+        velocity : np.ndarray, optional
             Velocity used to compute NAC, by default None
 
         Returns
@@ -553,14 +564,15 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
         velo = velocity if velocity is not None else self.velocity
         if electronics is None:
             electronics = self.electronics
+        assert electronics is not None
         return electronics.NAC_matrix(velo)
 
-    def mode_kinetic_energy(self, direction: ArrayLike) -> np.float64:
+    def mode_kinetic_energy(self, direction: np.ndarray) -> np.float64:
         """Calculate kinetic energy along given momentum mode.
 
         Parameters
         ----------
-        direction : ArrayLike
+        direction : np.ndarray
             Numpy array defining direction
 
         Returns
@@ -588,12 +600,12 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
             return self.zeta_list.pop(0)
         return self.random()
 
-    def hop_allowed(self, direction: ArrayLike, dE: float) -> bool:
+    def hop_allowed(self, direction: np.ndarray, dE: float) -> bool:
         """Determine if a hop with given rescale direction and energy change is allowed.
 
         Parameters
         ----------
-        direction : ArrayLike
+        direction : np.ndarray
             Momentum unit vector
         dE : float
             Change in energy such that Enew = Eold + dE
@@ -615,7 +627,7 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
             self,
             source: int,
             target: int,
-            electronics: 'ElectronicModel_' = None) -> np.ndarray:
+            electronics: ElectronicModel_ | None = None) -> np.ndarray:
         """
         Return direction in which to rescale momentum.
 
@@ -634,17 +646,18 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
             Unit vector pointing in direction of rescale
         """
         elec_states = self.electronics if electronics is None else electronics
+        assert elec_states is not None
         out = elec_states.derivative_coupling(source, target)
         return np.copy(out)
 
-    def rescale_component(self, direction: ArrayLike,
-                          reduction: np.floating) -> None:
+    def rescale_component(self, direction: np.ndarray,
+                          reduction: float) -> None:
         """
         Update velocity by rescaling the *momentum* in the specified direction and amount.
 
         Parameters
         ----------
-        direction : ArrayLike
+        direction : np.ndarray
             The direction of the *momentum* to rescale
         reduction : np.floating
             How much kinetic energy should be damped
@@ -660,9 +673,9 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
         self.velocity += scal * M_inv * u
 
     def hamiltonian_propagator(self,
-                               last_electronics: 'ElectronicModel_',
-                               this_electronics: 'ElectronicModel_',
-                               velo: ArrayLike = None) -> np.ndarray:
+                               last_electronics: ElectronicModel_,
+                               this_electronics: ElectronicModel_,
+                               velo: np.ndarray | None = None) -> np.ndarray:
         """
         Compute the Hamiltonian used to propagate the electronic wavefunction.
 
@@ -672,7 +685,7 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
             Electronic states at previous time step
         this_electronics : ElectronicModel
             Electronic states at current time step
-        velo : ArrayLike, optional
+        velo : np.ndarray, optional
             Velocity at midpoint between current and previous time steps, by default None
 
         Returns
@@ -692,9 +705,9 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
         TV = 0.5 * np.einsum("ijx,x->ij", this_tau + last_tau, velo)
         return H - 1j * TV
 
-    def propagate_electronics(self, last_electronics: 'ElectronicModel_',
-                              this_electronics: 'ElectronicModel_',
-                              dt: np.floating) -> None:
+    def propagate_electronics(self, last_electronics: ElectronicModel_,
+                              this_electronics: ElectronicModel_,
+                              dt: float) -> None:
         """
         Propagate density matrix from t to t+dt.
 
@@ -731,8 +744,8 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
                 f"Unrecognized electronic integration option: {self.electronic_integration}. "
                 "Must be one of ['exp', 'linear-rk4']")
 
-    def surface_hopping(self, last_electronics: 'ElectronicModel_',
-                        this_electronics: 'ElectronicModel_'):
+    def surface_hopping(self, last_electronics: ElectronicModel_,
+                        this_electronics: ElectronicModel_) -> None:
         """
         Compute probability of hopping, generate random number, and perform hops.
 
@@ -759,6 +772,7 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
             old_state = self.state
             self.hop_to_it(hop_targets, this_electronics)
             if self.state != old_state:
+                assert self.electronics is not None
                 self.electronics.compute_additional(gradients=[self.state])
 
     def hopper(self, gkndt: np.ndarray) -> List[Dict[str, float]]:
@@ -784,6 +798,7 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
 
         # Forced hop check — short-circuit normal hopping logic
         if self.forced_hop_threshold is not None:
+            assert self.electronics is not None
             energies = np.diag(self.electronics.hamiltonian).real
             sorted_energies = np.sort(energies)
             gap = sorted_energies[1] - sorted_energies[0]
@@ -825,7 +840,7 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
                                                   p=hop_choice)
 
                 # reset probabilities and random
-                self.prob_cum = 0.0
+                self.prob_cum = np.longdouble(0.0)
                 self.zeta = self.draw_new_zeta()
                 if self.hopping_method == "cumulative_integrated":
                     self.zeta = -np.log(1.0 - self.zeta)
@@ -859,7 +874,7 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
             else:
                 return []
 
-    def hop_update(self, hop_from, hop_to):  # pylint: disable=unused-argument
+    def hop_update(self, hop_from: int, hop_to: int) -> None:  # pylint: disable=unused-argument
         """
         Handle any extra operations that need to occur after a hop.
 
@@ -874,7 +889,7 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
 
     def hop_to_it(self,
                   hop_targets: List[Dict[str, Union[float, int]]],
-                  electronics: 'ElectronicModel_' = None) -> None:
+                  electronics: ElectronicModel_ | None = None) -> None:
         """
         Hop from the current active state to the given state, including rescaling the momentum.
 
@@ -888,6 +903,7 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
         hop_dict = hop_targets[0]
         hop_to = int(hop_dict["target"])
         elec_states = electronics if electronics is not None else self.electronics
+        assert elec_states is not None
         H = elec_states.hamiltonian
         new_potential, old_potential = H[hop_to, hop_to], H[self.state,
                                                             self.state]
@@ -915,7 +931,7 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
             },
                                      event_type="frustrated_hop")
 
-    def simulate(self) -> 'Trace':
+    def simulate(self) -> Trace_:
         """
         Run the surface hopping molecular dynamics simulation.
 

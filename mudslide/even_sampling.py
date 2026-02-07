@@ -4,14 +4,19 @@
 This module implements trajectory surface hopping with even sampling of phase space.
 """
 
+from __future__ import annotations
+
 from itertools import count
-from typing import Optional, List, Any, Dict, Union
+from typing import Optional, List, Any, Dict, Union, Iterator, TYPE_CHECKING
 import copy as cp
 import numpy as np
 from numpy.typing import ArrayLike
 
 from .integration import quadrature
 from .surface_hopping_md import SurfaceHoppingMD
+
+if TYPE_CHECKING:
+    from .models.electronics import ElectronicModel_
 
 # pylint: disable=no-member
 
@@ -170,10 +175,10 @@ class SpawnStack:
     def append_layer(self,
                      zetas: list,
                      dws: list,
-                     stack=None,
-                     node=None,
-                     nodes=None,
-                     adj_matrix=None):
+                     stack: list | None = None,
+                     node: int | None = None,
+                     nodes: Iterator[int] | None = None,
+                     adj_matrix: dict | None = None) -> None:
         """Append a layer to all leaves in the sample stack tree.
 
         A depth-first traversal of a sample_stack tree to append a layer to all leaves.
@@ -217,6 +222,7 @@ class SpawnStack:
             for i in range(l):
                 adj_matrix[1].append(next(nodes))
         else:
+            assert nodes is not None
             adj_matrix[node] = []
             for i in range(l):
                 adj_matrix[node].append(next(nodes))
@@ -239,7 +245,7 @@ class SpawnStack:
                     adj_matrix=adj_matrix,
                 )
 
-    def unpack(self, zeta_list, dw_list, stack=None, depth=0):
+    def unpack(self, zeta_list: list, dw_list: list, stack: list | dict | None = None, depth: int = 0) -> None:
         """Recursively unpack a sample stack.
 
         Fills in the zeta_list and dw_list with flattened lists of zeta values
@@ -272,7 +278,7 @@ class SpawnStack:
                             stack["children"],
                             depth=depth + 1)
 
-    def unravel(self):
+    def unravel(self) -> list:
         """Unravel the sample stack into points and weights.
 
         Calls unpack to recursively unpack a sample_stack and then unravels the list
@@ -284,8 +290,8 @@ class SpawnStack:
             List of tuples containing (points, weights) where points is a tuple of
             coordinates and weights is the product of weights at those coordinates.
         """
-        zetas = []
-        dws = []
+        zetas: list[Any] = []
+        dws: list[Any] = []
         self.unpack(zeta_list=zetas, dw_list=dws)
 
         dim_list = []
@@ -293,8 +299,8 @@ class SpawnStack:
             dim_list.append(tpl[0])
         dim = max(dim_list) + 1
         main_list = []
-        coords = []
-        weights = []
+        coords: list[Any] = []
+        weights: list[Any] = []
         last_depth = 0
         for i, tpl in enumerate(zetas):
             # When we recurse back up in depth, remove num_to_pop items from coords/weights.
@@ -336,7 +342,7 @@ class SpawnStack:
         weight: float = 1.0,
         method: str = "gl",
         mcsamples: int = 1,
-        random_state: Optional[np.random.RandomState] = None,
+        random_state: Optional[np.random.RandomState | np.random.Generator] = None,
     ) -> "SpawnStack":
         """Create a SpawnStack from quadrature points.
 
@@ -374,7 +380,7 @@ class SpawnStack:
                 "dw": dw,
                 "children": cp.deepcopy(leaves),
                 "spawn_size": spawnsize
-            } for s, dw in zip(samples, weights)]  # type: ignore
+            } for s, dw in zip(samples, weights)]  # type: ignore[arg-type]
 
         return cls(forest, weight)
 
@@ -402,7 +408,7 @@ class EvenSamplingTrajectory(SurfaceHoppingMD):
     recognized_options = (SurfaceHoppingMD.recognized_options +
                           ["spawn_stack", "quadrature", "mcsamples"])
 
-    def __init__(self, *args, **options):
+    def __init__(self, *args: Any, **options: Any) -> None:
         """Initialize the EvenSamplingTrajectory.
 
         Parameters
@@ -478,12 +484,12 @@ class EvenSamplingTrajectory(SurfaceHoppingMD):
         )
         return out
 
-    def hopper(self, gkndt: ArrayLike) -> List[Dict[str, Union[int, float]]]:
+    def hopper(self, gkndt: np.ndarray) -> List[Dict[str, Union[int, float]]]:
         """Determine whether and where to hop based on probabilities.
 
         Parameters
         ----------
-        probs : ArrayLike
+        probs : np.ndarray
             Array of individual hopping probabilities.
 
         Returns
@@ -542,7 +548,7 @@ class EvenSamplingTrajectory(SurfaceHoppingMD):
 
     def hop_to_it(self,
                   hop_targets: List[Dict[str, Any]],
-                  electronics: 'ElectronicModel_' = None) -> None:
+                  electronics: ElectronicModel_ | None = None) -> None:
         """Handle hopping by spawning new trajectories.
 
         This method spawns new trajectories instead of enacting hops directly.
@@ -567,6 +573,7 @@ class EvenSamplingTrajectory(SurfaceHoppingMD):
                 SurfaceHoppingMD.hop_to_it(spawn, [hop],
                                            electronics=spawn.electronics)
                 if spawn.state != old_state:
+                    assert spawn.electronics is not None
                     spawn.electronics.compute_additional(
                         gradients=[spawn.state])
                 spawn.time += spawn.dt
@@ -579,10 +586,11 @@ class EvenSamplingTrajectory(SurfaceHoppingMD):
                 self.queue.put(spawn)
             self.update_weight(self.spawn_stack.weight())
         else:
-            self.prob_cum = 0.0
+            self.prob_cum = np.longdouble(0.0)
             old_state = self.state
             SurfaceHoppingMD.hop_to_it(self,
                                        hop_targets,
                                        electronics=self.electronics)
             if self.state != old_state:
+                assert self.electronics is not None
                 self.electronics.compute_additional(gradients=[self.state])

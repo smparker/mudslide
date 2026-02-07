@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """ OpenMM interface for mudslide """
 
+from __future__ import annotations
+
 from typing import Any
 
 import numpy as np
@@ -23,7 +25,7 @@ except ImportError:
     OPENMM_INSTALLED = False
 
 
-def openmm_is_installed():
+def openmm_is_installed() -> bool:
     """Check if OpenMM is installed"""
     return OPENMM_INSTALLED
 
@@ -32,11 +34,11 @@ class OpenMM(ElectronicModel_):
     """OpenMM interface"""
 
     def __init__(self,
-                 pdb,
-                 ff,
-                 system,
+                 pdb: Any,
+                 ff: Any,
+                 system: Any,
                  platform_name: str = "Reference",
-                 properties: dict = None):
+                 properties: dict | None = None) -> None:
         """Initialize OpenMM interface"""
         super().__init__(representation="adiabatic",
                          nstates=1,
@@ -103,31 +105,31 @@ class OpenMM(ElectronicModel_):
         self.mass *= amu_to_au
         self.energies = np.zeros([1], dtype=np.float64)
 
-    def _convert_au_position_to_openmm(self, xyz):
+    def _convert_au_position_to_openmm(self, xyz: np.ndarray) -> Any:
         """Convert position from bohr to nanometer using OpenMM units"""
         nm = openmm.unit.nanometer
         return (xyz.reshape(-1, 3) * bohr_to_angstrom * 0.1) * nm
 
-    def _convert_openmm_position_to_au(self, xyz):
+    def _convert_openmm_position_to_au(self, xyz: Any) -> np.ndarray:
         """Convert position from nanometer to bohr using OpenMM units"""
         nm = openmm.unit.nanometer
         return np.array(xyz / nm).reshape(-1) * (10.0 / bohr_to_angstrom)
 
-    def _convert_openmm_force_to_au(self, force):
+    def _convert_openmm_force_to_au(self, force: Any) -> np.ndarray:
         kjmol = openmm.unit.kilojoules_per_mole
         nm = openmm.unit.nanometer
         return np.array(force * nm / kjmol).reshape(
             1, -1) / Hartree_to_kJmol * 0.1 * bohr_to_angstrom
 
-    def _convert_energy_to_au(self, energy):
+    def _convert_energy_to_au(self, energy: Any) -> float:
         kjmol = openmm.unit.kilojoules_per_mole
         return energy / kjmol / Hartree_to_kJmol
 
     def compute(self,
-                X: ArrayLike,
+                X: np.ndarray,
                 couplings: Any = None,
                 gradients: Any = None,
-                reference: Any = None):
+                reference: Any = None) -> None:
         """Compute energy and forces"""
         self._position = X
         xyz = self._convert_au_position_to_openmm(X)

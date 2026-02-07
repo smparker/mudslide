@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 """CLI for collecting data from a trajectory"""
 
+from __future__ import annotations
+
+from typing import Any
+
 from .tracer import YAMLTrace
 
 legend = {
@@ -19,7 +23,7 @@ legend_format = {
 }
 
 
-def add_collect_parser(subparsers) -> None:
+def add_collect_parser(subparsers: Any) -> None:
     """
     Add a parser for the collect command to the subparsers
 
@@ -53,7 +57,7 @@ def collect(logname: str, keys: str = "tkpea") -> None:
                   file=f)
 
 
-def collect_wrapper(args) -> None:
+def collect_wrapper(args: Any) -> None:
     """
     Wrapper for collect
     """

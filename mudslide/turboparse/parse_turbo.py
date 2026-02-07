@@ -5,6 +5,9 @@ Provides parse_turbo(), which reads a Turbomole output file (or any
 iterable of lines) and returns a nested dict of parsed data organized
 by Turbomole module (ridft, dscf, egrad, escf, freeh, etc.).
 """
+from __future__ import annotations
+
+from typing import Any, Iterable
 
 from .stack_iterator import StackIterator
 from .section_parser import ParseSection
@@ -22,7 +25,7 @@ class TurboParser(ParseSection):
     """
     name = ""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(r".*", r"a^")
         self.parsers = [
             RIDFTParser(),
@@ -36,7 +39,7 @@ class TurboParser(ParseSection):
         ]
 
 
-def parse_turbo(iterable):
+def parse_turbo(iterable: Iterable[str]) -> dict[str, Any]:
     """Parse a Turbomole output file and return structured data.
 
     Args:
@@ -52,7 +55,7 @@ def parse_turbo(iterable):
     liter = StackIterator(iterable)
     parser = TurboParser()
 
-    out = {}
+    out: dict[str, Any] = {}
     try:
         next(liter)
         while True:

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Code for the mudslide runtime"""
 
-from __future__ import print_function, division
+from __future__ import annotations
 
 import argparse as ap
 import pickle
@@ -36,7 +36,7 @@ methods = {
 }
 
 
-def main(argv=None, file=sys.stdout) -> None:
+def main(argv: list[str] | None = None, file: Any = sys.stdout) -> None:
     """CLI entry point for running scattering model surface hopping simulations."""
     parser = ap.ArgumentParser(description="Mudslide test driver",
                                epilog=get_version_info(),
@@ -211,7 +211,7 @@ def main(argv=None, file=sys.stdout) -> None:
                 "Warning! Published option chosen but no available bounds! Using inputs.",
                 file=sys.stderr)
 
-    kpoints = []
+    kpoints: np.ndarray
     if args.kspacing == "linear":
         kpoints = np.linspace(min_k, max_k, nk)
     elif args.kspacing == "log":
@@ -293,7 +293,7 @@ def main(argv=None, file=sys.stdout) -> None:
             for f in fils:
                 f.close()
         elif args.output in ("averaged", "pickle"):
-            print(f"{k:12.6f} {' '.join(f'{x:12.6f}' for x in np.nditer(outcomes))}",
+            print(f"{k:12.6f} {' '.join(f'{float(x):12.6f}' for x in outcomes.flat)}",
                   file=file)
             if args.output == "pickle":  # save results for later processing
                 all_results.append((k, results))

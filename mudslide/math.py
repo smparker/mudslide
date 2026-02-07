@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Math helper functions for molecular dynamics simulations."""
 
+from __future__ import annotations
+
 from collections import deque
 import warnings
 import numpy as np
@@ -11,12 +13,12 @@ from .util import remove_center_of_mass_motion, remove_angular_momentum
 from .constants import boltzmann
 
 
-def poisson_prob_scale(x: ArrayLike):
+def poisson_prob_scale(x: np.ndarray) -> np.ndarray:
     """Compute (1 - exp(-x))/x for scaling Poisson probabilities.
 
     Parameters
     ----------
-    x : ArrayLike
+    x : np.ndarray
         Input array of values.
 
     Returns
@@ -33,25 +35,25 @@ def poisson_prob_scale(x: ArrayLike):
     return out
 
 
-def boltzmann_velocities(mass,
-                         temperature,
-                         remove_translation=True,
-                         coords=None,
-                         remove_rotation=None,
-                         scale=True,
-                         seed=None):
+def boltzmann_velocities(mass: np.ndarray,
+                         temperature: float,
+                         remove_translation: bool = True,
+                         coords: np.ndarray | None = None,
+                         remove_rotation: bool | None = None,
+                         scale: bool = True,
+                         seed: int | None = None) -> np.ndarray:
     """Generate random velocities according to the Boltzmann distribution.
 
     Parameters
     ----------
-    mass : ArrayLike
+    mass : np.ndarray
         Array of particle masses.
     temperature : float
         Target temperature for the velocity distribution.
     remove_translation : bool, optional
         Whether to remove center of mass translation from velocities.
         Default is True.
-    coords : ArrayLike or None, optional
+    coords : np.ndarray or None, optional
         Array of particle coordinates. Required if removing rotation.
         Default is None.
     remove_rotation : bool or None, optional
@@ -92,6 +94,7 @@ def boltzmann_velocities(mass,
     if remove_rotation:
         v3 = v.reshape((-1, 3))
         M = mass.reshape((-1, 3))[:, 0]
+        assert coords is not None
         coords3 = coords.reshape((-1, 3))
 
         v3_am = remove_angular_momentum(v3, M, coords3)
@@ -132,7 +135,7 @@ class RollingAverage:
         The current sum of all values in the window.
     """
 
-    def __init__(self, window_size=50):
+    def __init__(self, window_size: int = 50) -> None:
         """Initialize the RollingAverage calculator.
 
         Parameters
@@ -142,10 +145,10 @@ class RollingAverage:
             Default is 50.
         """
         self.window_size = window_size
-        self.values = deque(maxlen=window_size)
+        self.values: deque[float] = deque(maxlen=window_size)
         self.sum = 0.0
 
-    def insert(self, value):
+    def insert(self, value: float) -> None:
         """Add a new value to the rolling average.
 
         If the window is full, the oldest value is automatically removed.
@@ -163,7 +166,7 @@ class RollingAverage:
         self.values.append(value)
         self.sum += value
 
-    def get_average(self):
+    def get_average(self) -> float:
         """Calculate and return the current rolling average.
 
         Returns
@@ -175,7 +178,7 @@ class RollingAverage:
             return 0.0
         return self.sum / len(self.values)
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the current number of values in the window.
 
         Returns
