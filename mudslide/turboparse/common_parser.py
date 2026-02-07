@@ -1,10 +1,16 @@
 #!/usr/bin/env python
+"""Parsers for data common across multiple Turbomole modules.
+
+Includes parsers for basis set information, DFT settings, ground state
+properties, cartesian gradients, and nonadiabatic coupling vectors.
+"""
 
 from .section_parser import ParseSection
 from .line_parser import LineParser, SimpleLineParser
 
 
 def fortran_float(x):
+    """Convert a Fortran-formatted float string (using D/d exponent) to Python float."""
     x = x.replace("D", "E")
     x = x.replace("d", "E")
     return float(x)
@@ -20,6 +26,7 @@ class CompParser(LineParser):
 
 
 class BasisParser(ParseSection):
+    """Parser for basis set information (atoms, primitives, contractions)."""
     name = "basis"
 
     def __init__(self):
@@ -45,6 +52,7 @@ class BasisParser(ParseSection):
 
 
 class DFTParser(ParseSection):
+    """Parser for DFT settings (grid size, weight derivatives)."""
     name = "dft"
 
     def __init__(self):
@@ -106,17 +114,20 @@ class VarLineParser(LineParser):
         self.title = title
         self.vars_type = vars_type
 
-    def process(self, match, out):
+    def process(self, m, out):
         if self.title not in out:
             out[self.title] = []
-        for group in match.groups():
+        for group in m.groups():
             if group is not None:
                 out[self.title].append(self.vars_type(group))
 
 
 class CoordParser(ParseSection):
-    """
-    Parser for regex for parsing gradients and NAC coupling.
+    """Parser for atom-indexed Cartesian vector data (gradients and NAC couplings).
+
+    Parses blocks of data formatted as atom labels followed by dx, dy, dz
+    components in Fortran notation. After parsing, the clean() method combines
+    the components into a single 'd/dR' list of [dx, dy, dz] per atom.
     """
     name = "regex"
 

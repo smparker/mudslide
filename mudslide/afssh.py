@@ -70,7 +70,7 @@ class AFSSHVVPropagator(Propagator_):
             traj.nsteps += 1
 
 
-class AFSSHPropagator(Propagator_):
+class AFSSHPropagator(Propagator_):  # pylint: disable=abstract-method
     """Surface Hopping propagator factory.
 
     This class serves as a factory for creating different types of propagators
@@ -107,9 +107,8 @@ class AFSSHPropagator(Propagator_):
         proptype = prop_options.get("type", "vv")
         if proptype.lower() == "vv":
             return AFSSHVVPropagator(**prop_options)
-        else:
-            raise ValueError(
-                f"Unrecognized surface hopping propagator type: {proptype}.")
+        raise ValueError(
+            f"Unrecognized surface hopping propagator type: {proptype}.")
 
 
 class AugmentedFSSH(SurfaceHoppingMD):
@@ -118,6 +117,10 @@ class AugmentedFSSH(SurfaceHoppingMD):
     Initial implementation based on original paper:
       Subotnik, Shenvi JCP 134, 024105 (2011); doi: 10.1063/1.3506779
     """
+
+    recognized_options = SurfaceHoppingMD.recognized_options + [
+        "augmented_integration"
+    ]
 
     def __init__(self, *args: Any, **options: Any):
         options[

@@ -1,4 +1,10 @@
 #!/usr/bin/env python
+"""Parser for Turbomole freeh (free enthalpy) module output.
+
+Extracts thermodynamic data including temperature, pressure, partition
+functions (translational, rotational, vibrational), chemical potential,
+energy, entropy, heat capacities (Cv, Cp), and enthalpy.
+"""
 
 import re
 
@@ -8,14 +14,15 @@ FLT = r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?"
 
 
 def try_to_fill_with_float(dict_obj, key, value):
-    """Try to fill a dict with a float, but do nothing if it fails."""
+    """Store value as float in dict_obj[key], silently ignoring conversion failures."""
     try:
         dict_obj[key] = float(value)
-    except:
+    except (ValueError, TypeError):
         pass
 
 
 class FreeHData(ParseSection):
+    """Parser for the thermodynamic data table within a freeh section."""
     name = ''
 
     start1st_re = re.compile(
@@ -123,6 +130,7 @@ class FreeHData(ParseSection):
 
 
 class FreeHParser(ParseSection):
+    """Parser for the freeh (free enthalpy) module output."""
     name = "freeh"
 
     def __init__(self):

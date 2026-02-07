@@ -99,9 +99,9 @@ class TullySimpleAvoidedCrossing(DiabaticModel_):
         out = np.array([[v11, v12], [v12, v22]], dtype=np.float64)
         return out
 
-    def dV(self, x: ArrayLike) -> ArrayLike:
+    def dV(self, X: ArrayLike) -> ArrayLike:
         """:math:`\\nabla V(x)`"""
-        xx = np.array(x, dtype=np.float64)
+        xx = np.array(X, dtype=np.float64)
         v11 = self.A * self.B * np.exp(-self.B * abs(xx))
         v22 = -v11
         v12 = -2.0 * self.C * self.D * xx * np.exp(-self.D * xx * xx)
@@ -149,9 +149,9 @@ class TullyDualAvoidedCrossing(DiabaticModel_):
         out = np.array([[v11, v12], [v12, v22]], dtype=np.float64)
         return out
 
-    def dV(self, x: ArrayLike) -> ArrayLike:
+    def dV(self, X: ArrayLike) -> ArrayLike:
         """:math:`\\nabla V(x)`"""
-        xx = np.array(x, dtype=np.float64)
+        xx = np.array(X, dtype=np.float64)
         v11 = np.zeros_like(xx)
         v22 = 2.0 * self.A * self.B * xx * np.exp(-self.B * xx * xx)
         v12 = -2.0 * self.C * self.D * xx * np.exp(-self.D * xx * xx)
@@ -203,9 +203,9 @@ class TullyExtendedCouplingReflection(DiabaticModel_):
         out = np.array([[v11, v12], [v12, v22]], dtype=np.float64)
         return out
 
-    def dV(self, x: ArrayLike) -> ArrayLike:
+    def dV(self, X: ArrayLike) -> ArrayLike:
         """:math:`\\nabla V(x)`"""
-        xx = np.array(x, dtype=np.float64)
+        xx = np.array(X, dtype=np.float64)
         v11 = np.zeros_like(xx)
         v22 = np.zeros_like(xx)
         v12 = self.B * self.C * np.exp(-self.C * np.abs(xx))
@@ -214,6 +214,7 @@ class TullyExtendedCouplingReflection(DiabaticModel_):
 
 
 class SuperExchange(DiabaticModel_):
+    """Three-state super-exchange model from Prezhdo's GFSH paper."""
 
     def __init__(self,
                  representation: str = "adiabatic",
@@ -237,8 +238,9 @@ class SuperExchange(DiabaticModel_):
         self.v23 = v23
         self.mass = np.array(mass, dtype=np.float64).reshape(self.ndof)
 
-    def V(self, x: ArrayLike) -> ArrayLike:
+    def V(self, X: ArrayLike) -> ArrayLike:
         """:math:`V(x)`"""
+        x = X
         if np.ndim(x) != 0:
             x = x[0]
         v12 = self.v12 * np.exp(-0.5 * x * x)
@@ -248,8 +250,9 @@ class SuperExchange(DiabaticModel_):
             [[self.v11, v12, 0.0], [v12, self.v22, v23], [0.0, v23, self.v33]],
             dtype=np.float64)
 
-    def dV(self, x: ArrayLike) -> ArrayLike:
+    def dV(self, X: ArrayLike) -> ArrayLike:
         """:math:`\\nabla V(x)`"""
+        x = X
         if np.ndim(x) != 0:
             x = x[0]
         v12 = -x * self.v12 * np.exp(-0.5 * x * x)
@@ -261,6 +264,7 @@ class SuperExchange(DiabaticModel_):
 
 
 class SubotnikModelX(DiabaticModel_):
+    """Three-state model X from Subotnik JPCA 2011 decoherence paper."""
 
     def __init__(self,
                  representation: str = "adiabatic",
@@ -282,8 +286,9 @@ class SubotnikModelX(DiabaticModel_):
         self.xp = float(xp)
         self.mass = np.array(mass, dtype=np.float64).reshape(self.ndof)
 
-    def V(self, x: ArrayLike) -> ArrayLike:
+    def V(self, X: ArrayLike) -> ArrayLike:
         """:math:`V(x)`"""
+        x = X
         if np.ndim(x) != 0:
             x = x[0]
         xx = np.array([x - self.xp, x, x + self.xp])
@@ -300,8 +305,9 @@ class SubotnikModelX(DiabaticModel_):
         return np.array([[v11, v12, v13], [v12, v22, v23], [v13, v23, v33]],
                         dtype=np.float64)
 
-    def dV(self, x: ArrayLike) -> ArrayLike:
+    def dV(self, X: ArrayLike) -> ArrayLike:
         """:math:`\\nabla V(x)`"""
+        x = X
         if np.ndim(x) != 0:
             x = x[0]
         xx = np.array([x - self.xp, x, x + self.xp])
@@ -322,6 +328,7 @@ class SubotnikModelX(DiabaticModel_):
 
 
 class SubotnikModelS(DiabaticModel_):
+    """Three-state model S from Subotnik JPCA 2011 decoherence paper."""
 
     def __init__(self,
                  representation: str = "adiabatic",
@@ -345,8 +352,9 @@ class SubotnikModelS(DiabaticModel_):
         self.xp = float(xp)
         self.mass = np.array(mass, dtype=np.float64).reshape(self.ndof)
 
-    def V(self, x: ArrayLike) -> ArrayLike:
+    def V(self, X: ArrayLike) -> ArrayLike:
         """:math:`V(x)`"""
+        x = X
         if np.ndim(x) != 0:
             x = x[0]
         xx = np.array([x - self.xp, x, x + self.xp])
@@ -363,8 +371,9 @@ class SubotnikModelS(DiabaticModel_):
         return np.array([[v11, v12, v13], [v12, v22, v23], [v13, v23, v33]],
                         dtype=np.float64)
 
-    def dV(self, x: ArrayLike) -> ArrayLike:
+    def dV(self, X: ArrayLike) -> ArrayLike:
         """:math:`\\nabla V(x)`"""
+        x = X
         if np.ndim(x) != 0:
             x = x[0]
         xx = np.array([x - self.xp, x, x + self.xp])
@@ -385,6 +394,7 @@ class SubotnikModelS(DiabaticModel_):
 
 
 class Subotnik2D(DiabaticModel_):
+    """Two-state, two-dimensional model from Subotnik JPCA 2011 decoherence paper."""
 
     def __init__(self,
                  representation: str = "adiabatic",
@@ -412,9 +422,9 @@ class Subotnik2D(DiabaticModel_):
         self.w = float(w)
         self.mass = np.array(mass, dtype=np.float64).reshape(self.ndof)
 
-    def V(self, r: ArrayLike) -> ArrayLike:
+    def V(self, X: ArrayLike) -> ArrayLike:
         """:math:`V(x)`"""
-        x, y = r[0], r[1]
+        x, y = X[0], X[1]
         v11 = -self.f * np.tanh(self.b * x)
         z = self.b * (x - 1.0) + self.w * np.cos(self.g * y + np.pi * 0.5)
         v22 = self.a * np.tanh(z) + 0.75 * self.a
@@ -422,9 +432,9 @@ class Subotnik2D(DiabaticModel_):
 
         return np.array([[v11, v12], [v12, v22]], dtype=np.float64)
 
-    def dV(self, r: ArrayLike) -> ArrayLike:
+    def dV(self, X: ArrayLike) -> ArrayLike:
         """:math:`\\nabla V(x)`"""
-        x, y = r[0], r[1]
+        x, y = X[0], X[1]
 
         z = self.b * (x - 1.0) + self.w * np.cos(self.g * y + np.pi * 0.5)
 
@@ -447,6 +457,7 @@ class Subotnik2D(DiabaticModel_):
 
 
 class ShinMetiu(AdiabaticModel_):
+    """Shin-Metiu model for proton-coupled electron transfer."""
 
     def __init__(self,
                  representation: str = "adiabatic",
@@ -487,10 +498,12 @@ class ShinMetiu(AdiabaticModel_):
                               dtype=np.float64)
 
     def soft_coulomb(self, r12: ArrayLike, gamma: np.floating) -> ArrayLike:
+        """Soft Coulomb potential using the error function."""
         abs_r12 = np.abs(r12)
         return erf(abs_r12 / gamma) / abs_r12
 
     def d_soft_coulomb(self, r12: ArrayLike, gamma: np.floating) -> ArrayLike:
+        """Derivative of the soft Coulomb potential."""
         abs_r12 = np.abs(r12)
         two_over_root_pi = 2.0 / np.sqrt(np.pi)
         out = r12 * erf(abs_r12/gamma) / (abs_r12**3) \
@@ -498,10 +511,12 @@ class ShinMetiu(AdiabaticModel_):
         return out
 
     def V_nuc(self, R: ArrayLike) -> ArrayLike:
+        """Nuclear repulsion potential."""
         v0 = 1.0 / np.abs(R - self.ion_left) + 1.0 / np.abs(R - self.ion_right)
         return v0
 
     def V_el(self, R: ArrayLike) -> ArrayLike:
+        """Electronic Hamiltonian matrix at nuclear position R."""
         rr = self.rr
 
         v_en = -self.soft_coulomb(rr - R, self.Rf)
@@ -521,6 +536,7 @@ class ShinMetiu(AdiabaticModel_):
         return H
 
     def dV_nuc(self, R: ArrayLike) -> ArrayLike:
+        """Derivative of nuclear repulsion potential."""
         LmR = np.abs(0.5 * self.L - R)
         LpR = np.abs(0.5 * self.L + R)
         dv0 = LmR / np.abs(LmR**3) - LpR / np.abs(LpR**3)
@@ -528,30 +544,30 @@ class ShinMetiu(AdiabaticModel_):
         return dv0
 
     def dV_el(self, R: ArrayLike) -> ArrayLike:
+        """Derivative of electronic Hamiltonian matrix."""
         rr = self.rr
         rR = R - rr
         dvv = self.d_soft_coulomb(rR, self.Rf)
         return np.diag(dvv)
 
-    def V(self, R: ArrayLike) -> ArrayLike:
+    def V(self, X: ArrayLike) -> ArrayLike:
         """:math:`V(x)`"""
-        return self.V_el(R) + self.V_nuc(R)
+        return self.V_el(X) + self.V_nuc(X)
 
-    def dV(self, R: ArrayLike) -> ArrayLike:
+    def dV(self, X: ArrayLike) -> ArrayLike:
         """:math:`\\nabla V(x)`"""
-        return (self.dV_el(R) + self.dV_nuc(R)).reshape(
+        return (self.dV_el(X) + self.dV_nuc(X)).reshape(
             [1, len(self.rr), len(self.rr)])
 
 
 class LinearVibronic(DiabaticModel_):
+    """Linear vibronic coupling model for conical intersections."""
 
     def __init__(
             self,
             representation: str = "adiabatic",
             reference: Any = None,
-            mass: float = [
-                243.6078782, 134.6412667, 99.93022402, 66.33593369, 3475.98736
-            ],
+            mass=None,
             E1: float = 8.5037,
             E2: float = 9.4523,
             lamb: float = 0.3289,
@@ -561,6 +577,8 @@ class LinearVibronic(DiabaticModel_):
             k2: float = np.array([-0.0393, 0.0463, 0.2877, -0.1352]),
             An: float = np.array([1.4823, -0.2191, 0.0525, -0.0118]),
     ):
+        if mass is None:
+            mass = [243.6078782, 134.6412667, 99.93022402, 66.33593369, 3475.98736]
         DiabaticModel_.__init__(self,
                                 representation=representation,
                                 reference=reference,
@@ -635,6 +653,7 @@ class LinearVibronic(DiabaticModel_):
 
 
 class SubotnikModelW(DiabaticModel_):
+    """N-state scattering model W from Subotnik and coworkers."""
 
     def __init__(self,
                  representation: str = "adiabatic",
@@ -678,6 +697,7 @@ class SubotnikModelW(DiabaticModel_):
 
 
 class SubotnikModelZ(DiabaticModel_):
+    """N-state scattering model Z from Subotnik and coworkers."""
 
     def __init__(self,
                  representation: str = "adiabatic",

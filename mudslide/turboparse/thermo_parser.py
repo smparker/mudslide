@@ -1,10 +1,16 @@
 #!/usr/bin/env python
+"""Parser for Turbomole thermo module output.
+
+Extracts thermochemical quantities: enthalpy H(T), entropy contribution
+T*S, and Gibbs free energy G(T) in atomic units, kcal/mol, and kJ/mol.
+"""
 
 from .section_parser import ParseSection
 from .line_parser import SimpleLineParser
 
 
 class ThermoParser(ParseSection):
+    """Parser for the thermo module output (H, T*S, G at given temperature)."""
     name = "thermo"
 
     def __init__(self):

@@ -3,10 +3,12 @@
 
 from __future__ import print_function, division
 
-import numpy as np
-
+import argparse as ap
 import pickle
 import sys
+from typing import Any
+
+import numpy as np
 
 from .surface_hopping_md import SurfaceHoppingMD
 from .even_sampling import EvenSamplingTrajectory
@@ -16,10 +18,6 @@ from .batch import TrajGenConst, TrajGenNormal, BatchedTraj
 from .tracer import TraceManager
 from .models import scattering_models as models
 from .version import __version__, get_version_info
-
-import argparse as ap
-
-from typing import Any
 
 # Add a method into this dictionary to register it with argparse
 methods = {
@@ -39,6 +37,7 @@ methods = {
 
 
 def main(argv=None, file=sys.stdout) -> None:
+    """CLI entry point for running scattering model surface hopping simulations."""
     parser = ap.ArgumentParser(description="Mudslide test driver",
                                epilog=get_version_info(),
                                formatter_class=ap.RawDescriptionHelpFormatter)
@@ -196,16 +195,16 @@ def main(argv=None, file=sys.stdout) -> None:
     nk = args.nk
     min_k, max_k = args.krange
 
-    if (args.published):  # hack spacing to resemble Tully's
-        if (args.model == "simple"):
+    if args.published:  # hack spacing to resemble Tully's
+        if args.model == "simple":
             min_k, max_k = 1.0, 35.0
-        elif (args.model == "dual"):
+        elif args.model == "dual":
             min_k, max_k = np.log10(np.sqrt(
                 2.0 * args.mass * np.exp(-4.0))), np.log10(
                     np.sqrt(2.0 * args.mass * np.exp(1.0)))
-        elif (args.model == "extended"):
+        elif args.model == "extended":
             min_k, max_k = 1.0, 35.0
-        elif (args.model == "super"):
+        elif args.model == "super":
             min_k, max_k = 0.5, 20.0
         else:
             print(
@@ -218,7 +217,7 @@ def main(argv=None, file=sys.stdout) -> None:
     elif args.kspacing == "log":
         kpoints = np.logspace(min_k, max_k, nk)
     else:
-        raise Exception("Unrecognized type of spacing")
+        raise ValueError("Unrecognized type of spacing")
 
     trajectory_type = methods[args.method]
 
@@ -229,11 +228,11 @@ def main(argv=None, file=sys.stdout) -> None:
 
     all_results = []
 
-    if (args.output == "averaged" or args.output == "pickle"):
+    if args.output in ("averaged", "pickle"):
         print("# momentum ", end='', file=file)
         for ist in range(model.nstates):
             for d in ["reflected", "transmitted"]:
-                print("%d_%s" % (ist, d), end=' ', file=file)
+                print(f"{ist}_{d}", end=' ', file=file)
         print(file=file)
 
     for k in kpoints:
@@ -269,11 +268,11 @@ def main(argv=None, file=sys.stdout) -> None:
         results = fssh.compute()
         outcomes = results.outcomes
 
-        if (args.output == "single"):
+        if args.output == "single":
             results.traces[0].print(file=file)
-        elif (args.output == "swarm"):
+        elif args.output == "swarm":
             maxsteps = max([len(t) for t in results.traces])
-            outfiles = ["state_%d.trace" % i for i in range(model.nstates)]
+            outfiles = [f"state_{i}.trace" for i in range(model.nstates)]
             fils = [open(o, "w") for o in outfiles]
             for i in range(maxsteps):
                 nswarm = [0 for x in fils]
@@ -288,24 +287,23 @@ def main(argv=None, file=sys.stdout) -> None:
 
                 for ist in range(model.nstates):
                     if nswarm[ist] == 0:
-                        print("%12.6f" % -9999999, file=fils[ist])
+                        print(f"{-9999999:12.6f}", file=fils[ist])
                     print(file=fils[ist])
                     print(file=fils[ist])
             for f in fils:
                 f.close()
-        elif (args.output == "averaged" or args.output == "pickle"):
-            print("%12.6f %s" %
-                  (k, " ".join(["%12.6f" % x for x in np.nditer(outcomes)])),
+        elif args.output in ("averaged", "pickle"):
+            print(f"{k:12.6f} {' '.join(f'{x:12.6f}' for x in np.nditer(outcomes))}",
                   file=file)
-            if (args.output == "pickle"):  # save results for later processing
+            if args.output == "pickle":  # save results for later processing
                 all_results.append((k, results))
-        elif (args.output == "hack"):
+        elif args.output == "hack":
             print("Hack something here, if you like.", file=file)
         else:
             print("Not printing results. This is probably not what you wanted!",
                   file=file)
 
-    if (len(all_results) > 0):
+    if len(all_results) > 0:
         pickle.dump(all_results, open(args.outfile, "wb"))
 
 

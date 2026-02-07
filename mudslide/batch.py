@@ -276,8 +276,8 @@ class BatchedTraj:
 
         if nprocs > 1:
             logger.warning(
-                'nprocs {} specified, but parallelism is not currently handled'.
-                format(nprocs))
+                f'nprocs {nprocs} specified, but parallelism is not currently handled'
+            )
 
         traj_queue: Any = queue.Queue()
         results_queue: Any = queue.Queue()

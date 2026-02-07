@@ -99,6 +99,5 @@ class SHPropagator:
         proptype = prop_options.get("type", "vv")
         if proptype.lower() == "vv":
             return SHVVPropagator(**prop_options)
-        else:
-            raise ValueError(
-                f"Unrecognized surface hopping propagator type: {proptype}.")
+        raise ValueError(
+            f"Unrecognized surface hopping propagator type: {proptype}.")

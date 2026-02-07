@@ -1,4 +1,10 @@
 #!/usr/bin/env python
+"""Parsers for Turbomole SCF and gradient module output.
+
+Handles output from ridft, dscf (SCF calculations) and rdgrad, grad
+(gradient calculations), extracting energies, convergence status,
+basis set info, and gradient data.
+"""
 
 from .section_parser import ParseSection
 from .line_parser import BooleanLineParser, SimpleLineParser
@@ -6,6 +12,7 @@ from .common_parser import BasisParser, DFTParser, GradientDataParser, GROUND_ST
 
 
 class SCFParser(ParseSection):
+    """Base parser for SCF module output (energy, convergence, basis, DFT settings)."""
 
     def __init__(self, head, tail):
         super().__init__(head, tail)
@@ -27,6 +34,7 @@ class SCFParser(ParseSection):
 
 
 class RIDFTParser(SCFParser):
+    """Parser for the ridft (RI-DFT SCF) module output."""
     name = 'ridft'
 
     def __init__(self):
@@ -34,6 +42,7 @@ class RIDFTParser(SCFParser):
 
 
 class DSCFParser(SCFParser):
+    """Parser for the dscf (conventional SCF) module output."""
     name = 'dscf'
 
     def __init__(self):

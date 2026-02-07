@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+"""CLI entry point for the turboparse command."""
 
 import argparse
 import json
@@ -11,6 +12,11 @@ from ..yaml_format import CompactDumper
 
 
 def parse(argv=None):
+    """CLI entry point for the turboparse command.
+
+    Parses a Turbomole output file and prints the extracted data as
+    JSON or YAML (default: YAML).
+    """
     ap = argparse.ArgumentParser(
         description=
         "Collects excited state information from an egrad run and prepares as JSON",

@@ -105,7 +105,7 @@ def surface_main(model: str, scan_range: List[float], n: int,
     if model in models:
         model = models[model]()
     else:
-        raise Exception(
+        raise ValueError(
             "Unknown model chosen"
         )  # the argument parser should prevent this throw from being possible
 
@@ -120,9 +120,9 @@ def surface_main(model: str, scan_range: List[float], n: int,
     if len(x0) != ndof:
         print(
             "Must provide reference vector of same length as the model problem")
-        raise Exception(
-            "Expected reference vector of length {}, but received {}".format(
-                ndof, len(x0)))
+        raise ValueError(
+            f"Expected reference vector of length {ndof}, but received {len(x0)}"
+        )
 
     xx = np.array(x0)
     xx[scan_dimension] = start
@@ -131,17 +131,17 @@ def surface_main(model: str, scan_range: List[float], n: int,
     elec = model.update(xx)
 
     def headprinter() -> str:
-        xn = ["x{:d}".format(i) for i in range(ndof)]
-        diabats = ["V_%1d" % i for i in range(nstates)]
-        energies = ["E_%1d" % i for i in range(nstates)]
-        dc = ["d_%1d%1d" % (j, i) for i in range(nstates) for j in range(i)]
+        xn = [f"x{i}" for i in range(ndof)]
+        diabats = [f"V_{i}" for i in range(nstates)]
+        energies = [f"E_{i}" for i in range(nstates)]
+        dc = [f"d_{j}{i}" for i in range(nstates) for j in range(i)]
         if model == "vibronic":
-            forces = ["dE_%1d" % i for i in range(ndof * 2)]
+            forces = [f"dE_{i}" for i in range(ndof * 2)]
         else:
-            forces = ["dE_%1d" % i for i in range(nstates)]
+            forces = [f"dE_{i}" for i in range(nstates)]
 
         plist = xn + diabats + energies + dc + forces
-        return "#" + " ".join(["%16s" % x for x in plist])
+        return "#" + " ".join(f"{x:>16s}" for x in plist)
 
     def lineprinter(x: ArrayLike, model: Any, estates: Any) -> str:
         V = model.V(x)
@@ -162,7 +162,7 @@ def surface_main(model: str, scan_range: List[float], n: int,
         plist = list(
             x.flatten()) + diabats + energies + dc + forces  # type: List[float]
 
-        return " ".join(["{:16.10f}".format(x) for x in plist])
+        return " ".join(f"{x:16.10f}" for x in plist)
 
     #print("# scanning using model {}".format(model), file=output)
     #print("# reference point: {}".format(xx), file=output)

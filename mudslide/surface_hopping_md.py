@@ -8,7 +8,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 from .util import check_options
-from .constants import boltzmann, fs_to_au
+from .constants import boltzmann
 from .propagation import propagate_exponential, propagate_interpolated_rk4
 from .tracer import Trace
 from .math import poisson_prob_scale
@@ -74,8 +74,8 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
         duration : dict, optional
             Dictionary controlling simulation duration (overrides max_steps, max_time, etc.).
             Default is auto-generated.
-        dt : float, optional
-            Time step for nuclear propagation (in atomic units). Default is fs_to_au.
+        dt : float
+            Time step for nuclear propagation (in atomic units). Required.
         t0 : float, optional
             Initial time. Default is 0.0.
         previous_steps : int, optional
@@ -139,21 +139,22 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
                                     dtype=np.complex128)
                 self.rho[state, state] = 1.0
                 self.state = state
-            except (TypeError, ValueError):
+            except (TypeError, ValueError) as exc:
                 raise ValueError(
                     "Initial state rho0 must be convertible to an integer state "
-                    "index")
+                    "index") from exc
         else:
             try:
                 self.rho = np.copy(rho0)
                 self.state = int(options["state0"])
-            except KeyError:
+            except KeyError as exc:
                 raise KeyError(
-                    "state0 option required when rho0 is a density matrix")
-            except (ValueError, TypeError):
+                    "state0 option required when rho0 is a density matrix"
+                ) from exc
+            except (ValueError, TypeError) as exc:
                 raise ValueError(
                     "state0 option must be convertible to an integer state index"
-                )
+                ) from exc
 
         # function duration_initialize should get us ready to for future continue_simulating calls
         # that decide whether the simulation has finished
@@ -168,7 +169,9 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
         self.max_steps = int(options.get("max_steps", 1000000))
         self.max_time = float(options.get("max_time", 1e25))
         self.trace_every = int(options.get("trace_every", 1))
-        self.dt = float(options.get("dt", fs_to_au))
+        if "dt" not in options:
+            raise KeyError("dt option is required for SurfaceHoppingMD")
+        self.dt = float(options["dt"])
         self.propagator = SHPropagator(self.model,
                                        options.get("propagator", "vv"))
 
@@ -583,8 +586,7 @@ class SurfaceHoppingMD:  # pylint: disable=too-many-instance-attributes
         """
         if self.zeta_list:
             return self.zeta_list.pop(0)
-        else:
-            return self.random()
+        return self.random()
 
     def hop_allowed(self, direction: ArrayLike, dE: float) -> bool:
         """Determine if a hop with given rescale direction and energy change is allowed.

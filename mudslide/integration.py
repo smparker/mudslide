@@ -146,5 +146,4 @@ def quadrature(n: int,
         return trapezoid(n, a, b)
     if method in ["simpson"]:
         return simpson(n, a, b)
-    else:
-        raise ValueError("Unrecognized quadrature choice")
+    raise ValueError("Unrecognized quadrature choice")

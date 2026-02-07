@@ -1,4 +1,11 @@
 #!/usr/bin/env python
+"""Parsers for Turbomole response property and excited state output.
+
+Handles output from egrad and escf modules, extracting excited state
+energies, transition dipole moments, state-to-state properties,
+two-photon absorption amplitudes, hyperpolarizabilities, Davidson
+iteration convergence, CPKS iterations, and NAC couplings.
+"""
 
 from .line_parser import LineParser, SimpleLineParser, BooleanLineParser
 from .section_parser import ParseSection
@@ -68,6 +75,7 @@ class ExcitedParser(ParseSection):
 
 
 class MomentParser(LineParser):
+    """Parse <i|mu|j> transition dipole moment matrix elements."""
 
     def __init__(self,
                  reg=r"<\s*(\d+)\|mu\|\s*(\d+)>:\s+(\S+)\s+(\S+)\s+(\S+)"):
@@ -87,6 +95,7 @@ class MomentParser(LineParser):
 
 
 class ExcitedMoments(ParseSection):
+    """Parser for a block of excited state dipole moment matrix elements."""
 
     def __init__(self, name, head, tail=r"^\s*$"):
         super().__init__(head, tail)
@@ -95,6 +104,7 @@ class ExcitedMoments(ParseSection):
 
 
 class StateToStateParser(ParseSection):
+    """Parser for state-to-state transition and difference moments."""
     name = "state-to-state"
 
     def __init__(self):
@@ -114,6 +124,7 @@ class StateToStateParser(ParseSection):
 
 
 class TPAColParser(ParseSection):
+    """Parser for two-photon absorption tensor columns and cross sections."""
     name = "columns"
 
     def __init__(self):
@@ -148,6 +159,7 @@ class TPAColParser(ParseSection):
 
 
 class TPAParser(ParseSection):
+    """Parser for two-photon absorption amplitudes per excited state."""
     name = "tpa"
 
     def __init__(self):
@@ -176,6 +188,7 @@ class TPAParser(ParseSection):
 
 
 class HyperParser(ParseSection):
+    """Parser for first hyperpolarizability tensor components."""
     name = "hyper"
 
     def __init__(self):
@@ -222,6 +235,7 @@ class _DavidsonIterationParsers:
 
     @staticmethod
     def make_parsers():
+        """Create parsers for iteration step number, residual norm, and convergence."""
         return [
             SimpleLineParser(r"^\s*(\d+)\s+\S+\s+\d+\s+(\S+)\s*$",
                              ["step", "max_residual_norm"],
@@ -252,6 +266,13 @@ class DavidsonParser(ParseSection):
 
 
 class EgradEscfParser(ParseSection):
+    """Base parser for egrad/escf output sections.
+
+    Contains the full set of sub-parsers for excited state properties:
+    excitation energies, transition moments, gradients, NAC couplings,
+    TPA amplitudes, and hyperpolarizabilities. The clean() method assigns
+    gradient indices from exopt data when both are present.
+    """
 
     def __init__(self, head, tail):
         super().__init__(head, tail)
@@ -287,6 +308,7 @@ class EgradEscfParser(ParseSection):
 
 
 class EgradParser(EgradEscfParser):
+    """Parser for the egrad (excited state gradient) module output."""
     name = "egrad"
 
     def __init__(self):
@@ -294,6 +316,7 @@ class EgradParser(EgradEscfParser):
 
 
 class EscfParser(EgradEscfParser):
+    """Parser for the escf (excited state SCF) module output."""
     name = "escf"
 
     def __init__(self):

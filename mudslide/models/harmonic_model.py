@@ -46,6 +46,7 @@ class HarmonicModel(ElectronicModel_):
         self.H0 = np.array(H0)
 
         self.mass = np.array(mass, dtype=np.float64).reshape(self._ndof)
+        self.energies = np.array([])
 
         if self.H0.shape != (self._ndof, self._ndof):
             raise ValueError("Incorrect shape of Hessian")
@@ -55,8 +56,8 @@ class HarmonicModel(ElectronicModel_):
 
     def compute(self,
                 X: ArrayLike,
-                gradients: Any = None,
                 couplings: Any = None,
+                gradients: Any = None,
                 reference: Any = None) -> None:
         """Compute and store the energies and gradients
 

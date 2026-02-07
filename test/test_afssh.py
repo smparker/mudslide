@@ -10,18 +10,19 @@ import numpy as np
 import pytest
 
 from mudslide.afssh import AugmentedFSSH, AFSSHPropagator, AFSSHVVPropagator
+from mudslide.constants import fs_to_au
 from mudslide.models import scattering_models as models
 
 
 def make_afssh_traj(model, x0, v0, state0, **kwargs):
     """Helper to create an AugmentedFSSH trajectory with common defaults."""
-    # Use strict_option_check=False since augmented_integration is AFSSH-specific
+    if "dt" not in kwargs:
+        kwargs["dt"] = fs_to_au
     return AugmentedFSSH(
         model,
         np.atleast_1d(x0),
         np.atleast_1d(v0),
         state0,
-        strict_option_check=False,
         **kwargs
     )
 

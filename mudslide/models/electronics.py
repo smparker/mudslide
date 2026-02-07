@@ -89,6 +89,7 @@ class ElectronicModel_:
         self._derivative_coupling: "ArrayLike"
         self._derivative_couplings_available: "ArrayLike" = np.zeros(
             (self.nstates, self.nstates), dtype=bool)
+        self._force_matrix: "ArrayLike" = np.array([])
 
         self.atom_types: List[str] = atom_types
 
@@ -161,15 +162,15 @@ class ElectronicModel_:
     def force(self, state: int = 0) -> "ArrayLike":
         """Return the force on a given state"""
         if not self._forces_available[state]:
-            raise ValueError("Force on state %d not available" % state)
+            raise ValueError(f"Force on state {state} not available")
         return self._force[state, :]
 
     def derivative_coupling(self, state1: int, state2: int) -> "ArrayLike":
         """Return the derivative coupling between two states"""
         if not self._derivative_couplings_available[state1, state2]:
             raise ValueError(
-                "Derivative coupling between states %d and %d not available" %
-                (state1, state2))
+                f"Derivative coupling between states {state1} and {state2} not available"
+            )
         return self._derivative_coupling[state1, state2, :]
 
     @property
@@ -475,17 +476,17 @@ class DiabaticModel_(ElectronicModel_):
             if reference is not None:
                 try:
                     for mo in range(self.nstates):
-                        if (np.dot(coeff[:, mo], reference[:, mo]) < 0.0):
+                        if np.dot(coeff[:, mo], reference[:, mo]) < 0.0:
                             coeff[:, mo] *= -1.0
-                except:
-                    raise Exception(
-                        "Failed to regularize new ElectronicStates from a reference object %s"
-                        % (reference))
+                except Exception as exc:
+                    raise RuntimeError(
+                        f"Failed to regularize new ElectronicStates from a reference object {reference}"
+                    ) from exc
             return (coeff, np.diag(energies))
         elif self._representation == "diabatic":
             return (np.eye(self.nstates, dtype=np.float64), V)
         else:
-            raise Exception("Unrecognized run mode")
+            raise ValueError("Unrecognized run mode")
 
     def _compute_force(self, dV: ArrayLike, coeff: ArrayLike) -> ArrayLike:
         r""":math:`-\langle \phi_{\mbox{state}} | \nabla H | \phi_{\mbox{state}} \rangle`"""
@@ -534,10 +535,12 @@ class DiabaticModel_(ElectronicModel_):
         return out
 
     def V(self, X: ArrayLike) -> ArrayLike:
+        """Return the diabatic potential matrix V(X)."""
         raise NotImplementedError(
             "Diabatic models must implement the function V")
 
     def dV(self, X: ArrayLike) -> ArrayLike:
+        """Return the gradient of the diabatic potential matrix dV/dX."""
         raise NotImplementedError(
             "Diabatic models must implement the function dV")
 
@@ -707,19 +710,18 @@ class AdiabaticModel_(ElectronicModel_):
             if reference is not None:
                 try:
                     for mo in range(self.nstates):
-                        if (np.dot(coeff[:, mo], reference[:, mo]) < 0.0):
+                        if np.dot(coeff[:, mo], reference[:, mo]) < 0.0:
                             coeff[:, mo] *= -1.0
-                except:
-                    raise Exception(
-                        "Failed to regularize new ElectronicStates from a reference object %s"
-                        % (reference))
+                except Exception as exc:
+                    raise RuntimeError(
+                        f"Failed to regularize new ElectronicStates from a reference object {reference}"
+                    ) from exc
             return coeff, np.diag(energies)
         elif self._representation == "diabatic":
-            raise Exception(
+            raise ValueError(
                 "Adiabatic models can only be run in adiabatic mode")
-            return None
         else:
-            raise Exception("Unrecognized representation")
+            raise ValueError("Unrecognized representation")
 
     def _compute_force(self, dV: ArrayLike, coeff: ArrayLike) -> ArrayLike:
         r""":math:`-\langle \phi_{\mbox{state}} | \nabla H | \phi_{\mbox{state}} \rangle`"""
@@ -767,9 +769,11 @@ class AdiabaticModel_(ElectronicModel_):
         return out
 
     def V(self, X: ArrayLike) -> ArrayLike:
+        """Return the full electronic Hamiltonian matrix V(X)."""
         raise NotImplementedError(
             "Adiabatic models must implement the function V")
 
     def dV(self, X: ArrayLike) -> ArrayLike:
+        """Return the gradient of the electronic Hamiltonian dV/dX."""
         raise NotImplementedError(
             "Adiabatic models must implement the function dV")

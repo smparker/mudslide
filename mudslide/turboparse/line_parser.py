@@ -1,4 +1,10 @@
 #!/usr/bin/env python
+"""Line-level parsers that match individual lines against regex patterns.
+
+LineParser is the base class; SimpleLineParser handles the common case
+of extracting named groups with type conversion, and BooleanLineParser
+stores True/False based on which of two patterns matches.
+"""
 
 import re
 
@@ -21,11 +27,31 @@ class LineParser:
         return bool(result), False
 
     def process(self, m, out):
+        """Process a regex match and store results in out. Must be overridden."""
         raise NotImplementedError("Subclasses must implement process()")
 
 
 class SimpleLineParser(LineParser):
-    """Parse a single line and return a list of all matched groups"""
+    """Line parser that extracts regex groups into named fields.
+
+    Matches a line against a regex and stores the captured groups as named
+    entries in the output dict, with optional type conversion.
+
+    Args:
+        reg: Regex pattern with capturing groups.
+        names: List of keys corresponding to each captured group.
+        converter: A single callable applied to all groups (e.g., float).
+            Mutually exclusive with types.
+        types: List of callables, one per group, for individual type
+            conversion. If neither converter nor types is given, all values
+            are stored as str.
+        title: If non-empty, results are stored as a sub-dict under this key
+            rather than merged directly into the output dict.
+        multi: If True, each match appends to a list under title (requires
+            title to be set).
+        first_only: If True, only the first match is stored; subsequent
+            matches for the same key are ignored.
+    """
 
     def __init__(self,
                  reg,
@@ -70,9 +96,21 @@ class SimpleLineParser(LineParser):
 
 
 class BooleanLineParser(LineParser):
-    """Parse a line and store a boolean based on success/failure regex matches."""
+    """Line parser that stores a boolean based on matching one of two patterns.
+
+    Tests the current line against a success regex and a failure regex.
+    If the success regex matches, stores True; if the failure regex matches,
+    stores False. If neither matches, reports no match.
+
+    Args:
+        success_reg: Regex pattern indicating a True result.
+        failure_reg: Regex pattern indicating a False result.
+        key: Dict key under which the boolean is stored.
+        first_only: If True, only the first match is stored.
+    """
 
     def __init__(self, success_reg, failure_reg, key, first_only=False):
+        super().__init__(success_reg)  # satisfy base class; self.reg is unused
         self.success_reg = re.compile(success_reg)
         self.failure_reg = re.compile(failure_reg)
         self.key = key
@@ -97,6 +135,6 @@ class BooleanLineParser(LineParser):
 
         return False, False
 
-    def process(self, value, out):
+    def process(self, m, out):  # m is a boolean for BooleanLineParser
         if not (self.first_only and self.key in out):
-            out[self.key] = value
+            out[self.key] = m

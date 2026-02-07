@@ -1,8 +1,25 @@
 #!/usr/bin/env python
+"""Iterator wrapper that maintains a lookback stack of recent lines.
+
+Used by the parsing framework to allow parsers to inspect the current
+line (via top()) without consuming it, since multiple parsers may need
+to test the same line.
+"""
 
 
 class StackIterator:
-    """FIFO stack used to iterate over file while holding onto most recent lines"""
+    """Iterator with a fixed-size lookback stack.
+
+    Wraps any iterable and maintains a FIFO stack of the most recently
+    yielded items. The current item is always accessible via top() without
+    advancing the iterator.
+
+    Args:
+        iterable: The underlying iterable to wrap.
+        stacksize: Maximum number of items to retain in the lookback stack.
+        current: Initial line counter value (defaults to -1 so first next()
+            sets it to 0).
+    """
 
     def __init__(self, iterable, stacksize=1, current=-1):
         self.stacksize = stacksize
@@ -21,9 +38,11 @@ class StackIterator:
         return nx
 
     def add_to_stack(self, item):
+        """Add item to the stack, evicting the oldest if at capacity."""
         self.stack.append(item)
         if len(self.stack) > self.stacksize:
             self.stack.pop(0)
 
     def top(self):
+        """Return the most recently yielded item without advancing."""
         return self.stack[-1]
