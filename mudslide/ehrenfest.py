@@ -71,7 +71,7 @@ class Ehrenfest(SurfaceHoppingMD):
         assert electronics is not None
         return np.real(np.trace(np.dot(self.rho, electronics.hamiltonian)))
 
-    def _force(self, electronics: ElectronicModel_ | None = None) -> np.ndarray:
+    def force(self, electronics: ElectronicModel_ | None = None) -> np.ndarray:
         """Calculate Ehrenfest force.
 
         The force is computed as the trace of the product of the density matrix

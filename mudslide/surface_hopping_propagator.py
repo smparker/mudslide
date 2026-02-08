@@ -40,7 +40,7 @@ class SHVVPropagator(Propagator_):
         # first update nuclear coordinates
         for _ in range(nsteps):
             # Advance position using Velocity Verlet
-            acceleration = traj._force(traj.electronics) / traj.mass
+            acceleration = traj.force(traj.electronics) / traj.mass
             traj.last_position = traj.position
             traj.position += traj.velocity * dt + 0.5 * acceleration * dt * dt
 
@@ -52,8 +52,8 @@ class SHVVPropagator(Propagator_):
                 couplings=traj.needed_couplings())
 
             # Update velocity using Velocity Verlet
-            last_acceleration = traj._force(traj.last_electronics) / traj.mass
-            this_acceleration = traj._force(traj.electronics) / traj.mass
+            last_acceleration = traj.force(traj.last_electronics) / traj.mass
+            this_acceleration = traj.force(traj.electronics) / traj.mass
             traj.last_velocity = traj.velocity
             traj.velocity += 0.5 * (last_acceleration + this_acceleration) * dt
 

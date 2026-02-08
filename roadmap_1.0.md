@@ -73,8 +73,8 @@ Mudslide is a Python nonadiabatic molecular dynamics library at version 0.12.0. 
 ### High
 
 - **Pylint configured and cleaned up**: Unused imports removed across 6 files (`Dict`, `Tuple`, `sys`, `math`, `Union`, `numpy`). Codebase formatted with yapf. `.pylintrc` updated for pylint 4.x compatibility (removed deprecated `suggestion-mode`). Score is 9.36/10 with remaining issues being duplicated code, missing docstrings in turboparse, and minor style suggestions. Disabled `too-many-positional-arguments` (R0917) globally as inappropriate for scientific constructors. Disabled `too-many-instance-attributes` (R0902) on `SurfaceHoppingMD` (36 attrs, all necessary). Configured `good-names-rgxs` with 7 regex patterns for scientific naming conventions (Hamiltonians, derivatives, matrix elements, etc.) — all 103 naming violations resolved without disabling the check.
-- **CI doesn't run mypy or pylint**: Both are configured (pyproject.toml, .pylintrc) but the GitHub Actions workflow only runs `pytest`. Add mypy and pylint steps to CI. This is especially important for 1.0 to catch type errors.
-- **mypy has 885 errors**: Mostly missing type annotations in `turboparse/`, `util.py`, `mud.py`, `__main__.py`, and `turbo_make_harmonic.py`; NumPy `ArrayLike` mismatches with strict stubs; missing `types-PyYAML` stubs; and implicit `Optional` defaults. Needs significant work before it can run in CI.
+- **CI now runs pylint and mypy**.
+- **mypy now has 0 errors**.
 - **No test coverage reporting**: Add `pytest-cov` and a coverage badge. Important for understanding what's tested before 1.0.
 - **Previously empty test files now have tests**: `test_tracer.py` has 2 tests and `test_boltzmann_velocity.py` has 1 test covering core functionality.
 

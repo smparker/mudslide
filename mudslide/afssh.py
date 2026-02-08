@@ -46,7 +46,7 @@ class AFSSHVVPropagator(Propagator_):
         # first update nuclear coordinates
         for _ in range(nsteps):
             # Advance position using Velocity Verlet
-            acceleration = traj._force(traj.electronics) / traj.mass
+            acceleration = traj.force(traj.electronics) / traj.mass
             traj.last_position = traj.position
             traj.position += traj.velocity * dt + 0.5 * acceleration * dt * dt
 
@@ -60,8 +60,8 @@ class AFSSHVVPropagator(Propagator_):
                 couplings=traj.needed_couplings())
 
             # Update velocity using Velocity Verlet
-            last_acceleration = traj._force(traj.last_electronics) / traj.mass
-            this_acceleration = traj._force(traj.electronics) / traj.mass
+            last_acceleration = traj.force(traj.last_electronics) / traj.mass
+            this_acceleration = traj.force(traj.electronics) / traj.mass
             traj.last_velocity = traj.velocity
             traj.velocity += 0.5 * (last_acceleration + this_acceleration) * dt
 
@@ -171,7 +171,7 @@ class AugmentedFSSH(SurfaceHoppingMD):
             Matrix of force differences between states.
         """
         delF = np.copy(this_electronics.force_matrix)
-        F0 = self._force(this_electronics)
+        F0 = self.force(this_electronics)
         for i in range(self.model.nstates):
             delF[i, i, :] -= F0
         return delF
