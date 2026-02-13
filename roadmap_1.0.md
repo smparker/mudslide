@@ -38,8 +38,6 @@ Mudslide is a Python nonadiabatic molecular dynamics library at version 0.12.0. 
 - **AIMD → NAMD initialization pathway**: Currently no built-in way to take snapshots from an adiabatic MD (ground-state) trajectory and use them to initialize surface hopping trajectories. This is a very common workflow (run AIMD to equilibrate, then spawn NAMD from snapshots). Needs:
   - A utility/trajectory generator that reads AIMD trace output (positions, velocities) and spawns FSSH initial conditions from them
   - Could be a new `TrajGen` subclass like `TrajGenFromTrace` or `TrajGenFromAIMD`
-- **Parallel trajectory execution** (`batch.py`): Commented-out multiprocessing code (lines 274-299) shows this was planned. For batch runs of hundreds of trajectories, serial execution is a major bottleneck. Implement using `multiprocessing.Pool` or `concurrent.futures.ProcessPoolExecutor`. The `nprocs` option already exists but warns and falls back to serial.
-
 ### Medium Priority (would strengthen the package)
 
 - **Trivial crossing / state reordering detection**: Near conical intersections, adiabatic state ordering can swap between timesteps. No detection or handling mechanism exists. At minimum, add a warning; ideally, implement overlap-based state tracking (some infrastructure exists in `DiabaticModel_` phase fixing but not for ab initio models).
@@ -56,7 +54,7 @@ Mudslide is a Python nonadiabatic molecular dynamics library at version 0.12.0. 
 
 ### High
 
-- `**dt` validation in AdiabaticMD**: `AdiabaticMD` now raises a clear `ValueError("dt option is required for AdiabaticMD")` if `dt` is omitted. `SurfaceHoppingMD` still defaults to `fs_to_au`.
+- `**dt` validation**: `TrajectoryMD` now raises a clear `ValueError("dt option is required for AdiabaticMD")` if `dt` is omitted.
 - **Ehrenfest `outcome_type` defaulted to `"populations"**`: Ehrenfest now defaults `outcome_type` to `"populations"` since the "state" outcome is meaningless for mean-field dynamics. Docstring documents that `forced_hop_threshold` is inherited but unused.
 - `**forced_hop_threshold` accepted by Ehrenfest**: Inherited but is a complete no-op since `surface_hopping()` returns immediately. Should not be in Ehrenfest's `recognized_options`.
 
@@ -72,7 +70,7 @@ Mudslide is a Python nonadiabatic molecular dynamics library at version 0.12.0. 
 
 ### High
 
-- **Pylint configured and cleaned up**: Unused imports removed across 6 files (`Dict`, `Tuple`, `sys`, `math`, `Union`, `numpy`). Codebase formatted with yapf. `.pylintrc` updated for pylint 4.x compatibility (removed deprecated `suggestion-mode`). Score is 9.36/10 with remaining issues being duplicated code, missing docstrings in turboparse, and minor style suggestions. Disabled `too-many-positional-arguments` (R0917) globally as inappropriate for scientific constructors. Disabled `too-many-instance-attributes` (R0902) on `SurfaceHoppingMD` (36 attrs, all necessary). Configured `good-names-rgxs` with 7 regex patterns for scientific naming conventions (Hamiltonians, derivatives, matrix elements, etc.) — all 103 naming violations resolved without disabling the check.
+- **Pylint configured and cleaned up**.
 - **CI now runs pylint and mypy**.
 - **mypy now has 0 errors**.
 - **No test coverage reporting**: Add `pytest-cov` and a coverage badge. Important for understanding what's tested before 1.0.
@@ -87,7 +85,7 @@ Mudslide is a Python nonadiabatic molecular dynamics library at version 0.12.0. 
 
 ### Low
 
-- **Commented-out code**: Multiple locations (batch.py multiprocessing, surface_hopping_md.py:394 troubleshooter). Clean up or implement.
+- **Commented-out code**: surface_hopping_md.py:394 troubleshooter. Clean up or implement.
 - **Update GitHub Actions versions**: `actions/checkout@v3` and `actions/setup-python@v3` should be updated to v4.
 
 ---

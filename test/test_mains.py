@@ -87,14 +87,14 @@ def compare_line_by_line(f1, f2, typespec, tol=1e-3):
 
 
 def capture_traj_problems(model, nstate, k, tol, method="fssh", x=-10, dt=5,
-                          n=1, seed=200, o="single", j=1, electronic="exp",
+                          n=1, seed=200, o="single", electronic="exp",
                           log="memory", extra_options=None):
     if extra_options is None:
         extra_options = []
     options = ("-s {0:d} -m {1:s} -k {2:f} {2:f} -x {3:f} --dt {4:f} -n {5:d} "
-               "-z {6:d} -o {7:s} -j {8:d} -a {9:s} --electronic {10:s} "
-               "--log {11:s}").format(
-        1, model, k, x, dt, n, seed, o, j, method, electronic, log).split()
+               "-z {6:d} -o {7:s} -a {8:s} --electronic {9:s} "
+               "--log {10:s}").format(
+        1, model, k, x, dt, n, seed, o, method, electronic, log).split()
     options += extra_options
 
     checkdir = os.path.join(testdir, "checks", method)

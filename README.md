@@ -98,7 +98,6 @@ will run 4 scattering simulations with a particle starting in the ground state (
 * `electronic_integration` - method used to propagate electronic wavefunction
     * "exp" (default) - apply exponentiated Hamiltonian via diagonalization
     * "linear-rk4" - interpolated RK4 integration
-* `nprocs` - number of processes over which to parallelize trajectories (default: 1)
 * `outcome_type` - how to count statistics at the end of a trajectory
     * "state" (default) - use the state attribute of the simulation only
     * "populations" - use the diagonals of the density matrix
@@ -154,12 +153,6 @@ Additional models included are:
 For batch runs, one must tell `BatchedTraj` how to decide on new initial conditions
 and how to decide when a trajectory has finished. The basic requirements for each of those
 is simple.
-
-The structure of these classes is somewhat strange because of the limitations of
-multiprocessing in python. To make use of multiprocessing, every object
-must be able to be `pickle`d, meaning that multiprocessing inherits all the
-same limitations. As a result, when using multiprocessing, the trajectory generator class must
-be fully defined in the default namespace.
 
 ### Generating initial conditions
 This should be a generator function that accepts a number of samples

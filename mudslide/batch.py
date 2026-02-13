@@ -236,11 +236,10 @@ class BatchedTraj:
     | key                |   default                  |
     ---------------------|----------------------------|
     | t0                 | 0.0                        |
-    | nprocs             | 1                          |
     | seed               | None (date)                |
     """
 
-    batch_only_options = ["samples", "nprocs"]
+    batch_only_options = ["samples"]
 
     def __init__(self,
                  model: ElectronicModel_,
@@ -259,7 +258,6 @@ class BatchedTraj:
 
         # statistical parameters
         self.batch_options["samples"] = inp.get("samples", 2000)
-        self.batch_options["nprocs"] = inp.get("nprocs", 1)
 
         # other options get copied over
         self.traj_options = {}
@@ -275,23 +273,9 @@ class BatchedTraj:
         TraceManager
             Object containing the results.
         """
-        # for now, define four possible outcomes of the simulation
         nsamples = self.batch_options["samples"]
-        nprocs = self.batch_options["nprocs"]
-
-        if nprocs > 1:
-            logger.warning(
-                f'nprocs {nprocs} specified, but parallelism is not currently handled'
-            )
 
         traj_queue: Any = queue.Queue()
-        results_queue: Any = queue.Queue()
-
-        #traj_queue = mp.JoinableQueue()
-        #results_queue = mp.Queue()
-        #procs = [ mp.Process(target=traj_runner, args=(traj_queue, results_queue, )) for p in range(nprocs) ]
-        #for p in procs:
-        #    p.start()
 
         for x0, v0, initial, params in self.traj_gen(nsamples):
             traj_input = self.traj_options
@@ -308,33 +292,7 @@ class BatchedTraj:
         while not traj_queue.empty():
             traj = traj_queue.get()
             results = traj.simulate()
-            results_queue.put(results)
-
-        #traj_queue.join()
-        #for p in procs:
-        #    p.terminate()
-
-        while not results_queue.empty():
-            r = results_queue.get()
-            self.tracemanager.merge_tracer(r)
+            self.tracemanager.merge_tracer(results)
 
         self.tracemanager.outcomes = self.tracemanager.outcome()
         return self.tracemanager
-
-
-def traj_runner(traj_queue: Any, results_queue: Any) -> None:
-    """Runner for computing jobs from queue.
-
-    Parameters
-    ----------
-    traj_queue : Any
-        Queue containing trajectories with a `simulate()` function.
-    results_queue : Any
-        Queue to store results of each call to `simulate()`.
-    """
-    while True:
-        traj = traj_queue.get()
-        if traj is not None:
-            results = traj.simulate()
-            results_queue.put(results)
-        traj_queue.task_done()

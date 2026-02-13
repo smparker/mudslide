@@ -108,11 +108,6 @@ def main(argv: list[str] | None = None, file: Any = sys.stdout) -> None:
         help=
         "number of samples at each sampling depth for even sampling algorithm (%(default)s)"
     )
-    parser.add_argument('-j',
-                        '--nprocs',
-                        default=1,
-                        type=int,
-                        help="number of processors (%(default)d)")
     parser.add_argument('-M',
                         '--mass',
                         default=2000.0,
@@ -253,7 +248,6 @@ def main(argv: list[str] | None = None, file: Any = sys.stdout) -> None:
                            traj_gen,
                            trajectory_type=trajectory_type,
                            samples=args.samples,
-                           nprocs=args.nprocs,
                            dt=dt,
                            max_steps=args.nt,
                            bounds=[-abs(args.bounds),
