@@ -231,6 +231,12 @@ class SurfaceHoppingMD(TrajectoryMD):  # pylint: disable=too-many-instance-attri
                    restarting=True,
                    **options)
 
+    def _report_columns(self) -> list[tuple[str, str]]:
+        """Append active state to report columns."""
+        columns = super()._report_columns()
+        columns.append(("Active", f"{self.state:>6d}"))
+        return columns
+
     def snapshot(self) -> Dict[str, Any]:
         """Collect data from run for logging.
 

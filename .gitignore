@@ -10,3 +10,4 @@ dist/
 test/checks
 .claude
 .vscode
+mudslide.report

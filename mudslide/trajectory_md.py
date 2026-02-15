@@ -8,14 +8,16 @@ adiabatic, surface hopping, and Ehrenfest dynamics.
 
 from __future__ import annotations
 
+import time
 from abc import ABC, abstractmethod
+from collections import deque
 from typing import Dict, Any, TYPE_CHECKING
 import copy as cp
 
 import numpy as np
 
 from .util import check_options
-from .constants import boltzmann
+from .constants import boltzmann, fs_to_au
 from .tracer import Trace, Trace_
 from .propagator import Propagator_
 
@@ -40,6 +42,7 @@ class TrajectoryMD(ABC):  # pylint: disable=too-many-instance-attributes
         "remove_angular_momentum_every", "max_steps", "max_time", "bounds",
         "propagator", "seed_sequence", "electronics", "outcome_type",
         "weight", "last_velocity", "previous_steps", "restarting", "duration",
+        "report_every", "report_file",
     ]
 
     def __init__(self,
@@ -155,6 +158,20 @@ class TrajectoryMD(ABC):  # pylint: disable=too-many-instance-attributes
 
         self.restarting = options.get("restarting", False)
         self.force_quit = False
+
+        # Progress reporting
+        self.report_file: str | None = options.get("report_file",
+                                                    "mudslide.report")
+        report_every_opt = options.get("report_every", None)
+        if report_every_opt is not None:
+            self.report_every = int(report_every_opt)
+        else:
+            total_steps = self.max_steps
+            if total_steps <= 0 or total_steps > 1e15:
+                total_steps = int(self.max_time / self.dt) if self.max_time < 1e15 else 0
+            self.report_every = max(1, total_steps // 100) if total_steps > 0 else 0
+        self._temp_buffer: deque[float] = deque(maxlen=50)
+        self._last_report_time: float = 0.0
 
     @abstractmethod
     def make_propagator(self, model: Any,
@@ -434,6 +451,52 @@ class TrajectoryMD(ABC):  # pylint: disable=too-many-instance-attributes
         """
         return None
 
+    def _reporting_enabled(self) -> bool:
+        """Check whether progress reporting is enabled."""
+        return self.report_every > 0 and self.report_file is not None
+
+    def _report_columns(self) -> list[tuple[str, str]]:
+        """Return (header, formatted_value) pairs for the current report line.
+
+        Subclasses can override to append additional columns.
+        """
+        assert self.electronics is not None
+        temp = float(2 * self.kinetic_energy() /
+                     (boltzmann * self.model.ndof))
+        self._temp_buffer.append(temp)
+        avg_temp = sum(self._temp_buffer) / len(self._temp_buffer)
+
+        elapsed = time.monotonic() - self._last_report_time
+        self._last_report_time = time.monotonic()
+
+        return [
+            ("Step", f"{self.nsteps:>10d}"),
+            ("Time (fs)", f"{self.time / fs_to_au:>12.2f}"),
+            ("Total Energy (H)", f"{self.total_energy():>17.10f}"),
+            ("Avg Temp (K)", f"{avg_temp:>12.1f}"),
+            ("Wall (min)", f"{elapsed / 60.0:>10.2f}"),
+        ]
+
+    def _print_report_header(self, fh: Any) -> None:
+        """Print column headers to stdout and report file."""
+        columns = self._report_columns()
+        widths = [max(len(h), len(v)) for h, v in columns]
+        header = "  ".join(f"{h:>{w}}" for (h, _), w in zip(columns, widths))
+        sep = "  ".join("-" * w for w in widths)
+        print(header)
+        print(sep)
+        fh.write(header + "\n")
+        fh.write(sep + "\n")
+        fh.flush()
+
+    def _print_report(self, fh: Any) -> None:
+        """Print one report line to stdout and report file."""
+        columns = self._report_columns()
+        line = "  ".join(v for _, v in columns)
+        print(line)
+        fh.write(line + "\n")
+        fh.flush()
+
     def simulate(self) -> Trace_:
         """Run the simulation.
 
@@ -454,16 +517,37 @@ class TrajectoryMD(ABC):  # pylint: disable=too-many-instance-attributes
         if not self.restarting:
             self.trace()
 
+        # set up progress reporting
+        reporting = self._reporting_enabled()
+        report_fh = None
+        if reporting:
+            self._temp_buffer.clear()
+            self._last_report_time = time.monotonic()
+            assert self.report_file is not None
+            report_fh = open(self.report_file, "w")  # noqa: SIM115
+            self._print_report_header(report_fh)
+
         # propagation
-        while True:
-            self.propagator(self, 1)  # pylint: disable=not-callable
+        try:
+            while True:
+                self.propagator(self, 1)  # pylint: disable=not-callable
 
-            # ending condition
-            if not self.continue_simulating():
-                break
+                if reporting and report_fh is not None \
+                        and self.nsteps % self.report_every == 0:
+                    self._print_report(report_fh)
 
-            self.trace()
+                # ending condition
+                if not self.continue_simulating():
+                    break
 
-        self.trace(force=True)
+                self.trace()
+
+            self.trace(force=True)
+
+            if reporting and report_fh is not None:
+                self._print_report(report_fh)
+        finally:
+            if report_fh is not None:
+                report_fh.close()
 
         return self.tracer
