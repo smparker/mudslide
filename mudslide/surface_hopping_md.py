@@ -33,7 +33,7 @@ class SurfaceHoppingMD(TrajectoryMD):  # pylint: disable=too-many-instance-attri
     ]
 
     def __init__(self,
-                 model: Any,
+                 model: ElectronicModel_,
                  x0: np.ndarray,
                  v0: np.ndarray,
                  rho0: Union[np.ndarray, int, str],
@@ -163,7 +163,7 @@ class SurfaceHoppingMD(TrajectoryMD):  # pylint: disable=too-many-instance-attri
             if self.hopping_method == "cumulative_integrated":
                 self.zeta = -np.log(1.0 - self.zeta)
 
-    def make_propagator(self, model: Any,
+    def make_propagator(self, model: ElectronicModel_,
                         options: Dict[str, Any]) -> Propagator_:
         """Create the surface hopping propagator.
 
@@ -182,7 +182,7 @@ class SurfaceHoppingMD(TrajectoryMD):  # pylint: disable=too-many-instance-attri
         return SHPropagator(model, options.get("propagator", "vv"))  # type: ignore[return-value]
 
     @classmethod
-    def restart(cls, model: Any, log: Any,
+    def restart(cls, model: ElectronicModel_, log: Any,
                 **options: Any) -> 'SurfaceHoppingMD':
         """Restart a simulation from a previous trajectory log.
 

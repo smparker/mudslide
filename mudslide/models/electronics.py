@@ -94,6 +94,7 @@ class ElectronicModel_:
             (self.nstates, self.nstates), dtype=bool)
         self._force_matrix: np.ndarray
 
+        self.mass: np.ndarray
         self.atom_types: List[str] | None = atom_types
 
     @property

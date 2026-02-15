@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import Any, List
+from typing import Any, List, TYPE_CHECKING
 
 import argparse
 import sys
@@ -13,6 +13,9 @@ from numpy.typing import ArrayLike
 
 from .models.scattering_models import scattering_models as models
 from .version import get_version_info
+
+if TYPE_CHECKING:
+    from .models.electronics import DiabaticModel_, ElectronicModel_
 
 
 def add_surface_parser(subparsers: Any) -> None:
@@ -147,7 +150,7 @@ def surface_main(model_name: str, scan_range: List[float], n: int,
         plist = xn + diabats + energies + dc + forces
         return "#" + " ".join(f"{x:>16s}" for x in plist)
 
-    def lineprinter(x: np.ndarray, model: Any, estates: Any) -> str:
+    def lineprinter(x: np.ndarray, model: DiabaticModel_, estates: ElectronicModel_) -> str:
         V = model.V(x)
         ndof = estates.ndof
         diabats = [V[i, i] for i in range(nstates)]  # type: List[float]

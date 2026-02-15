@@ -89,7 +89,7 @@ class AFSSHPropagator(Propagator_):  # pylint: disable=abstract-method
     used in adiabatic FSSH molecular dynamics simulations.
     """
 
-    def __new__(cls, model: Any, prop_options: Any = "vv") -> Propagator_:  # type: ignore[misc]
+    def __new__(cls, model: ElectronicModel_, prop_options: Any = "vv") -> Propagator_:  # type: ignore[misc]
         """Create a new surface hopping propagator instance.
 
         Parameters

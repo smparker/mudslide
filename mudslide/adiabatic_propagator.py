@@ -18,6 +18,7 @@ from .util import remove_center_of_mass_motion, remove_angular_momentum, check_o
 
 if TYPE_CHECKING:
     from .adiabatic_md import AdiabaticMD
+    from .models.electronics import ElectronicModel_
 
 
 class VVPropagator(Propagator_):
@@ -328,7 +329,7 @@ class AdiabaticPropagator:
         If the propagator type is unknown or if the propagator options are invalid.
     """
 
-    def __new__(cls, model: Any, prop_options: Any = "vv") -> Propagator_:  # type: ignore[misc]
+    def __new__(cls, model: ElectronicModel_, prop_options: Any = "vv") -> Propagator_:  # type: ignore[misc]
         """Create a new propagator instance.
 
         Parameters

@@ -46,7 +46,7 @@ class TrajectoryMD(ABC):  # pylint: disable=too-many-instance-attributes
     ]
 
     def __init__(self,
-                 model: Any,
+                 model: ElectronicModel_,
                  x0: np.ndarray,
                  v0: np.ndarray,
                  tracer: Any = None,
@@ -174,7 +174,7 @@ class TrajectoryMD(ABC):  # pylint: disable=too-many-instance-attributes
         self._last_report_time: float = 0.0
 
     @abstractmethod
-    def make_propagator(self, model: Any,
+    def make_propagator(self, model: ElectronicModel_,
                         options: Dict[str, Any]) -> Propagator_:
         """Create the propagator for this trajectory type.
 

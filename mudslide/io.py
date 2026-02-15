@@ -3,9 +3,12 @@
 
 from __future__ import annotations
 
-from typing import Any, List, TextIO
+from typing import Any, List, TextIO, TYPE_CHECKING
 
 from .constants import bohr_to_angstrom
+
+if TYPE_CHECKING:
+    from .models.electronics import ElectronicModel_
 
 
 def write_xyz(coords: Any,
@@ -24,7 +27,7 @@ def write_xyz(coords: Any,
         )
 
 
-def write_trajectory_xyz(model: Any, trace: Any, filename: str, every: int = 1) -> None:
+def write_trajectory_xyz(model: ElectronicModel_, trace: Any, filename: str, every: int = 1) -> None:
     """Write trajectory to XYZ file"""
     natom, nd = model.dimensionality
     with open(filename, "w", encoding='utf-8') as file:

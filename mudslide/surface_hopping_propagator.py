@@ -5,8 +5,13 @@ from __future__ import annotations
 
 from typing import Any
 
+from typing import TYPE_CHECKING
+
 from .util import is_string, check_options
 from .propagator import Propagator_
+
+if TYPE_CHECKING:
+    from .models.electronics import ElectronicModel_
 
 
 class SHVVPropagator(Propagator_):
@@ -76,7 +81,7 @@ class SHPropagator:
     used in surface hopping molecular dynamics simulations.
     """
 
-    def __new__(cls, model: Any, prop_options: Any = "vv") -> Propagator_:  # type: ignore[misc]
+    def __new__(cls, model: ElectronicModel_, prop_options: Any = "vv") -> Propagator_:  # type: ignore[misc]
         """Create a new surface hopping propagator instance.
 
         Parameters

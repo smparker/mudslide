@@ -25,7 +25,7 @@ class AdiabaticMD(TrajectoryMD):
     This class handles the propagation of molecular dynamics trajectories in the
     adiabatic regime, similar to ground state molecular dynamics.
     """
-    def make_propagator(self, model: Any,
+    def make_propagator(self, model: ElectronicModel_,
                         options: Dict[str, Any]) -> Propagator_:
         """Create the adiabatic propagator.
 
@@ -44,7 +44,7 @@ class AdiabaticMD(TrajectoryMD):
         return AdiabaticPropagator(model, options.get("propagator", "VV"))  # type: ignore[return-value]
 
     @classmethod
-    def restart(cls, model: Any, log: Any, **options: Any) -> 'AdiabaticMD':
+    def restart(cls, model: ElectronicModel_, log: Any, **options: Any) -> 'AdiabaticMD':
         """Restart trajectory from log.
 
         Parameters
