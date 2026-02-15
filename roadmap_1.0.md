@@ -8,11 +8,7 @@ Mudslide is a Python nonadiabatic molecular dynamics library at version 0.12.0. 
 
 ## 1. Bugs and Correctness Issues
 
-### Medium
-
-- `**afssh.py:288` — magic number `1e-10`**: Hardcoded floor for `ddP` to avoid division by zero. Should be a named constant or parameter.
-- **Multiple hardcoded tolerances**: `1e-8` in time comparisons, `1e-10` placeholders throughout. Define named constants (e.g., `COUPLING_THRESHOLD`, `TIME_TOLERANCE`).
-
+**None left**
 ---
 
 ## 2. Missing Features
@@ -40,10 +36,6 @@ Mudslide is a Python nonadiabatic molecular dynamics library at version 0.12.0. 
 
 ## 3. Feature Inconsistencies
 
-### High
-
-- `**forced_hop_threshold` accepted by Ehrenfest**: Inherited but is a complete no-op since `surface_hopping()` returns immediately. Should not be in Ehrenfest's `recognized_options`.
-
 ### Medium
 
 - **Two CLI entry points**: `mudslide` (**main**.py) and `mud` (mud.py) overlap in functionality. For 1.0, consolidate into one or clearly document that `mud` is the successor and deprecate `mudslide`.
@@ -57,10 +49,6 @@ Mudslide is a Python nonadiabatic molecular dynamics library at version 0.12.0. 
 - **No `conftest.py`**: No shared fixtures. Common setup (model creation, trajectory initialization) is duplicated across test files.
 - **Under-tested areas**: AFSSH (6 tests), scattering models (2 tests), QM/MM (1 test), OpenMM (1 test), surface CLI (0 tests), quadrature (1 test). Increase coverage for core algorithms before 1.0.
 - **Pickle for output** (`__main__.py:220`): `pickle.dump()` used for saving results. Consider safer alternatives (JSON, YAML which is already used elsewhere, or at minimum document the pickle security caveat).
-
-### Low
-
-- **Commented-out code**: surface_hopping_md.py:394 troubleshooter. Clean up or implement.
 
 ---
 
@@ -92,7 +80,6 @@ Mudslide is a Python nonadiabatic molecular dynamics library at version 0.12.0. 
 
 ### Medium
 
-- **Progress reporting for batch runs**: Long-running batch simulations produce no output. Add a progress bar (e.g., `tqdm`) or periodic log messages showing completed/total trajectories.
 - **Option validation at init**: Move all option validation to `__init__` rather than failing mid-simulation. The `check_options` utility exists but isn't consistently applied.
 
 ### Low

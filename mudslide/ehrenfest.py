@@ -8,6 +8,7 @@ from typing import Any, TYPE_CHECKING
 import numpy as np
 from numpy.typing import ArrayLike
 
+from .trajectory_md import TrajectoryMD
 from .surface_hopping_md import SurfaceHoppingMD
 
 if TYPE_CHECKING:
@@ -25,6 +26,10 @@ class Ehrenfest(SurfaceHoppingMD):
     Surface hopping options (hopping_probability, hopping_method, forced_hop_threshold,
     zeta_list) are not used in Ehrenfest dynamics.
     """
+    recognized_options = TrajectoryMD.recognized_options + [
+        "electronic_integration", "max_electronic_dt",
+        "starting_electronic_intervals", "state0"
+    ]
 
     def __init__(self, *args: Any, **kwargs: Any):
         """Initialize Ehrenfest dynamics.
