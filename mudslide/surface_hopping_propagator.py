@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .util import is_string
+from .util import is_string, check_options
 from .propagator import Propagator_
 
 
@@ -16,6 +16,8 @@ class SHVVPropagator(Propagator_):
     classical trajectories in surface hopping molecular dynamics simulations.
     """
 
+    recognized_options: list[str] = ["type"]
+
     def __init__(self, **options: Any) -> None:
         """Constructor
 
@@ -24,6 +26,7 @@ class SHVVPropagator(Propagator_):
         **options : Any
             Option dictionary for configuration.
         """
+        check_options(options, self.recognized_options)
         super().__init__()
 
     def __call__(self, traj: Any, nsteps: int) -> None:

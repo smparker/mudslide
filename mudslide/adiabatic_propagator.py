@@ -14,7 +14,7 @@ import numpy as np
 
 from .constants import fs_to_au, boltzmann, amu_to_au
 from .propagator import Propagator_
-from .util import remove_center_of_mass_motion, remove_angular_momentum
+from .util import remove_center_of_mass_motion, remove_angular_momentum, check_options
 
 if TYPE_CHECKING:
     from .adiabatic_md import AdiabaticMD
@@ -32,6 +32,8 @@ class VVPropagator(Propagator_):
         Additional options for the propagator.
     """
 
+    recognized_options: list[str] = ["ndof"]
+
     def __init__(self, **options: Any) -> None:
         """Initialize the Velocity Verlet propagator.
 
@@ -40,6 +42,7 @@ class VVPropagator(Propagator_):
         **options : Any
             Additional options for the propagator.
         """
+        check_options(options, self.recognized_options)
         super().__init__()
 
     def __call__(self, traj: 'AdiabaticMD', nsteps: int) -> None:
