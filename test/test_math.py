@@ -6,6 +6,7 @@ import pytest
 import sys
 
 from mudslide import poisson_prob_scale
+from mudslide.exceptions import ConfigurationError
 from mudslide.math import boltzmann_velocities
 from mudslide.constants import boltzmann
 import numpy as np
@@ -117,6 +118,6 @@ class TestBoltzmannVelocities:
     def test_remove_rotation_without_coords_raises(self):
         """Requesting rotation removal without coords should raise ValueError"""
         _, temperature, seed, _, mass_flat, _, _, _ = self._setup()
-        with pytest.raises(ValueError):
+        with pytest.raises(ConfigurationError):
             boltzmann_velocities(mass_flat, temperature,
                                  remove_rotation=True, seed=seed)

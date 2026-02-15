@@ -16,6 +16,7 @@ import copy as cp
 
 import numpy as np
 
+from .exceptions import ConfigurationError
 from .util import check_options
 from .constants import boltzmann, fs_to_au
 from .tracer import Trace, Trace_
@@ -136,7 +137,7 @@ class TrajectoryMD(ABC):  # pylint: disable=too-many-instance-attributes
         self.remove_angular_momentum_every = int(
             options.get("remove_angular_momentum_every", 0))
         if "dt" not in options:
-            raise ValueError("dt option is required")
+            raise ConfigurationError("dt option is required")
         self.dt = float(options["dt"])
 
         self.propagator: Propagator_ = self.make_propagator(

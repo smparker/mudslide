@@ -11,6 +11,7 @@ import sys
 
 import numpy as np
 
+from .exceptions import ExternalCodeError
 from .models.turbomole_model import TurboControl, turbomole_is_installed_or_prefixed
 from .models.harmonic_model import HarmonicModel
 from .units import amu
@@ -131,7 +132,7 @@ def make_harmonic_main(control: str, model_dest: str, output: Any) -> None:
         Writes harmonic model to model_dest
     """
     if not turbomole_is_installed_or_prefixed():
-        raise RuntimeError("Turbomole is not available")
+        raise ExternalCodeError("Turbomole is not available")
 
     print(f"Reading Turbomole control file from {control}", file=output)
     print(file=output)

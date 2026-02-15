@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 import mudslide
+from mudslide.exceptions import ConfigurationError
 from mudslide.adiabatic_propagator import (VVPropagator,
                                            NoseHooverChainPropagator,
                                            AdiabaticPropagator)
@@ -169,5 +170,5 @@ def test_factory_nhc_from_dict():
 
 def test_factory_unknown_type_raises():
     """Factory raises ValueError for unknown propagator type"""
-    with pytest.raises(ValueError, match="Unknown propagator type"):
+    with pytest.raises(ConfigurationError, match="Unknown propagator type"):
         AdiabaticPropagator(water_model, {"type": "unknown"})

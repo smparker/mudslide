@@ -7,6 +7,11 @@ nonadiabatic molecular dynamics.
 
 from .version import __version__
 from .header import print_header
+from .exceptions import (
+    MudslideError, ConfigurationError, ExternalCodeError,
+    ConvergenceError, ComputeError, MissingDataError,
+    MissingForceError, MissingCouplingError
+)
 
 from . import units
 from . import models

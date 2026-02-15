@@ -9,6 +9,9 @@ from typing import Tuple, Any, List
 import numpy as np
 from numpy.typing import ArrayLike
 
+from ..exceptions import (ComputeError, ConfigurationError, MissingCouplingError,
+                          MissingForceError)
+
 
 class ElectronicModel_:
     """Base class for handling electronic structure part of dynamics.
@@ -166,13 +169,13 @@ class ElectronicModel_:
     def force(self, state: int = 0) -> np.ndarray:
         """Return the force on a given state"""
         if not self._forces_available[state]:
-            raise ValueError(f"Force on state {state} not available")
+            raise MissingForceError(f"Force on state {state} not available")
         return self._force[state, :]
 
     def derivative_coupling(self, state1: int, state2: int) -> np.ndarray:
         """Return the derivative coupling between two states"""
         if not self._derivative_couplings_available[state1, state2]:
-            raise ValueError(
+            raise MissingCouplingError(
                 f"Derivative coupling between states {state1} and {state2} not available"
             )
         return self._derivative_coupling[state1, state2, :]
@@ -188,7 +191,7 @@ class ElectronicModel_:
             print(
                 f"Full availability matrix:\n{self._derivative_couplings_available}"
             )
-            raise ValueError("All derivative couplings not available")
+            raise MissingCouplingError("All derivative couplings not available")
         return self._derivative_coupling
 
     def NAC_matrix(self, velocity: np.ndarray) -> np.ndarray:
@@ -196,14 +199,14 @@ class ElectronicModel_:
         for a given velocity vector
         """
         if not np.all(self._derivative_couplings_available):
-            raise ValueError("NAC_matrix needs all derivative couplings")
+            raise MissingCouplingError("NAC_matrix needs all derivative couplings")
         return np.einsum("ijk,k->ij", self._derivative_coupling, velocity)
 
     @property
     def force_matrix(self) -> np.ndarray:
         """Return the force matrix"""
         if not np.all(self._forces_available):
-            raise ValueError("Force matrix needs all forces")
+            raise MissingForceError("Force matrix needs all forces")
         return self._force_matrix
 
     def _needed_gradients(self, gradients: Any) -> List[int]:
@@ -483,14 +486,14 @@ class DiabaticModel_(ElectronicModel_):
                         if np.dot(coeff[:, mo], reference[:, mo]) < 0.0:
                             coeff[:, mo] *= -1.0
                 except Exception as exc:
-                    raise RuntimeError(
+                    raise ComputeError(
                         f"Failed to regularize new ElectronicStates from a reference object {reference}"
                     ) from exc
             return (coeff, np.diag(energies))
         elif self._representation == "diabatic":
             return (np.eye(self.nstates, dtype=np.float64), V)
         else:
-            raise ValueError("Unrecognized run mode")
+            raise ConfigurationError("Unrecognized run mode")
 
     def _compute_force(self, dV: np.ndarray, coeff: np.ndarray) -> np.ndarray:
         r""":math:`-\langle \phi_{\mbox{state}} | \nabla H | \phi_{\mbox{state}} \rangle`"""
@@ -585,7 +588,7 @@ class AdiabaticModel_(ElectronicModel_):
             If representation is set to "diabatic"
         """
         if representation == "diabatic":
-            raise ValueError(
+            raise ConfigurationError(
                 'Adiabatic models can only be run in adiabatic mode')
         ElectronicModel_.__init__(self,
                                   representation=representation,
@@ -717,15 +720,15 @@ class AdiabaticModel_(ElectronicModel_):
                         if np.dot(coeff[:, mo], reference[:, mo]) < 0.0:
                             coeff[:, mo] *= -1.0
                 except Exception as exc:
-                    raise RuntimeError(
+                    raise ComputeError(
                         f"Failed to regularize new ElectronicStates from a reference object {reference}"
                     ) from exc
             return coeff, np.diag(energies)
         elif self._representation == "diabatic":
-            raise ValueError(
+            raise ConfigurationError(
                 "Adiabatic models can only be run in adiabatic mode")
         else:
-            raise ValueError("Unrecognized representation")
+            raise ConfigurationError("Unrecognized representation")
 
     def _compute_force(self, dV: np.ndarray, coeff: np.ndarray) -> np.ndarray:
         r""":math:`-\langle \phi_{\mbox{state}} | \nabla H | \phi_{\mbox{state}} \rangle`"""

@@ -10,6 +10,8 @@ from __future__ import annotations
 import re
 from typing import Any, Callable
 
+from mudslide.exceptions import ConfigurationError
+
 from .stack_iterator import StackIterator
 
 
@@ -78,7 +80,7 @@ class SimpleLineParser(LineParser):
         self.first_only = first_only
 
         if self.multi and self.title == "":
-            raise ValueError("SimpleLineParser in multi mode requires title")
+            raise ConfigurationError("SimpleLineParser in multi mode requires title")
 
     def process(self, m: re.Match[str], out: dict[str, Any]) -> None:
         data = {

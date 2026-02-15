@@ -8,6 +8,7 @@ import warnings
 import numpy as np
 from numpy.typing import ArrayLike
 
+from .exceptions import ConfigurationError
 from .util import remove_center_of_mass_motion, remove_angular_momentum
 
 from .constants import boltzmann
@@ -80,7 +81,7 @@ def boltzmann_velocities(mass: np.ndarray,
     if remove_rotation is None:
         remove_rotation = coords is not None
     elif remove_rotation and coords is None:
-        raise ValueError("Coordinates must be provided to remove rotation.")
+        raise ConfigurationError("Coordinates must be provided to remove rotation.")
 
     if remove_translation:
         v = p / mass

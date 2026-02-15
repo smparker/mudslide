@@ -8,6 +8,7 @@ from typing import Any
 import numpy as np
 from numpy.typing import ArrayLike
 
+from ..exceptions import ConfigurationError
 from .electronics import ElectronicModel_
 from ..constants import bohr_to_angstrom, amu_to_au, Hartree_to_kJmol
 from ..periodic_table import masses
@@ -52,7 +53,7 @@ class OpenMM(ElectronicModel_):
         # check if there are constraints
         num_constraints = self._system.getNumConstraints()
         if num_constraints > 0:
-            raise ValueError(
+            raise ConfigurationError(
                 "OpenMM system has constraints, which are not supported by mudslide. "
                 +
                 "Please remove constraints from the system and use the rigidWater=True option."
@@ -62,7 +63,7 @@ class OpenMM(ElectronicModel_):
         if any(
                 self._system.isVirtualSite(i)
                 for i in range(self._system.getNumParticles())):
-            raise ValueError(
+            raise ConfigurationError(
                 "OpenMM system has virtual sites, which are not supported by mudslide."
             )
 
@@ -78,7 +79,7 @@ class OpenMM(ElectronicModel_):
                 for i in range(self.nparticles)
             ])
         except IndexError as exc:
-            raise ValueError(
+            raise ConfigurationError(
                 "Can't find charges from OpenMM,"
                 " probably because mudslide only understands Amber-like forces"
             ) from exc

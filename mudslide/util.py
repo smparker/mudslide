@@ -9,6 +9,8 @@ from typing import Any
 
 import numpy as np
 
+from .exceptions import ConfigurationError
+
 
 
 def find_unique_name(name: str,
@@ -156,6 +158,6 @@ def check_options(options: dict, recognized: list, strict: bool = True) -> None:
 
     if problems:
         if strict:  # pylint: disable=no-else-raise
-            raise ValueError(f"Unrecognized options found: {problems}.")
+            raise ConfigurationError(f"Unrecognized options found: {problems}.")
         else:
             print(f"WARNING: Ignoring unrecognized options: {problems}.")

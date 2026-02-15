@@ -11,6 +11,7 @@ import sys
 import numpy as np
 from numpy.typing import ArrayLike
 
+from .exceptions import ConfigurationError
 from .models.scattering_models import scattering_models as models
 from .version import get_version_info
 
@@ -112,7 +113,7 @@ def surface_main(model_name: str, scan_range: List[float], n: int,
     if model_name in models:
         model = models[model_name]()
     else:
-        raise ValueError(
+        raise ConfigurationError(
             "Unknown model chosen"
         )  # the argument parser should prevent this throw from being possible
 
@@ -127,7 +128,7 @@ def surface_main(model_name: str, scan_range: List[float], n: int,
     if len(x0) != ndof:
         print(
             "Must provide reference vector of same length as the model problem")
-        raise ValueError(
+        raise ConfigurationError(
             f"Expected reference vector of length {ndof}, but received {len(x0)}"
         )
 

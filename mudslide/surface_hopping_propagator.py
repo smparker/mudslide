@@ -7,6 +7,7 @@ from typing import Any
 
 from typing import TYPE_CHECKING
 
+from .exceptions import ConfigurationError
 from .util import is_string, check_options
 from .propagator import Propagator_
 
@@ -104,10 +105,10 @@ class SHPropagator:
         if is_string(prop_options):
             prop_options = {"type": prop_options}
         elif not isinstance(prop_options, dict):
-            raise ValueError("prop_options must be a string or a dictionary")
+            raise ConfigurationError("prop_options must be a string or a dictionary")
 
         proptype = prop_options.get("type", "vv")
         if proptype.lower() == "vv":
             return SHVVPropagator(**prop_options)
-        raise ValueError(
+        raise ConfigurationError(
             f"Unrecognized surface hopping propagator type: {proptype}.")

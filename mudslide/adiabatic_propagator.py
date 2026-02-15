@@ -13,6 +13,7 @@ from typing import Any, Dict, TYPE_CHECKING
 import numpy as np
 
 from .constants import fs_to_au, boltzmann, amu_to_au
+from .exceptions import ConfigurationError
 from .propagator import Propagator_
 from .util import remove_center_of_mass_motion, remove_angular_momentum, check_options
 
@@ -175,7 +176,7 @@ class NoseHooverChainPropagator(Propagator_):
             tmp = 1 / (4 - 4**(1. / 3))
             self.w = np.array([tmp, tmp, 1 - 4 * tmp, tmp, tmp]) / nc
         else:
-            raise ValueError("nys must be either 3 or 5")
+            raise ConfigurationError("nys must be either 3 or 5")
 
         self.G = np.zeros(nchains)
 
@@ -361,6 +362,6 @@ class AdiabaticPropagator:
             elif prop_type in ["nh", "nhc", "nose-hoover"]:
                 return NoseHooverChainPropagator(**prop_options)
             else:
-                raise ValueError(f"Unknown propagator type: {prop_type}")
+                raise ConfigurationError(f"Unknown propagator type: {prop_type}")
 
-        raise ValueError(f"Unknown propagator options: {prop_options}")
+        raise ConfigurationError(f"Unknown propagator options: {prop_options}")

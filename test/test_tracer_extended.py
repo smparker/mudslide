@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 
 import mudslide
+from mudslide.exceptions import ConfigurationError
 from mudslide.tracer import (_sanitize_for_yaml, InMemoryTrace, YAMLTrace,
                              TraceManager, trace_factory, Trace, load_log,
                              _COMPRESSORS, _COMPRESSION_EXTENSIONS)
@@ -230,7 +231,7 @@ def test_trace_factory_yaml():
 
 
 def test_trace_factory_invalid():
-    with pytest.raises(ValueError, match="Invalid trace type"):
+    with pytest.raises(ConfigurationError, match="Invalid trace type"):
         trace_factory("unknown")
 
 
@@ -259,7 +260,7 @@ def test_trace_function_passthrough():
 
 
 def test_trace_function_invalid():
-    with pytest.raises(ValueError, match="Unrecognized Trace option"):
+    with pytest.raises(ConfigurationError, match="Unrecognized Trace option"):
         Trace(12345)
 
 
@@ -459,7 +460,7 @@ def test_yaml_trace_load_and_reload(tmp_path):
 
 
 def test_yaml_trace_invalid_compression():
-    with pytest.raises(ValueError, match="Unknown compression type"):
+    with pytest.raises(ConfigurationError, match="Unknown compression type"):
         YAMLTrace(base_name="test", compression="lz4")
 
 

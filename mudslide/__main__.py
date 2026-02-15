@@ -17,6 +17,7 @@ from .afssh import AugmentedFSSH
 from .batch import TrajGenConst, TrajGenNormal, BatchedTraj
 from .tracer import TraceManager
 from .models import scattering_models as models
+from .exceptions import ConfigurationError
 from .version import __version__, get_version_info
 
 # Add a method into this dictionary to register it with argparse
@@ -212,7 +213,7 @@ def main(argv: list[str] | None = None, file: Any = sys.stdout) -> None:
     elif args.kspacing == "log":
         kpoints = np.logspace(min_k, max_k, nk)
     else:
-        raise ValueError("Unrecognized type of spacing")
+        raise ConfigurationError("Unrecognized type of spacing")
 
     trajectory_type = methods[args.method]
 

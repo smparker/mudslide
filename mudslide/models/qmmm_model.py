@@ -15,6 +15,7 @@ try:
 except ImportError:
     OPENMM_INSTALLED = False
 
+from ..exceptions import ConfigurationError
 from .electronics import ElectronicModel_
 
 
@@ -40,7 +41,7 @@ class QMMM(ElectronicModel_):
         super().__init__(nstates=qm_model.nstates, ndof=mm_model.ndof)
 
         if not self.check_qm_and_mm_regions(self._qm_atoms):
-            raise ValueError(
+            raise ConfigurationError(
                 "QM atoms must have the same elements in the QM and MM models.")
         self.remove_qm_interactions(self._qm_atoms)
 
@@ -71,7 +72,7 @@ class QMMM(ElectronicModel_):
                         force.setBondParameters(n, a, b, r, k * 0.000)
                         num_bond_removed += 1
                     if (a in qm_atoms) != (b in qm_atoms):
-                        raise ValueError(
+                        raise ConfigurationError(
                             "Bonded interactions between QM and MM regions not allowed."
                             f"Atoms {a:d} and {b:d} are bonded across regions.")
             elif isinstance(force, openmm.HarmonicAngleForce):
@@ -82,7 +83,7 @@ class QMMM(ElectronicModel_):
                         force.setAngleParameters(n, a, b, c, t, k * 0.000)
                         num_angl_removed += 1
                     elif any(in_qm):
-                        raise ValueError(
+                        raise ConfigurationError(
                             "Bonded interactions between QM and MM regions not allowed."
                             f"Atoms {a:d}, {b:d}, and {c:d} are bonded across regions."
                         )
@@ -95,7 +96,7 @@ class QMMM(ElectronicModel_):
                                                    k * 0.000)
                         num_tors_removed += 1
                     elif any(in_qm):
-                        raise ValueError(
+                        raise ConfigurationError(
                             "Bonded interactions between QM and MM regions not allowed."
                             f"Atoms {a:d}, {b:d}, {c:d}, and {d:d} are bonded across regions."
                         )
@@ -112,11 +113,11 @@ class QMMM(ElectronicModel_):
                     for j in range(i):
                         force.addException(i, j, 0, 1, 0, replace=True)
             elif isinstance(force, openmm.CMMotionRemover):
-                raise ValueError(
+                raise ConfigurationError(
                     "Cannot use CMMotionRemover in QM/MM model. Turn it off by setting removeCMMotion=False when preparing the System()."
                 )
             else:
-                raise ValueError(
+                raise ConfigurationError(
                     f"Force {force.__class__.__name__} not supported in QM/MM model."
                 )
 

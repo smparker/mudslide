@@ -18,6 +18,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 from .constants import fs_to_au
+from .exceptions import ConfigurationError
 from .util import find_unique_name, is_string
 from .math import RollingAverage
 from .version import __version__
@@ -365,7 +366,7 @@ class YAMLTrace(Trace_):
         super().__init__(weight=weight)
 
         if compression is not None and compression not in _COMPRESSORS:
-            raise ValueError(f"Unknown compression type: {compression}. "
+            raise ConfigurationError(f"Unknown compression type: {compression}. "
                              f"Supported types: {list(_COMPRESSORS.keys())}")
 
         self.weight: float = weight
@@ -422,7 +423,7 @@ class YAMLTrace(Trace_):
             self.logfiles = logdata["logfiles"]
             self.main_log = self.unique_name + ".yaml"
             if self.main_log != os.path.basename(load_main_log):
-                raise RuntimeError(
+                raise ConfigurationError(
                     f"It looks like the log file {load_main_log} was renamed. "
                     "This is undefined behavior for now!")
             self.active_logfile = self.logfiles[-1]
@@ -657,7 +658,7 @@ def trace_factory(trace_type: str = "yaml") -> type:
         return YAMLTrace
     if trace_type == "in_memory":
         return InMemoryTrace
-    raise ValueError(f"Invalid trace type specified: {trace_type}")
+    raise ConfigurationError(f"Invalid trace type specified: {trace_type}")
 
 
 def Trace(trace_type: Any, *args: Any, **kwargs: Any) -> Trace_:
@@ -696,7 +697,7 @@ def Trace(trace_type: Any, *args: Any, **kwargs: Any) -> Trace_:
     elif isinstance(trace_type, Trace_):
         return trace_type
 
-    raise ValueError("Unrecognized Trace option")
+    raise ConfigurationError("Unrecognized Trace option")
 
 
 class TraceManager:

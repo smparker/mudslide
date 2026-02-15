@@ -4,6 +4,7 @@
 
 import numpy as np
 import pytest
+from mudslide.exceptions import ConfigurationError
 from mudslide.even_sampling import SpawnStack
 import itertools
 
@@ -164,5 +165,5 @@ def test_input():
     sample_stack = []
     ss = SpawnStack(sample_stack = sample_stack)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ConfigurationError):
         ss.append_layer(zetas=zetas, dws=dws, stack=ss.sample_stack)

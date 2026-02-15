@@ -8,6 +8,7 @@ from typing import Any, Union, TYPE_CHECKING
 import numpy as np
 from numpy.typing import ArrayLike
 
+from .exceptions import ComputeError, ConfigurationError
 from .util import is_string
 from .math import poisson_prob_scale
 from .propagation import rk4
@@ -114,12 +115,12 @@ class AFSSHPropagator(Propagator_):  # pylint: disable=abstract-method
         if is_string(prop_options):
             prop_options = {"type": prop_options}
         elif not isinstance(prop_options, dict):
-            raise TypeError("prop_options must be a string or a dictionary")
+            raise ConfigurationError("prop_options must be a string or a dictionary")
 
         proptype = prop_options.get("type", "vv")
         if proptype.lower() == "vv":
             return AFSSHVVPropagator(**prop_options)
-        raise ValueError(
+        raise ConfigurationError(
             f"Unrecognized surface hopping propagator type: {proptype}.")
 
 
@@ -217,7 +218,7 @@ class AugmentedFSSH(SurfaceHoppingMD):
             Rt = rk4(self.delR, ydot, 0.0, dt, nsteps)
             self.delR = Rt
         else:
-            raise ValueError(
+            raise ConfigurationError(
                 f"Unrecognized augmented integration method: {self.augmented_integration}"
             )
 
@@ -269,7 +270,7 @@ class AugmentedFSSH(SurfaceHoppingMD):
             Pt = rk4(self.delP, ydot, 0.0, dt, nsteps)
             self.delP = Pt
         else:
-            raise ValueError(
+            raise ConfigurationError(
                 f"Unrecognized augmented integration method: {self.augmented_integration}"
             )
         return
@@ -299,7 +300,7 @@ class AugmentedFSSH(SurfaceHoppingMD):
         """
         out = self.delP[:, source, source] - self.delP[:, target, target]
         if np.linalg.norm(np.imag(out)) >= IMAGINARY_NORM_TOLERANCE:
-            raise RuntimeError(
+            raise ComputeError(
                 "Rescale direction has unexpectedly large imaginary component: "
                 f"{np.linalg.norm(np.imag(out)):.2e}")
         return np.real(out)

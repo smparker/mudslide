@@ -11,6 +11,7 @@ import pytest
 
 from mudslide.afssh import AugmentedFSSH, AFSSHPropagator, AFSSHVVPropagator
 from mudslide.constants import fs_to_au
+from mudslide.exceptions import ConfigurationError
 from mudslide.models import scattering_models as models
 
 
@@ -62,7 +63,7 @@ class TestAFSSHPropagator:
     def test_invalid_propagator_type_raises(self):
         """Test that invalid propagator type raises ValueError"""
         model = models["simple"](mass=2000.0)
-        with pytest.raises(ValueError, match="Unrecognized"):
+        with pytest.raises(ConfigurationError, match="Unrecognized"):
             AFSSHPropagator(model, "invalid_type")
 
     def test_invalid_options_type_raises(self):
@@ -142,7 +143,7 @@ class TestAFSSHRK4Integration:
         # Manually set invalid integration method
         traj.augmented_integration = "invalid"
 
-        with pytest.raises(ValueError, match="Unrecognized augmented integration method"):
+        with pytest.raises(ConfigurationError, match="Unrecognized augmented integration method"):
             step_trajectory(traj)
 
     def test_invalid_integration_method_delP_raises(self):
@@ -158,7 +159,7 @@ class TestAFSSHRK4Integration:
         # Then set invalid method
         traj.augmented_integration = "invalid"
 
-        with pytest.raises(ValueError, match="Unrecognized augmented integration method"):
+        with pytest.raises(ConfigurationError, match="Unrecognized augmented integration method"):
             # Call advance_delP directly
             traj.advance_delP(traj.last_electronics, traj.electronics)
 

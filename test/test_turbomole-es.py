@@ -15,6 +15,7 @@ from mudslide.even_sampling import EvenSamplingTrajectory
 from mudslide.tracer import TraceManager
 from mudslide.batch import TrajGenConst, TrajGenNormal, BatchedTraj
 
+from mudslide.exceptions import ConvergenceError, ExternalCodeError
 from mudslide.models import TMModel, turbomole_is_installed
 from mudslide.config import get_config
 
@@ -135,14 +136,14 @@ def test_ridft_convergence_failure(tm_es_setup):
     # perturb geometry so the converged MOs are no longer a good guess
     positions = tm_model._position.copy()
     positions += 0.5 * np.random.default_rng(42).standard_normal(positions.shape)
-    with pytest.raises(RuntimeError):
+    with pytest.raises(ConvergenceError):
         tm_model.compute(positions)
 
 
 def test_egrad_convergence_failure(tm_es_setup):
-    """Test that non-convergence of egrad raises RuntimeError"""
+    """Test that non-convergence of egrad raises ExternalCodeError"""
     tm_model = TMModel(states=[0, 1, 2, 3], expert=True)
     tm_model.control.adg("escfiterlimit", 2)
     positions = tm_model._position.copy()
-    with pytest.raises(RuntimeError):
+    with pytest.raises(ExternalCodeError):
         tm_model.compute(positions)

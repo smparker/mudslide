@@ -76,19 +76,6 @@ Mudslide is a Python nonadiabatic molecular dynamics library at version 0.12.0. 
 
 ---
 
-## 7. Usability Improvements
-
-### Medium
-
-- **Option validation at init**: Move all option validation to `__init__` rather than failing mid-simulation. The `check_options` utility exists but isn't consistently applied.
-
-### Low
-
-- **Type the `model` parameter**: Throughout the codebase, `model: Any` is used. Use `'ElectronicModel_'` (forward reference) for better IDE support and type checking.
-- **Unify exception hierarchy**: Consider a `MudslideError` base exception in `exceptions.py` (which already exists) and derive specific errors from it.
-
----
-
 ## Summary: Suggested Priority Order for 1.0
 
 **Do first (blockers for a credible 1.0):**

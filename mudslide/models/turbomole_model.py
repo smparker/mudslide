@@ -25,6 +25,7 @@ from ..util import find_unique_name
 from ..constants import amu_to_au
 from ..periodic_table import masses
 from ..config import get_config
+from ..exceptions import ConfigurationError, ConvergenceError, ExternalCodeError
 from .electronics import ElectronicModel_
 
 
@@ -87,7 +88,7 @@ def _verify_scf(module: str, data_dict: dict) -> None:
         warnings.warn(f"Convergence information not found for {module}")
         return
     if not converged:
-        raise RuntimeError(f"{module} SCF did not converge")
+        raise ConvergenceError(f"{module} SCF did not converge")
 
 
 def _verify_response(module: str, data_dict: dict) -> None:
@@ -101,7 +102,7 @@ def _verify_response(module: str, data_dict: dict) -> None:
             )
             continue
         if not converged:
-            raise RuntimeError(f"{module} {solver} did not converge")
+            raise ConvergenceError(f"{module} {solver} did not converge")
 
 
 class TurboControl:
@@ -122,12 +123,12 @@ class TurboControl:
         elif workdir is not None:
             self.workdir = os.path.abspath(workdir)
         else:
-            raise ValueError("Must provide either control_file or workdir")
+            raise ConfigurationError("Must provide either control_file or workdir")
         self.control_file = control_file or "control"
 
         # make sure control file exists
         if not os.path.exists(os.path.join(self.workdir, self.control_file)):
-            raise RuntimeError(
+            raise ConfigurationError(
                 f"control file not found in working directory {self.workdir:s}")
 
         # list of data groups and which file they are in, used to avoid rerunning sdg too much
@@ -155,7 +156,7 @@ class TurboControl:
     def check_turbomole_is_installed(self) -> None:
         """Check that turbomole is installed, raise exception if not"""
         if not turbomole_is_installed():
-            raise RuntimeError("Turbomole is not installed")
+            raise ExternalCodeError("Turbomole is not installed")
 
     def where_is_dg(self, dg: str, absolute_path: bool = False) -> str:
         """Find which file a data group is in"""
@@ -218,7 +219,7 @@ class TurboControl:
                                 check=True)
         # check that the command ran successfully
         if "abnormal" in result.stderr:
-            raise RuntimeError(f"Call to adg ended abnormally: {result.stderr}")
+            raise ExternalCodeError(f"Call to adg ended abnormally: {result.stderr}")
 
     def cpc(self, dest: str) -> None:
         """Copy the control file and other files to a new directory"""
@@ -278,7 +279,7 @@ class TurboControl:
         else:
             print(output.stdout)
         if "abnormal" in output.stderr:
-            raise RuntimeError(f"Call to {module} ended abnormally")
+            raise ExternalCodeError(f"Call to {module} ended abnormally")
         data_dict = turboparse.parse_turbo(io.StringIO(output.stdout))
         verify_module_output(module, data_dict, output.stderr)
         return data_dict
@@ -456,7 +457,7 @@ class TMModel(ElectronicModel_):
 
         if not self.command_prefix:
             if not turbomole_is_installed():
-                raise RuntimeError("Turbomole is not installed")
+                raise ExternalCodeError("Turbomole is not installed")
 
         if turbomole_modules is None:
             # always need energy and gradients
@@ -470,7 +471,7 @@ class TMModel(ElectronicModel_):
             if not all(
                     shutil.which(x) is not None
                     for x in self.turbomole_modules.values()):
-                raise RuntimeError("Turbomole modules not found")
+                raise ExternalCodeError("Turbomole modules not found")
 
         if not self.expert:
             self.apply_suggested_parameters()
@@ -525,7 +526,7 @@ class TMModel(ElectronicModel_):
 
         # Reached end of file without finding $coord.
         if line == "":
-            raise ValueError(f"$coord entry not found in file: {coord_path}!")
+            raise ConfigurationError(f"$coord entry not found in file: {coord_path}!")
 
         coordline += 1
         for i, coord_list in enumerate(X):

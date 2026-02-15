@@ -8,6 +8,8 @@ from typing import Tuple
 import numpy as np
 from numpy.typing import ArrayLike
 
+from .exceptions import ConfigurationError
+
 
 def clenshaw_curtis(n: int,
                     a: float = -1.0,
@@ -110,7 +112,7 @@ def simpson(n: int,
     assert b > a and n > 1
 
     if n % 2 != 1:
-        raise ValueError(
+        raise ConfigurationError(
             "Simpson's rule must be defined with an odd number of points")
 
     ninterval = n - 1
@@ -148,4 +150,4 @@ def quadrature(n: int,
         return trapezoid(n, a, b)
     if method in ["simpson"]:
         return simpson(n, a, b)
-    raise ValueError("Unrecognized quadrature choice")
+    raise ConfigurationError("Unrecognized quadrature choice")

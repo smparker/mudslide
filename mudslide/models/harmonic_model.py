@@ -10,6 +10,7 @@ import yaml
 import numpy as np
 from numpy.typing import ArrayLike
 
+from ..exceptions import ConfigurationError
 from .electronics import ElectronicModel_
 
 
@@ -51,10 +52,10 @@ class HarmonicModel(ElectronicModel_):
         self.energies = np.array([])
 
         if self.H0.shape != (self._ndof, self._ndof):
-            raise ValueError("Incorrect shape of Hessian")
+            raise ConfigurationError("Incorrect shape of Hessian")
 
         if self.mass.shape != (self._ndof,):
-            raise ValueError("Incorrect shape of mass")
+            raise ConfigurationError("Incorrect shape of mass")
 
     def compute(self,
                 X: np.ndarray,
@@ -120,7 +121,7 @@ class HarmonicModel(ElectronicModel_):
             elif filename.endswith(".yaml"):
                 data = yaml.load(f, Loader=yaml.FullLoader)
             else:
-                raise ValueError("Unknown file format")
+                raise ConfigurationError("Unknown file format")
 
         return cls.from_dict(data)
 
@@ -144,4 +145,4 @@ class HarmonicModel(ElectronicModel_):
             elif filename.endswith(".yaml"):
                 yaml.dump(out, f)
             else:
-                raise ValueError("Unknown file format")
+                raise ConfigurationError("Unknown file format")

@@ -12,6 +12,7 @@ import copy as cp
 import numpy as np
 from numpy.typing import ArrayLike
 
+from .exceptions import ComputeError, ConfigurationError
 from .integration import quadrature
 from .surface_hopping_md import SurfaceHoppingMD
 
@@ -139,7 +140,7 @@ class SpawnStack:
             samp = self.last_stack
             dw = self.last_dw
             if dw == 0:
-                raise ValueError(
+                raise ComputeError(
                     "What happened? A hop with no differential weight?")
             weight = self.base_weight * dw * reweight
             next_stack = samp["children"]
@@ -209,7 +210,7 @@ class SpawnStack:
             stack = self.sample_stack
 
         if len(zetas) != len(dws):
-            raise ValueError("dimension of dws should be same as zetas")
+            raise ConfigurationError("dimension of dws should be same as zetas")
 
         l = len(stack)
 

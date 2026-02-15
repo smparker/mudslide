@@ -8,6 +8,7 @@ from typing import List, Dict, Union, Any, TYPE_CHECKING
 import numpy as np
 
 from .constants import boltzmann
+from .exceptions import ConfigurationError
 from .propagation import propagate_exponential, propagate_interpolated_rk4
 from .math import poisson_prob_scale
 from .propagator import Propagator_
@@ -103,7 +104,7 @@ class SurfaceHoppingMD(TrajectoryMD):  # pylint: disable=too-many-instance-attri
                 self.rho[state, state] = 1.0
                 self.state = state
             except (TypeError, ValueError) as exc:
-                raise ValueError(
+                raise ConfigurationError(
                     "Initial state rho0 must be convertible to an integer state "
                     "index") from exc
         else:
@@ -111,11 +112,11 @@ class SurfaceHoppingMD(TrajectoryMD):  # pylint: disable=too-many-instance-attri
                 self.rho = np.copy(rho0)
                 self.state = int(options["state0"])
             except KeyError as exc:
-                raise KeyError(
+                raise ConfigurationError(
                     "state0 option required when rho0 is a density matrix"
                 ) from exc
             except (ValueError, TypeError) as exc:
-                raise ValueError(
+                raise ConfigurationError(
                     "state0 option must be convertible to an integer state index"
                 ) from exc
 
@@ -130,7 +131,7 @@ class SurfaceHoppingMD(TrajectoryMD):  # pylint: disable=too-many-instance-attri
 
         self.hopping_probability = options.get("hopping_probability", "tully")
         if self.hopping_probability not in ["tully", "poisson"]:
-            raise ValueError(
+            raise ConfigurationError(
                 "hopping_probability accepts only \"tully\" or \"poisson\" options"
             )
 
@@ -152,7 +153,7 @@ class SurfaceHoppingMD(TrajectoryMD):  # pylint: disable=too-many-instance-attri
             "instantaneous", "cumulative", "cumulative_integrated"
         ]
         if self.hopping_method not in allowed_methods:
-            raise ValueError(
+            raise ConfigurationError(
                 f"hopping_method should be one of {allowed_methods}")
 
         self.forced_hop_threshold = options.get("forced_hop_threshold", None)
@@ -486,7 +487,7 @@ class SurfaceHoppingMD(TrajectoryMD):  # pylint: disable=too-many-instance-attri
                                        this_electronics.hamiltonian, this_tau,
                                        self.velocity, self.dt, nsteps)
         else:
-            raise ValueError(
+            raise ConfigurationError(
                 f"Unrecognized electronic integration option: {self.electronic_integration}. "
                 "Must be one of ['exp', 'linear-rk4']")
 
@@ -574,7 +575,7 @@ class SurfaceHoppingMD(TrajectoryMD):  # pylint: disable=too-many-instance-attri
             elif self.hopping_method == "cumulative_integrated":
                 accumulated += gkdt
             else:
-                raise ValueError(
+                raise ConfigurationError(
                     f"Unrecognized hopping method: {self.hopping_method}")
 
             if accumulated > self.zeta:  # then hop

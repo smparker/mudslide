@@ -10,6 +10,7 @@ from pathlib import Path
 import mudslide
 import yaml
 
+from mudslide.exceptions import ConfigurationError
 from mudslide.models import TMModel, turbomole_is_installed
 from mudslide.config import get_config
 from mudslide.tracer import YAMLTrace
@@ -31,7 +32,7 @@ pytestmark = pytest.mark.skipif(not _turbomole_available(),
 
 def test_raise_on_missing_control():
     """Test if an exception is raised if no control file is found"""
-    with pytest.raises(RuntimeError):
+    with pytest.raises(ConfigurationError):
         model = TMModel(states=[0])
 
 
