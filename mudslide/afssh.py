@@ -19,6 +19,10 @@ if TYPE_CHECKING:
     from .surface_hopping_propagator import SHPropagator
 
 
+IMAGINARY_NORM_TOLERANCE: float = 1e-10
+ZERO_DIVISION_FLOOR: float = 1e-10
+
+
 class AFSSHVVPropagator(Propagator_):
     """Surface Hopping Velocity Verlet propagator."""
 
@@ -294,7 +298,7 @@ class AugmentedFSSH(SurfaceHoppingMD):
             Unit vector pointing in direction of rescale.
         """
         out = self.delP[:, source, source] - self.delP[:, target, target]
-        if np.linalg.norm(np.imag(out)) >= 1e-8:
+        if np.linalg.norm(np.imag(out)) >= IMAGINARY_NORM_TOLERANCE:
             raise RuntimeError(
                 "Rescale direction has unexpectedly large imaginary component: "
                 f"{np.linalg.norm(np.imag(out)):.2e}")
@@ -329,7 +333,7 @@ class AugmentedFSSH(SurfaceHoppingMD):
 
         ddR = shifted_diagonal(self.delR, self.state)
         ddP = shifted_diagonal(self.delP, self.state)
-        ddP = np.where(np.abs(ddP) == 0.0, 1e-10, ddP)
+        ddP = np.where(np.abs(ddP) == 0.0, ZERO_DIVISION_FLOOR, ddP)
         assert electronics is not None
         ddF = shifted_diagonal(np.einsum("pqx->xpq", electronics.force_matrix),
                                self.state)

@@ -49,7 +49,7 @@ def clenshaw_curtis(n: int,
 
     # sanity check
     imag_norm = np.linalg.norm(np.imag(wcc))
-    assert imag_norm < 1e-14
+    assert imag_norm < 10 * np.finfo(float).eps
 
     out = np.zeros(npoints)
     out[:nsegments] = np.real(wcc)

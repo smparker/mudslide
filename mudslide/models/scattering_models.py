@@ -461,6 +461,8 @@ class Subotnik2D(DiabaticModel_):
 class ShinMetiu(AdiabaticModel_):
     """Shin-Metiu model for proton-coupled electron transfer."""
 
+    grid_boundary_offset: float = 1e-8
+
     def __init__(self,
                  representation: str = "adiabatic",
                  reference: Any = None,
@@ -493,8 +495,8 @@ class ShinMetiu(AdiabaticModel_):
         if box is None:
             box = L
         box_left, box_right = -0.5 * box, 0.5 * box
-        self.rr = np.linspace(box_left + 1e-12,
-                              box_right - 1e-12,
+        self.rr = np.linspace(box_left + self.grid_boundary_offset,
+                              box_right - self.grid_boundary_offset,
                               nel,
                               endpoint=True,
                               dtype=np.float64)

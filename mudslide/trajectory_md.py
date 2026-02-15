@@ -23,6 +23,9 @@ if TYPE_CHECKING:
     from .models.electronics import ElectronicModel_
 
 
+TIME_COMPARISON_ATOL: float = 1e-12
+
+
 class TrajectoryMD(ABC):  # pylint: disable=too-many-instance-attributes
     """Abstract base class for molecular dynamics trajectories.
 
@@ -276,7 +279,7 @@ class TrajectoryMD(ABC):  # pylint: disable=too-many-instance-attributes
         if self.max_steps >= 0 and self.nsteps >= self.max_steps:
             return False
         if self.time >= self.max_time or np.isclose(
-                self.time, self.max_time, atol=1e-8, rtol=0.0):
+                self.time, self.max_time, atol=TIME_COMPARISON_ATOL, rtol=0.0):
             return False
         if self.duration["found_box"]:
             return self.currently_interacting()
