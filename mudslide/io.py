@@ -1,9 +1,20 @@
 # -*- coding: utf-8 -*-
 """Util functions"""
 
+from __future__ import annotations
+
+from typing import Any, List, TextIO, TYPE_CHECKING
+
 from .constants import bohr_to_angstrom
 
-def write_xyz(coords, atom_types, file, comment=""):
+if TYPE_CHECKING:
+    from .models.electronics import ElectronicModel_
+
+
+def write_xyz(coords: Any,
+              atom_types: List[str],
+              file: TextIO,
+              comment: str = "") -> None:
     """Write coordinates to open file handle in XYZ format"""
     file.write(f"{len(coords)}\n")
     file.write(f"{comment}\n")
@@ -11,9 +22,12 @@ def write_xyz(coords, atom_types, file, comment=""):
     acoords = coords * bohr_to_angstrom
     for atom, coord in zip(atom_types, acoords):
         atom = atom.capitalize()
-        file.write(f"{atom:3s} {coord[0]:20.12f} {coord[1]:20.12f} {coord[2]:20.12f}\n")
+        file.write(
+            f"{atom:3s} {coord[0]:20.12f} {coord[1]:20.12f} {coord[2]:20.12f}\n"
+        )
 
-def write_trajectory_xyz(model, trace, filename, every=1):
+
+def write_trajectory_xyz(model: ElectronicModel_, trace: Any, filename: str, every: int = 1) -> None:
     """Write trajectory to XYZ file"""
     natom, nd = model.dimensionality
     with open(filename, "w", encoding='utf-8') as file:
@@ -22,5 +36,7 @@ def write_trajectory_xyz(model, trace, filename, every=1):
                 continue
             desc = f"E={frame['energy']:g}; t={frame['time']:g}"
             coords = frame["position"].reshape(natom, nd)
-            atom_types = model.atom_types if model.atom_types is not None else ["X"] * natom
+            atom_types = model.atom_types if model.atom_types is not None else [
+                "X"
+            ] * natom
             write_xyz(coords, atom_types, file, comment=desc)

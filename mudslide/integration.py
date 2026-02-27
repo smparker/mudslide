@@ -1,12 +1,19 @@
 # -*- coding: utf-8 -*-
 """Quadrature implementations"""
 
+from __future__ import annotations
+
 from typing import Tuple
 
 import numpy as np
 from numpy.typing import ArrayLike
 
-def clenshaw_curtis(n: int, a: float = -1.0, b: float = 1.0) -> Tuple[ArrayLike, ArrayLike]:
+from .exceptions import ConfigurationError
+
+
+def clenshaw_curtis(n: int,
+                    a: float = -1.0,
+                    b: float = 1.0) -> Tuple[ArrayLike, ArrayLike]:
     """
     Computes the points and weights for a Clenshaw-Curtis integration
     from a to b. In other words, for the approximation to the integral
@@ -44,7 +51,7 @@ def clenshaw_curtis(n: int, a: float = -1.0, b: float = 1.0) -> Tuple[ArrayLike,
 
     # sanity check
     imag_norm = np.linalg.norm(np.imag(wcc))
-    assert imag_norm < 1e-14
+    assert imag_norm < 10 * np.finfo(float).eps
 
     out = np.zeros(npoints)
     out[:nsegments] = np.real(wcc)
@@ -55,7 +62,9 @@ def clenshaw_curtis(n: int, a: float = -1.0, b: float = 1.0) -> Tuple[ArrayLike,
     return xx, out
 
 
-def midpoint(n: int, a: float = -1.0, b: float = 1.0) -> Tuple[ArrayLike, ArrayLike]:
+def midpoint(n: int,
+             a: float = -1.0,
+             b: float = 1.0) -> Tuple[ArrayLike, ArrayLike]:
     """
     Returns the points and weights for a midpoint integration
     from a to b. In other words, for the approximation to the integral
@@ -70,7 +79,9 @@ def midpoint(n: int, a: float = -1.0, b: float = 1.0) -> Tuple[ArrayLike, ArrayL
     return points, weights
 
 
-def trapezoid(n: int, a: float = -1.0, b: float = 1.0) -> Tuple[ArrayLike, ArrayLike]:
+def trapezoid(n: int,
+              a: float = -1.0,
+              b: float = 1.0) -> Tuple[ArrayLike, ArrayLike]:
     """
     Returns the points and weights for a trapezoid integration
     from a to b. In other words, for the approximation to the integral
@@ -89,7 +100,9 @@ def trapezoid(n: int, a: float = -1.0, b: float = 1.0) -> Tuple[ArrayLike, Array
     return points, weights
 
 
-def simpson(n: int, a: float = -1.0, b: float = 1.0) -> Tuple[ArrayLike, ArrayLike]:
+def simpson(n: int,
+            a: float = -1.0,
+            b: float = 1.0) -> Tuple[ArrayLike, ArrayLike]:
     """
     Returns the points and weights for a simpson rule integration
     from a to b. In other words, for the approximation to the integral
@@ -99,8 +112,8 @@ def simpson(n: int, a: float = -1.0, b: float = 1.0) -> Tuple[ArrayLike, ArrayLi
     assert b > a and n > 1
 
     if n % 2 != 1:
-        raise ValueError(
-                "Simpson's rule must be defined with an odd number of points")
+        raise ConfigurationError(
+            "Simpson's rule must be defined with an odd number of points")
 
     ninterval = n - 1
 
@@ -116,7 +129,9 @@ def simpson(n: int, a: float = -1.0, b: float = 1.0) -> Tuple[ArrayLike, ArrayLi
     return points, weights
 
 
-def quadrature(n: int, a: float = -1.0, b: float = 1.0,
+def quadrature(n: int,
+               a: float = -1.0,
+               b: float = 1.0,
                method: str = "gl") -> Tuple[ArrayLike, ArrayLike]:
     """
     Returns a quadrature rule for the specified method and bounds
@@ -135,5 +150,4 @@ def quadrature(n: int, a: float = -1.0, b: float = 1.0,
         return trapezoid(n, a, b)
     if method in ["simpson"]:
         return simpson(n, a, b)
-    else:
-        raise ValueError("Unrecognized quadrature choice")
+    raise ConfigurationError("Unrecognized quadrature choice")

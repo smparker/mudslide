@@ -1,33 +1,67 @@
 #!/usr/bin/env python
+"""Section-based parser framework for structured text output.
+
+ParseSection matches a region of text delimited by head and tail regex
+patterns, then delegates line-by-line parsing to child parsers.
+"""
+from __future__ import annotations
 
 import re
+from typing import Any, Protocol
+
+from .stack_iterator import StackIterator
+
+
+class ParserProtocol(Protocol):
+    """Protocol for objects that can parse lines from a StackIterator."""
+
+    def parse(self, liter: StackIterator, out: dict[str, Any]) -> tuple[bool, bool]: ...
 
 
 class ParseSection:
-    """Parse a section by looping over attached parsers until tail search is true"""
-    DEBUG = False
-    name = ""
-    parsers = []
+    """Parser for a delimited section of output.
 
-    def __init__(self, head, tail, multi=False):
-        self.head = re.compile(head)
-        self.tail = re.compile(tail)
-        self.lastsearch = None
+    A section is defined by a head regex (start marker) and a tail regex
+    (end marker). When parse() detects the head pattern on the current line,
+    it enters parse_driver() which iterates through lines, calling each child
+    parser on every line until the tail pattern is matched.
+
+    Child parsers (stored in self.parsers) can be LineParser instances for
+    single-line matches or nested ParseSection instances for subsections.
+
+    Attributes:
+        name: Key under which parsed results are stored in the output dict.
+            Empty string means results merge into the parent dict.
+        multi: If True, each match appends a new dict to a list under
+            self.name, allowing multiple instances of the same section.
+        parsers: List of child parsers to apply within this section.
+    """
+    DEBUG: bool = False
+    name: str = ""
+    parsers: list[ParserProtocol] = []
+
+    def __init__(self, head: str, tail: str, multi: bool = False) -> None:
+        self.head: re.Pattern[str] = re.compile(head)
+        self.tail: re.Pattern[str] = re.compile(tail)
+        self.lastsearch: re.Match[str] | None = None
         self.multi = multi
 
-    def test(self, reg, line):
+    def test(self, reg: re.Pattern[str], line: str) -> re.Match[str] | None:
+        """Test line against a regex and store the match result."""
         self.lastsearch = reg.search(line)
         return self.lastsearch
 
-    def test_head(self, line):
+    def test_head(self, line: str) -> re.Match[str] | None:
+        """Test if line matches the head (section start) pattern."""
         self.lastsearch = self.head.search(line)
         return self.lastsearch
 
-    def test_tail(self, line):
+    def test_tail(self, line: str) -> re.Match[str] | None:
+        """Test if line matches the tail (section end) pattern."""
         self.lastsearch = self.tail.search(line)
         return self.lastsearch
 
-    def parse_driver(self, liter, out):
+    def parse_driver(self, liter: StackIterator, out: dict[str, Any]) -> bool:
         """
         Driver to parse a section
 
@@ -54,7 +88,7 @@ class ParseSection:
 
         return advanced
 
-    def parse(self, liter, out):
+    def parse(self, liter: StackIterator, out: dict[str, Any]) -> tuple[bool, bool]:
         """
         Parse line found at liter.top()
 
@@ -74,7 +108,13 @@ class ParseSection:
             print(f"No match for {self.name} at {liter.top().strip()}")
         return found, advanced
 
-    def prepare(self, out):
+    def prepare(self, out: dict[str, Any]) -> dict[str, Any]:
+        """Set up the output dict entry for this section and return the destination.
+
+        If name is empty, returns the parent dict directly (results merge in).
+        If multi is True, appends a new dict to a list under self.name.
+        Otherwise, creates a single dict under self.name.
+        """
         if self.name == "":
             return out
         if self.multi:
@@ -85,5 +125,10 @@ class ParseSection:
         out[self.name] = {}
         return out[self.name]
 
-    def clean(self, liter, out):
+    def clean(self, liter: StackIterator, out: dict[str, Any]) -> None:
+        """Post-processing hook called after a section is fully parsed.
+
+        Override in subclasses to transform or validate parsed data.
+        Default implementation does nothing.
+        """
         return

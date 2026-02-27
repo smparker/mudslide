@@ -15,6 +15,7 @@ Mudslide!
    components
    usage
    library
+   developing
    references
 
 Indices and tables

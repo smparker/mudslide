@@ -1,12 +1,18 @@
 # -*- coding: utf-8 -*-
 """Propagating Ehrenfest trajectories"""
 
-from typing import Any
+from __future__ import annotations
+
+from typing import Any, TYPE_CHECKING
 
 import numpy as np
 from numpy.typing import ArrayLike
 
+from .trajectory_md import TrajectoryMD
 from .surface_hopping_md import SurfaceHoppingMD
+
+if TYPE_CHECKING:
+    from .models.electronics import ElectronicModel_
 
 
 class Ehrenfest(SurfaceHoppingMD):
@@ -16,7 +22,14 @@ class Ehrenfest(SurfaceHoppingMD):
     are treated quantum mechanically and the nuclear degrees of freedom are treated
     classically. The force on the nuclei is computed as the expectation value of the
     force operator over the electronic density matrix.
+
+    Surface hopping options (hopping_probability, hopping_method, forced_hop_threshold,
+    zeta_list) are not used in Ehrenfest dynamics.
     """
+    recognized_options = TrajectoryMD.recognized_options + [
+        "electronic_integration", "max_electronic_dt",
+        "starting_electronic_intervals", "state0"
+    ]
 
     def __init__(self, *args: Any, **kwargs: Any):
         """Initialize Ehrenfest dynamics.
@@ -28,13 +41,21 @@ class Ehrenfest(SurfaceHoppingMD):
         **kwargs : Any
             Keyword arguments passed to SurfaceHoppingMD
         """
+        kwargs.setdefault("outcome_type", "populations")
         SurfaceHoppingMD.__init__(self, *args, **kwargs)
 
-    def needed_gradients(self):
-        """Ehrenfest needs all forces since it sums over all states."""
+    def needed_gradients(self) -> list[int] | None:
+        """Ehrenfest needs all forces since it sums over all states.
+
+        Returns
+        -------
+        None
+            None means all state gradients are needed.
+        """
         return None
 
-    def potential_energy(self, electronics: 'ElectronicModel_' = None) -> np.floating:
+    def potential_energy(self,
+                         electronics: ElectronicModel_ | None = None) -> float:
         """Calculate Ehrenfest potential energy.
 
         The potential energy is computed as the trace of the product of the
@@ -52,9 +73,10 @@ class Ehrenfest(SurfaceHoppingMD):
         """
         if electronics is None:
             electronics = self.electronics
+        assert electronics is not None
         return np.real(np.trace(np.dot(self.rho, electronics.hamiltonian)))
 
-    def _force(self, electronics: 'ElectronicModel_' = None) -> ArrayLike:
+    def force(self, electronics: ElectronicModel_ | None = None) -> np.ndarray:
         """Calculate Ehrenfest force.
 
         The force is computed as the trace of the product of the density matrix
@@ -72,14 +94,15 @@ class Ehrenfest(SurfaceHoppingMD):
         """
         if electronics is None:
             electronics = self.electronics
+        assert electronics is not None
 
         out = np.zeros([electronics.ndof])
         for i in range(electronics.nstates):
-            out += np.real(self.rho[i,i]) * electronics.force(i)
+            out += np.real(self.rho[i, i]) * electronics.force(i)
         return out
 
-    def surface_hopping(self, last_electronics: 'ElectronicModel_',
-                        this_electronics: 'ElectronicModel_'):
+    def surface_hopping(self, last_electronics: ElectronicModel_,
+                        this_electronics: ElectronicModel_) -> None:
         """Handle surface hopping.
 
         In Ehrenfest dynamics, surface hopping is not performed as the electronic

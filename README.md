@@ -1,28 +1,38 @@
-# Fewest Switches Surface Hopping [![Build Status](https://github.com/smparker/mudslide/actions/workflows/python-package.yml/badge.svg)](https://github.com/smparker/mudslide/actions/workflows/python-package.yml) [![Documentation Status](https://readthedocs.org/projects/mudslide/badge/?version=latest)](https://mudslide.readthedocs.io/en/latest/?badge=latest)
-Python implementation of Tully's Fewest Switches Surface Hopping (FSSH) for model problems including
-a propagator and an implementation of Tully's model problems described in Tully, J.C. _J. Chem. Phys._ (1990) **93** 1061.
-The current implementation works for diabatic as well as ab initio models, with two or more electronic states, and with one or more
-dimensional potentials.
+# Mudslide [![Build Status](https://github.com/smparker/mudslide/actions/workflows/python-package.yml/badge.svg)](https://github.com/smparker/mudslide/actions/workflows/python-package.yml) [![Documentation Status](https://readthedocs.org/projects/mudslide/badge/?version=latest)](https://mudslide.readthedocs.io/en/latest/?badge=latest)
+A Python library for nonadiabatic molecular dynamics, implementing Fewest Switches Surface Hopping (FSSH)
+and related methods. Includes Tully's model problems (Tully, J.C. _J. Chem. Phys._ (1990) **93** 1061)
+as well as interfaces to ab initio electronic structure codes. Supports diabatic and adiabatic models
+with two or more electronic states and one or more dimensional potentials.
 
 ## Contents
 * `mudslide` package that contains
-  - implementation of all surface hopping methods
+  - nonadiabatic and adiabatic dynamics methods
     - `SurfaceHoppingMD` - Standard FSSH implementation
     - `Ehrenfest` - Ehrenfest dynamics
-    - `AugmentedFSSH` - Augmented FSSH implementation
+    - `AugmentedFSSH` - Augmented FSSH (A-FSSH) implementation
     - `EvenSamplingTrajectory` - FSSH with even sampling of phase space
-  - collection of 1D models
+    - `AdiabaticMD` - Adiabatic (ground state) molecular dynamics
+  - collection of 1D model potentials
     - `TullySimpleAvoidedCrossing`
     - `TullyDualAvoidedCrossing`
     - `TullyExtendedCouplingReflection`
     - `SuperExchange`
     - `SubotnikModelX`
     - `SubotnikModelS`
+    - `SubotnikModelW`
+    - `SubotnikModelZ`
     - `ShinMetiu`
-  - some 2D models
+    - `LinearVibronic`
+  - 2D models
     - `Subotnik2D`
+  - ab initio interfaces
+    - `TMModel` - Turbomole interface for TDDFT-based NAMD
+    - `OpenMM` - OpenMM interface for classical MD
+    - `QMMM` - QM/MM combining Turbomole and OpenMM
+    - `HarmonicModel` - Harmonic approximation from Hessian data
 * `mudslide` script that runs simple model trajectories
-* `mudslide-surface` script that prints 1D surface and couplings
+* `mud` script providing a unified CLI with subcommands
+* `mudslide-surface` script that prints 1D surfaces and couplings
 
 ## Requirements
 * numpy
@@ -85,10 +95,9 @@ will run 4 scattering simulations with a particle starting in the ground state (
 * `total_time` - total simulation length (default: 2 * abs(position/velocity))
 * `samples` - number of trajectories to run (default: 2000)
 * `seed` - random seed for trajectories (defaults however numpy does)
-* `propagator` - method used to propagate electronic wavefunction
-    * "exponential" (default) - apply exponentiated Hamiltonian via diagonalization
-    * "ode" - scipy's ODE integrator
-* `nprocs` - number of processes over which to parallelize trajectories (default: 1)
+* `electronic_integration` - method used to propagate electronic wavefunction
+    * "exp" (default) - apply exponentiated Hamiltonian via diagonalization
+    * "linear-rk4" - interpolated RK4 integration
 * `outcome_type` - how to count statistics at the end of a trajectory
     * "state" (default) - use the state attribute of the simulation only
     * "populations" - use the diagonals of the density matrix
@@ -105,15 +114,17 @@ and should implement
 ### compute() function
 The `compute()` function needs to have the following signature:
 
-    def compute(self, X: ArrayLike, couplings: Any = None, gradients: Any None, reference: Any = None) -> None
+    def compute(self, X: ArrayLike, couplings: Any = None, gradients: Any = None, reference: Any = None) -> None
 
 The `X` input to the `compute()` function is an array of the positions. All other inputs are ignored for now
 but will eventually be used to allow the trajectory to enumerate precisely which quantities are desired at
 each call.
 At the end of the `compute()` function, the object must store
-* `self.hamiltonian` - An `nstates x nstates` array of the Hamiltonian (`nstates` is the number of electronic states)
-* `self.force` - An `nstates x ndim` array of the force on each PES (`ndim` is the number of classical degrees of freedom)
-* `self.derivative_coupling` - An `nstates x nstates x ndim` array where `self.derivative_coupling[i,j,:]` contains <i|d/dR|j>.
+* `self._hamiltonian` - An `nstates x nstates` array of the Hamiltonian (`nstates` is the number of electronic states)
+* `self._force` - An `nstates x ndim` array of the force on each PES (`ndim` is the number of classical degrees of freedom)
+* `self._derivative_coupling` - An `nstates x nstates x ndim` array where `derivative_coupling[i,j,:]` contains <i|d/dR|j>
+* `self._forces_available` - A boolean array of length `nstates` indicating which forces were computed
+* `self._derivative_couplings_available` - An `nstates x nstates` boolean array indicating which couplings were computed
 
 See the file `mudslide/turbomole_model.py` for an example of a standalone ab initio model.
 
@@ -142,12 +153,6 @@ Additional models included are:
 For batch runs, one must tell `BatchedTraj` how to decide on new initial conditions
 and how to decide when a trajectory has finished. The basic requirements for each of those
 is simple.
-
-The structure of these classes is somewhat strange because of the limitations of
-multiprocessing in python. To make use of multiprocessing, every object
-must be able to be `pickle`d, meaning that multiprocessing inherits all the
-same limitations. As a result, when using multiprocessing, the trajectory generator class must
-be fully defined in the default namespace.
 
 ### Generating initial conditions
 This should be a generator function that accepts a number of samples

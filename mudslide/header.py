@@ -42,8 +42,8 @@ def print_header() -> None:
     border = "=" * width
 
     print(BANNER)
-    print(f"  Nonadiabatic Molecular Dynamics")
-    print(f"  with Trajectory Surface Hopping")
+    print("  Nonadiabatic Molecular Dynamics")
+    print("  with Trajectory Surface Hopping")
     print()
     print(border)
     for line in info_lines:

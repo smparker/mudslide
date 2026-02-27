@@ -1,7 +1,19 @@
 #!/usr/bin/env python
+"""Parsers for Turbomole response property and excited state output.
+
+Handles output from egrad and escf modules, extracting excited state
+energies, transition dipole moments, state-to-state properties,
+two-photon absorption amplitudes, hyperpolarizabilities, Davidson
+iteration convergence, CPKS iterations, and NAC couplings.
+"""
+from __future__ import annotations
+
+import re
+from typing import Any
 
 from .line_parser import LineParser, SimpleLineParser, BooleanLineParser
-from .section_parser import ParseSection
+from .section_parser import ParseSection, ParserProtocol
+from .stack_iterator import StackIterator
 from .common_parser import GroundParser, NACParser, GradientDataParser, EXCITED_STATE_GRADIENT_HEAD, fortran_float
 
 
@@ -14,13 +26,13 @@ class ExoptLineParser(LineParser):
     - "3 excited states specified in $exopt:     1     2     3" -> [1, 2, 3]
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         reg = (r"(?:Excited state no\.\s+(\d+)\s+chosen for optimization|"
                r"Default state chosen:\s+(\d+)|"
                r"\d+\s+excited states specified in \$exopt:\s+([\d\s]+))")
         super().__init__(reg)
 
-    def process(self, m, out):
+    def process(self, m: re.Match[str], out: dict[str, Any]) -> None:
         if m.group(1) is not None:
             out["exopt"] = [int(m.group(1))]
         elif m.group(2) is not None:
@@ -32,7 +44,7 @@ class ExoptLineParser(LineParser):
 class ExcitedDipoleParser(ParseSection):
     """Parser for excited state dipole moments"""
 
-    def __init__(self, name, head, tail=r"z\s+(\S+)"):
+    def __init__(self, name: str, head: str, tail: str = r"z\s+(\S+)") -> None:
         super().__init__(head, tail)
         self.name = name
         self.parsers = [
@@ -41,7 +53,7 @@ class ExcitedDipoleParser(ParseSection):
             SimpleLineParser(r"z\s+(\S+)", ["z"], converter=float),
         ]
 
-    def prepare(self, out):
+    def prepare(self, out: dict[str, Any]) -> dict[str, Any]:
         out[self.name] = {"x": 0.0, "y": 0.0, "z": 0.0}
         return out[self.name]
 
@@ -50,98 +62,126 @@ class ExcitedParser(ParseSection):
     """Parser for excited state properties"""
     name = "excited_state"
 
-    def __init__(self):
-        super().__init__(r"\d+ (singlet |triplet |)[abte1234567890]+ excitation",
-                         r"Electric quadrupole transition moment",
-                         multi=True)
+    def __init__(self) -> None:
+        super().__init__(
+            r"\d+ (singlet |triplet |)[abte1234567890]+ excitation",
+            r"Electric quadrupole transition moment",
+            multi=True)
         self.parsers = [
-            SimpleLineParser(r"(\d+) (singlet |triplet |)([abte1234567890]*) excitation",
-                             ["index", "spin", "irrep"],
-                             types=[int, str, str]),
-            SimpleLineParser(r"Excitation energy:\s+(\S+)", ["energy"], converter=float),
-            ExcitedDipoleParser("diplen", r"Electric transition dipole moment \(length rep"),
+            SimpleLineParser(
+                r"(\d+) (singlet |triplet |)([abte1234567890]*) excitation",
+                ["index", "spin", "irrep"],
+                types=[int, str, str]),
+            SimpleLineParser(r"Excitation energy:\s+(\S+)", ["energy"],
+                             converter=float),
+            ExcitedDipoleParser(
+                "diplen", r"Electric transition dipole moment \(length rep"),
         ]
 
 
 class MomentParser(LineParser):
+    """Parse <i|mu|j> transition dipole moment matrix elements."""
 
-    def __init__(self, reg=r"<\s*(\d+)\|mu\|\s*(\d+)>:\s+(\S+)\s+(\S+)\s+(\S+)"):
+    def __init__(self,
+                 reg: str = r"<\s*(\d+)\|mu\|\s*(\d+)>:\s+(\S+)\s+(\S+)\s+(\S+)"
+                 ) -> None:
         super().__init__(reg)
 
-    def process(self, m, out):
+    def process(self, m: re.Match[str], out: dict[str, Any]) -> None:  # type: ignore[override]
         i, j = int(m.group(1)), int(m.group(2))
         dip = [float(m.group(x)) for x in range(3, 6)]
 
         if i not in out:
-            out[i] = {}
-        out[i][j] = {"diplen": dip}
+            out[i] = {}  # type: ignore[index]
+        out[i][j] = {"diplen": dip}  # type: ignore[index]
 
         if j not in out:
-            out[j] = {}
-        out[j][i] = {"diplen": dip}
+            out[j] = {}  # type: ignore[index]
+        out[j][i] = {"diplen": dip}  # type: ignore[index]
 
 
 class ExcitedMoments(ParseSection):
+    """Parser for a block of excited state dipole moment matrix elements."""
 
-    def __init__(self, name, head, tail=r"^\s*$"):
+    def __init__(self, name: str, head: str, tail: str = r"^\s*$") -> None:
         super().__init__(head, tail)
         self.name = name
         self.parsers = [MomentParser()]
 
 
 class StateToStateParser(ParseSection):
+    """Parser for state-to-state transition and difference moments."""
     name = "state-to-state"
 
-    def __init__(self):
-        super().__init__(r"<\s*\d+\s*\|\s*W\s*\|\s*\d+\s*>.*(?:transition|difference) moments",
-                         r"(<\s*\d+\s*\|\s*W\s*\|\s*\d+\s*>.*(?:transition|difference) moments)|(S\+T\+V CONTRIBUTIONS TO)",
-                         multi=True)
+    def __init__(self) -> None:
+        super().__init__(
+            r"<\s*\d+\s*\|\s*W\s*\|\s*\d+\s*>.*(?:transition|difference) moments",
+            r"(<\s*\d+\s*\|\s*W\s*\|\s*\d+\s*>.*(?:transition|difference) moments)|(S\+T\+V CONTRIBUTIONS TO)",
+            multi=True)
         self.parsers = [
-            SimpleLineParser(r"<\s*(\d+)\s*\|\s*W\s*\|\s*(\d+)\s*>", ["bra", "ket"],
+            SimpleLineParser(r"<\s*(\d+)\s*\|\s*W\s*\|\s*(\d+)\s*>",
+                             ["bra", "ket"],
                              types=[int, int],
                              first_only=True),
-            ExcitedDipoleParser("diplen", r"Relaxed electric transition dipole moment \(length rep"),
+            ExcitedDipoleParser(
+                "diplen",
+                r"Relaxed electric transition dipole moment \(length rep"),
         ]
 
 
 class TPAColParser(ParseSection):
+    """Parser for two-photon absorption tensor columns and cross sections."""
     name = "columns"
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(r"Column:s+(\S+)", r"sigma_0", multi=True)
         self.parsers = self._make_parsers()
 
     @staticmethod
-    def _make_parsers():
+    def _make_parsers() -> list[ParserProtocol]:
         return [
             SimpleLineParser(r"Column:\s+(\S+)", ["column"], converter=int),
-            SimpleLineParser(r"xx\s+(\S+)\s+xy\s+(\S+)\s+xz\s+(\S+)", ["xx", "xy", "xz"], converter=float),
-            SimpleLineParser(r"yx\s+(\S+)\s+yy\s+(\S+)\s+yz\s+(\S+)", ["yx", "yy", "yz"], converter=float),
-            SimpleLineParser(r"zx\s+(\S+)\s+zy\s+(\S+)\s+zz\s+(\S+)", ["zx", "zy", "zz"], converter=float),
-            SimpleLineParser(r"\(dF,dG,dH\):\s+(\S+)\s+(\S+)\s+(\S+)", ["df", "dg", "dh"], converter=float),
-            SimpleLineParser(r"transition strength \[a\.u\.\]:\s*(\S+)\s*(\S+)\s*(\S+)",
-                             ["parallel_strength", "perp_strength", "circular_strength"],
+            SimpleLineParser(r"xx\s+(\S+)\s+xy\s+(\S+)\s+xz\s+(\S+)",
+                             ["xx", "xy", "xz"],
                              converter=float),
-            SimpleLineParser(r"sigma_0 \[1e-50 cm\^4 s\]:\s*(\S+)\s*(\S+)\s*(\S+)",
-                             ["parallel_cross", "perp_cross", "circular_cross"],
+            SimpleLineParser(r"yx\s+(\S+)\s+yy\s+(\S+)\s+yz\s+(\S+)",
+                             ["yx", "yy", "yz"],
                              converter=float),
+            SimpleLineParser(r"zx\s+(\S+)\s+zy\s+(\S+)\s+zz\s+(\S+)",
+                             ["zx", "zy", "zz"],
+                             converter=float),
+            SimpleLineParser(r"\(dF,dG,dH\):\s+(\S+)\s+(\S+)\s+(\S+)",
+                             ["df", "dg", "dh"],
+                             converter=float),
+            SimpleLineParser(
+                r"transition strength \[a\.u\.\]:\s*(\S+)\s*(\S+)\s*(\S+)",
+                ["parallel_strength", "perp_strength", "circular_strength"],
+                converter=float),
+            SimpleLineParser(
+                r"sigma_0 \[1e-50 cm\^4 s\]:\s*(\S+)\s*(\S+)\s*(\S+)",
+                ["parallel_cross", "perp_cross", "circular_cross"],
+                converter=float),
         ]
 
 
 class TPAParser(ParseSection):
+    """Parser for two-photon absorption amplitudes per excited state."""
     name = "tpa"
 
-    def __init__(self):
-        super().__init__(r"Two-photon absorption amplitudes for transition to " +
-                         r"the\s+(\d+)\S+\s+electronic excitation in symmetry\s+(\S+)",
-                         r"sigma_0",
-                         multi=True)
-        self.parsers = [
-            SimpleLineParser(r"Two-photon absorption amplitudes for transition to " +
-                             r"the\s+(\d+)\S+\s+electronic excitation in symmetry\s+(\S+)",
-                             ["state", "irrep"],
-                             types=[int, str]),
-            SimpleLineParser(r"Exc\. energy:\s+(\S+)\s+Hartree,\s+(\S+)", ["E (H)", "E (eV)"],
+    def __init__(self) -> None:
+        super().__init__(
+            r"Two-photon absorption amplitudes for transition to " +
+            r"the\s+(\d+)\S+\s+electronic excitation in symmetry\s+(\S+)",
+            r"sigma_0",
+            multi=True)
+        parsers: list[ParserProtocol] = [
+            SimpleLineParser(
+                r"Two-photon absorption amplitudes for transition to " +
+                r"the\s+(\d+)\S+\s+electronic excitation in symmetry\s+(\S+)",
+                ["state", "irrep"],
+                types=[int, str]),
+            SimpleLineParser(r"Exc\. energy:\s+(\S+)\s+Hartree,\s+(\S+)",
+                             ["E (H)", "E (eV)"],
                              converter=float),
             SimpleLineParser(r"omega_1\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)",
                              ["w1 (H)", "w1 (eV)", "w1 (nm)", "w1 (rcm)"],
@@ -150,48 +190,69 @@ class TPAParser(ParseSection):
                              ["w2 (H)", "w2 (eV)", "w2 (nm)", "w2 (rcm)"],
                              converter=float),
             TPAColParser(),
-        ] + TPAColParser._make_parsers()
+        ]
+        parsers.extend(TPAColParser._make_parsers())
+        self.parsers = parsers
 
 
 class HyperParser(ParseSection):
+    """Parser for first hyperpolarizability tensor components."""
     name = "hyper"
 
-    def __init__(self):
-        super().__init__(r"(\d+)\S+ pair of frequencies", r"septor norm", multi=True)
-        self.parsers = [
-            SimpleLineParser(r"Frequencies:\s+(\S+)\s+(\S+)", ["omega_1", "omega_2"], converter=float),
-            SimpleLineParser(r"Frequencies / eV:\s+(\S+)\s+(\S+)", ["omega_1 (eV)", "omega_2 (eV)"],
+    def __init__(self) -> None:
+        super().__init__(r"(\d+)\S+ pair of frequencies",
+                         r"septor norm",
+                         multi=True)
+        parsers: list[ParserProtocol] = [
+            SimpleLineParser(r"Frequencies:\s+(\S+)\s+(\S+)",
+                             ["omega_1", "omega_2"],
                              converter=float),
-            SimpleLineParser(r"Frequencies / nm:\s+(\S+)\s+(\S+)", ["omega_1 (nm)", "omega_2 (nm)"],
+            SimpleLineParser(r"Frequencies / eV:\s+(\S+)\s+(\S+)",
+                             ["omega_1 (eV)", "omega_2 (eV)"],
+                             converter=float),
+            SimpleLineParser(r"Frequencies / nm:\s+(\S+)\s+(\S+)",
+                             ["omega_1 (nm)", "omega_2 (nm)"],
                              converter=str),
-            SimpleLineParser(r"Frequencies / cm\^\(-1\):\s+(\S+)\s+(\S+)", ["omega_1 (rcm)", "omega_2 (rcm)"],
+            SimpleLineParser(r"Frequencies / cm\^\(-1\):\s+(\S+)\s+(\S+)",
+                             ["omega_1 (rcm)", "omega_2 (rcm)"],
                              converter=float),
-            SimpleLineParser(r"scalar norm:\s+(\S+)", ["scalar"], converter=float),
-            SimpleLineParser(r"vector norms:\s+(\S+)\s+(\S+)\s+(\S+)", ["v1", "v2", "v3"], converter=float),
-            SimpleLineParser(r"deviator 1 eigenvalues:\s+(\S+)\s+(\S+)\s+(\S+)\s+", ["d1_1", "d1_2", "d1_3"],
+            SimpleLineParser(r"scalar norm:\s+(\S+)", ["scalar"],
                              converter=float),
-            SimpleLineParser(r"deviator 2 eigenvalues:\s+(\S+)\s+(\S+)\s+(\S+)\s+", ["d2_1", "d2_2", "d2_3"],
+            SimpleLineParser(r"vector norms:\s+(\S+)\s+(\S+)\s+(\S+)",
+                             ["v1", "v2", "v3"],
                              converter=float),
+            SimpleLineParser(
+                r"deviator 1 eigenvalues:\s+(\S+)\s+(\S+)\s+(\S+)\s+",
+                ["d1_1", "d1_2", "d1_3"],
+                converter=float),
+            SimpleLineParser(
+                r"deviator 2 eigenvalues:\s+(\S+)\s+(\S+)\s+(\S+)\s+",
+                ["d2_1", "d2_2", "d2_3"],
+                converter=float),
             SimpleLineParser(r"septor nom:\s+(\S+)", ["sep"], converter=float),
-        ] + [
-            SimpleLineParser(rf"x{xy}\s+(\S+)\s+y{xy}\s+(\S+)\s+z{xy}\s+(\S+)",
-                             [f"x{xy}", f"y{xy}", f"z{xy}"],
-                             converter=float)
-            for xy in ["xx", "yx", "zx", "xy", "yy", "zy", "xz", "yz", "zz"]
         ]
+        for xy in ["xx", "yx", "zx", "xy", "yy", "zy", "xz", "yz", "zz"]:
+            parsers.append(
+                SimpleLineParser(rf"x{xy}\s+(\S+)\s+y{xy}\s+(\S+)\s+z{xy}\s+(\S+)",
+                                 [f"x{xy}", f"y{xy}", f"z{xy}"],
+                                 converter=float))
+        self.parsers = parsers
 
 
 class _DavidsonIterationParsers:
     """Common parsers for Block Davidson iteration sections"""
 
     @staticmethod
-    def make_parsers():
+    def make_parsers() -> list[ParserProtocol]:
+        """Create parsers for iteration step number, residual norm, and convergence."""
         return [
-            SimpleLineParser(r"^\s*(\d+)\s+\S+\s+\d+\s+(\S+)\s*$", ["step", "max_residual_norm"],
+            SimpleLineParser(r"^\s*(\d+)\s+\S+\s+\d+\s+(\S+)\s*$",
+                             ["step", "max_residual_norm"],
                              types=[int, fortran_float],
                              title="iterations",
                              multi=True),
-            BooleanLineParser(r"^\s*converged!", r"not converged!", "converged"),
+            BooleanLineParser(r"^\s*converged!", r"not converged!",
+                              "converged"),
         ]
 
 
@@ -199,7 +260,7 @@ class CPKSParser(ParseSection):
     """Parser for CPKS iterations"""
     name = "cpks"
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(r"CPKS right-hand side", r"(not )?converged!")
         self.parsers = _DavidsonIterationParsers.make_parsers()
 
@@ -208,14 +269,21 @@ class DavidsonParser(ParseSection):
     """Parser for excitation vector Davidson iterations"""
     name = "davidson"
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(r"^\s*excitation vector\s*$", r"(not )?converged!")
         self.parsers = _DavidsonIterationParsers.make_parsers()
 
 
 class EgradEscfParser(ParseSection):
+    """Base parser for egrad/escf output sections.
 
-    def __init__(self, head, tail):
+    Contains the full set of sub-parsers for excited state properties:
+    excitation energies, transition moments, gradients, NAC couplings,
+    TPA amplitudes, and hyperpolarizabilities. The clean() method assigns
+    gradient indices from exopt data when both are present.
+    """
+
+    def __init__(self, head: str, tail: str) -> None:
         super().__init__(head, tail)
         self.parsers = [
             ExoptLineParser(),
@@ -223,10 +291,14 @@ class EgradEscfParser(ParseSection):
             CPKSParser(),
             GroundParser(),
             ExcitedParser(),
-            ExcitedMoments("relaxed moments", r"Fully relaxed moments of the excited states"),
-            ExcitedMoments("relaxed transitions", r"Fully relaxed state-to-state transition moments"),
-            ExcitedMoments("unrelaxed moments", r"Unrelaxed moments of the excited states"),
-            ExcitedMoments("unrelaxed transitions", r"Unrelaxed state-to-state transition moments"),
+            ExcitedMoments("relaxed moments",
+                           r"Fully relaxed moments of the excited states"),
+            ExcitedMoments("relaxed transitions",
+                           r"Fully relaxed state-to-state transition moments"),
+            ExcitedMoments("unrelaxed moments",
+                           r"Unrelaxed moments of the excited states"),
+            ExcitedMoments("unrelaxed transitions",
+                           r"Unrelaxed state-to-state transition moments"),
             TPAParser(),
             HyperParser(),
             StateToStateParser(),
@@ -234,7 +306,7 @@ class EgradEscfParser(ParseSection):
             GradientDataParser(EXCITED_STATE_GRADIENT_HEAD),
         ]
 
-    def clean(self, liter, out):
+    def clean(self, liter: StackIterator, out: dict[str, Any]) -> None:
         exopt = out.get("exopt")
         gradients = out.get("gradient")
         if not exopt or not gradients or len(exopt) != len(gradients):
@@ -245,14 +317,16 @@ class EgradEscfParser(ParseSection):
 
 
 class EgradParser(EgradEscfParser):
+    """Parser for the egrad (excited state gradient) module output."""
     name = "egrad"
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(r"^\s*e g r a d", r"egrad\s*:\s*all done")
 
 
 class EscfParser(EgradEscfParser):
+    """Parser for the escf (excited state SCF) module output."""
     name = "escf"
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(r"^\s*e s c f", r"escf\s*:\s*all done")

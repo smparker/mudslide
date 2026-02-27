@@ -1,17 +1,20 @@
 # -*- coding: utf-8 -*-
 """Code for running batches of trajectories."""
 
-from typing import Any, Iterator, Tuple
+from __future__ import annotations
+
+from typing import Any, Iterator, Tuple, TYPE_CHECKING
 import logging
 import queue
-import sys
 
 import numpy as np
 from numpy.typing import ArrayLike
 
 from .constants import boltzmann
-from .exceptions import StillInteracting
 from .tracer import TraceManager
+
+if TYPE_CHECKING:
+    from .models.electronics import ElectronicModel_
 
 logger = logging.getLogger("mudslide")
 
@@ -21,9 +24,9 @@ class TrajGenConst:
 
     Parameters
     ----------
-    position : ArrayLike
+    position : np.ndarray
         Initial position.
-    velocity : ArrayLike
+    velocity : np.ndarray
         Initial velocity.
     initial_state : Any
         Initial state specification, should be either an integer or "ground".
@@ -36,7 +39,11 @@ class TrajGenConst:
         Generator yielding tuples of (position, velocity, initial_state, params).
     """
 
-    def __init__(self, position: ArrayLike, velocity: ArrayLike, initial_state: Any, seed: Any = None):
+    def __init__(self,
+                 position: np.ndarray,
+                 velocity: np.ndarray,
+                 initial_state: Any,
+                 seed: Any = None):
         self.position = position
         self.velocity = velocity
         self.initial_state = initial_state
@@ -57,7 +64,9 @@ class TrajGenConst:
         """
         seedseqs = self.seed_sequence.spawn(nsamples)
         for i in range(nsamples):
-            yield (self.position, self.velocity, self.initial_state, {"seed_sequence": seedseqs[i]})
+            yield (self.position, self.velocity, self.initial_state, {
+                "seed_sequence": seedseqs[i]
+            })
 
 
 class TrajGenNormal:
@@ -65,13 +74,13 @@ class TrajGenNormal:
 
     Parameters
     ----------
-    position : ArrayLike
+    position : np.ndarray
         Center of normal distribution for position.
-    velocity : ArrayLike
+    velocity : np.ndarray
         Center of normal distribution for velocity.
     initial_state : Any
         Initial state designation.
-    sigma : ArrayLike
+    sigma : np.ndarray
         Standard deviation of distribution.
     seed : Any, optional
         Initial seed to give to trajectory, by default None.
@@ -80,10 +89,10 @@ class TrajGenNormal:
     """
 
     def __init__(self,
-                 position: ArrayLike,
-                 velocity: ArrayLike,
+                 position: np.ndarray,
+                 velocity: np.ndarray,
                  initial_state: Any,
-                 sigma: ArrayLike,
+                 sigma: np.ndarray,
                  seed: Any = None,
                  seed_traj: Any = None):
         self.position = position
@@ -94,12 +103,12 @@ class TrajGenNormal:
         self.seed_sequence = np.random.SeedSequence(seed)
         self.random_state = np.random.default_rng(seed_traj)
 
-    def vskip(self, vtest: float) -> bool:
+    def vskip(self, vtest: np.ndarray) -> bool:
         """Determine whether to skip given velocity.
 
         Parameters
         ----------
-        vtest : float
+        vtest : np.ndarray
             Velocity to test.
 
         Returns
@@ -107,7 +116,7 @@ class TrajGenNormal:
         bool
             True if velocity should be skipped, False otherwise.
         """
-        return np.any(vtest < 0.0)
+        return bool(np.any(vtest < 0.0))
 
     def __call__(self, nsamples: int) -> Iterator:
         """Generate initial conditions.
@@ -137,9 +146,9 @@ class TrajGenBoltzmann:
 
     Parameters
     ----------
-    position : ArrayLike
+    position : np.ndarray
         Initial positions.
-    mass : ArrayLike
+    mass : np.ndarray
         Array of particle masses.
     temperature : float
         Initial temperature to determine velocities.
@@ -154,8 +163,8 @@ class TrajGenBoltzmann:
     """
 
     def __init__(self,
-                 position: ArrayLike,
-                 mass: ArrayLike,
+                 position: np.ndarray,
+                 mass: np.ndarray,
                  temperature: float,
                  initial_state: Any,
                  scale: bool = True,
@@ -227,13 +236,17 @@ class BatchedTraj:
     | key                |   default                  |
     ---------------------|----------------------------|
     | t0                 | 0.0                        |
-    | nprocs             | 1                          |
     | seed               | None (date)                |
     """
 
-    batch_only_options = [ "samples", "nprocs" ]
+    batch_only_options = ["samples"]
 
-    def __init__(self, model: 'ElectronicModel_', traj_gen: Any, trajectory_type: Any, tracemanager: Any = None, **inp: Any):
+    def __init__(self,
+                 model: ElectronicModel_,
+                 traj_gen: Any,
+                 trajectory_type: Any,
+                 tracemanager: Any = None,
+                 **inp: Any):
         self.model = model
         if tracemanager is None:
             self.tracemanager = TraceManager()
@@ -244,8 +257,7 @@ class BatchedTraj:
         self.batch_options = {}
 
         # statistical parameters
-        self.batch_options["samples"]       = inp.get("samples", 2000)
-        self.batch_options["nprocs"]        = inp.get("nprocs", 1)
+        self.batch_options["samples"] = inp.get("samples", 2000)
 
         # other options get copied over
         self.traj_options = {}
@@ -261,21 +273,9 @@ class BatchedTraj:
         TraceManager
             Object containing the results.
         """
-        # for now, define four possible outcomes of the simulation
         nsamples = self.batch_options["samples"]
-        nprocs = self.batch_options["nprocs"]
-
-        if nprocs > 1:
-            logger.warning('nprocs {} specified, but parallelism is not currently handled'.format(nprocs))
 
         traj_queue: Any = queue.Queue()
-        results_queue: Any = queue.Queue()
-
-        #traj_queue = mp.JoinableQueue()
-        #results_queue = mp.Queue()
-        #procs = [ mp.Process(target=traj_runner, args=(traj_queue, results_queue, )) for p in range(nprocs) ]
-        #for p in procs:
-        #    p.start()
 
         for x0, v0, initial, params in self.traj_gen(nsamples):
             traj_input = self.traj_options
@@ -292,33 +292,7 @@ class BatchedTraj:
         while not traj_queue.empty():
             traj = traj_queue.get()
             results = traj.simulate()
-            results_queue.put(results)
-
-        #traj_queue.join()
-        #for p in procs:
-        #    p.terminate()
-
-        while not results_queue.empty():
-            r = results_queue.get()
-            self.tracemanager.merge_tracer(r)
+            self.tracemanager.merge_tracer(results)
 
         self.tracemanager.outcomes = self.tracemanager.outcome()
         return self.tracemanager
-
-
-def traj_runner(traj_queue: Any, results_queue: Any) -> None:
-    """Runner for computing jobs from queue.
-
-    Parameters
-    ----------
-    traj_queue : Any
-        Queue containing trajectories with a `simulate()` function.
-    results_queue : Any
-        Queue to store results of each call to `simulate()`.
-    """
-    while True:
-        traj = traj_queue.get()
-        if traj is not None:
-            results = traj.simulate()
-            results_queue.put(results)
-        traj_queue.task_done()

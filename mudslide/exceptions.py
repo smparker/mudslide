@@ -1,10 +1,38 @@
 # -*- coding: utf-8 -*-
-"""Mudslide Exceptions"""
+"""Mudslide exception hierarchy.
+
+All mudslide-specific exceptions inherit from MudslideError, making it
+possible to catch any library error with ``except MudslideError``.
+"""
 
 
-class StillInteracting(Exception):
-    """Exception class indicating that a simulation was terminated while still inside the
-    interaction region"""
+class MudslideError(Exception):
+    """Base class for all mudslide errors."""
 
-    def __init__(self) -> None:
-        Exception.__init__(self, "A simulation ended while still inside the interaction region.")
+
+class ConfigurationError(MudslideError):
+    """Bad user input, invalid options, dimension mismatches, or unsupported features."""
+
+
+class ExternalCodeError(MudslideError):
+    """An external tool (e.g. Turbomole) crashed or is unavailable."""
+
+
+class ConvergenceError(ExternalCodeError):
+    """SCF or iterative solver convergence failure (recoverable subset of ExternalCodeError)."""
+
+
+class ComputeError(MudslideError):
+    """Runtime numerical or algorithmic error during simulation."""
+
+
+class MissingDataError(MudslideError):
+    """Requested data (forces, couplings) was not computed."""
+
+
+class MissingForceError(MissingDataError):
+    """Requested force/gradient data was not computed."""
+
+
+class MissingCouplingError(MissingDataError):
+    """Requested derivative coupling data was not computed."""

@@ -1,10 +1,19 @@
 # -*- coding: utf-8 -*-
 """Propagate FSSH trajectory"""
 
+from __future__ import annotations
+
 from typing import Any
 
-from .util import is_string
+from typing import TYPE_CHECKING
+
+from .exceptions import ConfigurationError
+from .util import is_string, check_options
 from .propagator import Propagator_
+
+if TYPE_CHECKING:
+    from .models.electronics import ElectronicModel_
+
 
 class SHVVPropagator(Propagator_):
     """Velocity Verlet propagator for surface hopping dynamics.
@@ -12,6 +21,8 @@ class SHVVPropagator(Propagator_):
     This class implements the Velocity Verlet algorithm for propagating
     classical trajectories in surface hopping molecular dynamics simulations.
     """
+
+    recognized_options: list[str] = ["type"]
 
     def __init__(self, **options: Any) -> None:
         """Constructor
@@ -21,6 +32,7 @@ class SHVVPropagator(Propagator_):
         **options : Any
             Option dictionary for configuration.
         """
+        check_options(options, self.recognized_options)
         super().__init__()
 
     def __call__(self, traj: Any, nsteps: int) -> None:
@@ -37,27 +49,31 @@ class SHVVPropagator(Propagator_):
         # first update nuclear coordinates
         for _ in range(nsteps):
             # Advance position using Velocity Verlet
-            acceleration = traj._force(traj.electronics) / traj.mass
+            acceleration = traj.force(traj.electronics) / traj.mass
             traj.last_position = traj.position
             traj.position += traj.velocity * dt + 0.5 * acceleration * dt * dt
 
             # calculate electronics at new position
             traj.last_electronics, traj.electronics = traj.electronics, traj.model.update(
-                traj.position, electronics=traj.electronics,
-                gradients=traj.needed_gradients(), couplings=traj.needed_couplings())
+                traj.position,
+                electronics=traj.electronics,
+                gradients=traj.needed_gradients(),
+                couplings=traj.needed_couplings())
 
             # Update velocity using Velocity Verlet
-            last_acceleration = traj._force(traj.last_electronics) / traj.mass
-            this_acceleration = traj._force(traj.electronics) / traj.mass
+            last_acceleration = traj.force(traj.last_electronics) / traj.mass
+            this_acceleration = traj.force(traj.electronics) / traj.mass
             traj.last_velocity = traj.velocity
             traj.velocity += 0.5 * (last_acceleration + this_acceleration) * dt
 
             # now propagate the electronic wavefunction to the new time
-            traj.propagate_electronics(traj.last_electronics, traj.electronics, dt)
+            traj.propagate_electronics(traj.last_electronics, traj.electronics,
+                                       dt)
             traj.surface_hopping(traj.last_electronics, traj.electronics)
 
             traj.time += dt
             traj.nsteps += 1
+
 
 class SHPropagator:
     """Surface Hopping propagator factory.
@@ -66,7 +82,7 @@ class SHPropagator:
     used in surface hopping molecular dynamics simulations.
     """
 
-    def __new__(cls, model: Any, prop_options: Any = "vv") -> 'SHPropagator':
+    def __new__(cls, model: ElectronicModel_, prop_options: Any = "vv") -> Propagator_:  # type: ignore[misc]
         """Create a new surface hopping propagator instance.
 
         Parameters
@@ -89,10 +105,10 @@ class SHPropagator:
         if is_string(prop_options):
             prop_options = {"type": prop_options}
         elif not isinstance(prop_options, dict):
-            raise ValueError("prop_options must be a string or a dictionary")
+            raise ConfigurationError("prop_options must be a string or a dictionary")
 
         proptype = prop_options.get("type", "vv")
         if proptype.lower() == "vv":
             return SHVVPropagator(**prop_options)
-        else:
-            raise ValueError(f"Unrecognized surface hopping propagator type: {proptype}.")
+        raise ConfigurationError(
+            f"Unrecognized surface hopping propagator type: {proptype}.")

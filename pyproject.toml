@@ -42,6 +42,7 @@ dev = [
     "mypy",
     "pylint",
     "yapf",
+    "types-PyYAML",
 ]
 
 [project.urls]

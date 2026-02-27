@@ -43,7 +43,6 @@ def run():
     sample_stack = SpawnStack.from_quadrature(nsamples=[2, 2, 2])
     sample_stack.sample_stack[0]["zeta"]=0.003
     samples = 1
-    nprocs = 1
     trace_type = YAMLTrace
     trace_options = {}
     electronic_integration = 'exp'
@@ -60,7 +59,6 @@ def run():
                    positions=positions,
                    samples=samples,
                    max_time = max_time,
-                   nprocs=nprocs,
                    dt=dt,
                    t0=t0,
                    tracemanager=TraceManager(TraceType=trace_type, trace_kwargs=trace_options),

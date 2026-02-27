@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """Implementations of the interface between turbomole and mudslide."""
 
+from __future__ import annotations
+
 import glob
 import io
 import os
-import sys
 import shlex
 import shutil
 import re
@@ -24,6 +25,7 @@ from ..util import find_unique_name
 from ..constants import amu_to_au
 from ..periodic_table import masses
 from ..config import get_config
+from ..exceptions import ConfigurationError, ConvergenceError, ExternalCodeError
 from .electronics import ElectronicModel_
 
 
@@ -37,7 +39,7 @@ def _resolve_command_prefix(explicit: Optional[str]) -> Optional[str]:
     return get_config("turbomole.command_prefix")
 
 
-def turbomole_is_installed():
+def turbomole_is_installed() -> bool:
     """ Check if turbomole is installed by checking for environment variable TURBODIR and
     checking that the scripts and bin directories are available.
 
@@ -52,7 +54,8 @@ def turbomole_is_installed():
 
     return has_turbodir and has_scripts and has_bin
 
-def turbomole_is_installed_or_prefixed():
+
+def turbomole_is_installed_or_prefixed() -> bool:
     """ Check if turbomole is installed or a command prefix is set.
 
     :return: True if turbomole is installed or a command prefix is set, False otherwise
@@ -85,7 +88,7 @@ def _verify_scf(module: str, data_dict: dict) -> None:
         warnings.warn(f"Convergence information not found for {module}")
         return
     if not converged:
-        raise RuntimeError(f"{module} SCF did not converge")
+        raise ConvergenceError(f"{module} SCF did not converge")
 
 
 def _verify_response(module: str, data_dict: dict) -> None:
@@ -99,7 +102,7 @@ def _verify_response(module: str, data_dict: dict) -> None:
             )
             continue
         if not converged:
-            raise RuntimeError(f"{module} {solver} did not converge")
+            raise ConvergenceError(f"{module} {solver} did not converge")
 
 
 class TurboControl:
@@ -110,9 +113,9 @@ class TurboControl:
     control_file = "control"
 
     def __init__(self,
-                 control_file=None,
-                 workdir=None,
-                 command_prefix: Optional[str] = None):
+                 control_file: Optional[str] = None,
+                 workdir: Optional[str] = None,
+                 command_prefix: Optional[str] = None) -> None:
         self.command_prefix = _resolve_command_prefix(command_prefix)
         # workdir is directory of control file
         if control_file is not None:
@@ -120,16 +123,16 @@ class TurboControl:
         elif workdir is not None:
             self.workdir = os.path.abspath(workdir)
         else:
-            raise ValueError("Must provide either control_file or workdir")
+            raise ConfigurationError("Must provide either control_file or workdir")
         self.control_file = control_file or "control"
 
         # make sure control file exists
         if not os.path.exists(os.path.join(self.workdir, self.control_file)):
-            raise RuntimeError(
+            raise ConfigurationError(
                 f"control file not found in working directory {self.workdir:s}")
 
         # list of data groups and which file they are in, used to avoid rerunning sdg too much
-        self.dg_in_file = {}
+        self.dg_in_file: Dict[str, str] = {}
 
     def _build_command(self, cmd: list, cwd: Optional[str] = None) -> tuple:
         """Build command with prefix and working directory handling.
@@ -150,12 +153,12 @@ class TurboControl:
             return ["sh", "-c", shell_cmd], None
         return cmd, cwd
 
-    def check_turbomole_is_installed(self):
+    def check_turbomole_is_installed(self) -> None:
         """Check that turbomole is installed, raise exception if not"""
         if not turbomole_is_installed():
-            raise RuntimeError("Turbomole is not installed")
+            raise ExternalCodeError("Turbomole is not installed")
 
-    def where_is_dg(self, dg, absolute_path=False):
+    def where_is_dg(self, dg: str, absolute_path: bool = False) -> str:
         """Find which file a data group is in"""
         loc = self.dg_in_file[dg] if dg in self.dg_in_file \
                 else self.sdg(dg, show_filename_only=True)
@@ -165,14 +168,14 @@ class TurboControl:
 
     def sdg(
         self,
-        dg,
-        file=None,
-        show_keyword=False,
-        show_body=False,
-        show_filename_only=False,
-        discard_comments=True,
-        quiet=False,
-    ):
+        dg: str,
+        file: Optional[str] = None,
+        show_keyword: bool = False,
+        show_body: bool = False,
+        show_filename_only: bool = False,
+        discard_comments: bool = True,
+        quiet: bool = False,
+    ) -> str:
         """Convenience function to run show data group (sdg) on a control"""
         sdg_command = "sdg"
         if file is not None:
@@ -199,7 +202,7 @@ class TurboControl:
                                 check=False)
         return result.stdout.rstrip()
 
-    def adg(self, dg, data, newline=False):
+    def adg(self, dg: str, data: Union[str, list], newline: bool = False) -> None:
         """Convenience function to run add data group (adg) on a control"""
         if not isinstance(data, list):
             data = [data]
@@ -216,9 +219,9 @@ class TurboControl:
                                 check=True)
         # check that the command ran successfully
         if "abnormal" in result.stderr:
-            raise RuntimeError(f"Call to adg ended abnormally: {result.stderr}")
+            raise ExternalCodeError(f"Call to adg ended abnormally: {result.stderr}")
 
-    def cpc(self, dest):
+    def cpc(self, dest: str) -> None:
         """Copy the control file and other files to a new directory"""
         full_cmd, effective_cwd = self._build_command(["cpc", dest],
                                                       cwd=self.workdir)
@@ -237,7 +240,7 @@ class TurboControl:
                 shutil.copy(os.path.join(os.path.abspath(self.workdir), f),
                             dest)
 
-    def use_weight_derivatives(self, use=True):
+    def use_weight_derivatives(self, use: bool = True) -> None:
         """Check if weight derivatives are used in the control file"""
         sdg_dft = self.sdg("dft", show_body=True)
         if use:  # make sure weight derivatives turned on
@@ -276,12 +279,12 @@ class TurboControl:
         else:
             print(output.stdout)
         if "abnormal" in output.stderr:
-            raise RuntimeError(f"Call to {module} ended abnormally")
+            raise ExternalCodeError(f"Call to {module} ended abnormally")
         data_dict = turboparse.parse_turbo(io.StringIO(output.stdout))
         verify_module_output(module, data_dict, output.stderr)
         return data_dict
 
-    def read_coords(self):
+    def read_coords(self) -> tuple[list[str], np.ndarray]:
         """Read the coordinates from the control file
 
         :return: (symbols, X) where symbols is a list of element symbols
@@ -300,14 +303,14 @@ class TurboControl:
         X = np.array(coords, dtype=np.float64)
         return symbols, X
 
-    def get_masses(self, symbols):
+    def get_masses(self, symbols: list[str]) -> np.ndarray:
         """Get the masses of the atoms in the system"""
         atomic_masses = np.array([masses[s] for s in symbols for _ in range(3)],
                                  dtype=np.float64)
         atomic_masses *= amu_to_au
         return atomic_masses
 
-    def read_hessian(self):
+    def read_hessian(self) -> np.ndarray:
         """
         Projected Hessian has a structure of
         $hessian (projected)
@@ -327,7 +330,7 @@ class TurboControl:
         H = np.array(hessian, dtype=np.float64).reshape(ndof, ndof)
         return H
 
-    def add_point_charges(self, coords: ArrayLike, charges: ArrayLike):
+    def add_point_charges(self, coords: np.ndarray, charges: np.ndarray) -> None:
         """Add point charges to the control file
 
         point_charges data group has the structure:
@@ -352,12 +355,12 @@ class TurboControl:
         # make sure point charge gradients are requested
         drvopt = self.sdg("drvopt", show_body=True, show_keyword=False)
         if "point charges" not in drvopt:
-            drvopt = drvopt.rstrip().split("\n")
-            drvopt += [" point charges"]
-            self.adg("drvopt", drvopt, newline=True)
+            drvopt_lines = drvopt.rstrip().split("\n")
+            drvopt_lines += [" point charges"]
+            self.adg("drvopt", drvopt_lines, newline=True)
         self.adg("point_charge_gradients", [f"file={self.pcgrad_file}"])
 
-    def read_point_charge_gradients(self):
+    def read_point_charge_gradients(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Read point charges and gradients from the control file
 
         point charges in dg $point_charges
@@ -398,14 +401,14 @@ class TMModel(ElectronicModel_):
 
     def __init__(
             self,
-            states: ArrayLike,
+            states: np.ndarray,
             run_turbomole_dir: str = ".",
             workdir_stem: str = "run_turbomole",
             representation: str = "adiabatic",
             reference: Any = None,
             expert:
         bool = False,  # when False, update turbomole parameters for NAMD
-            turbomole_modules: Dict = None,
+            turbomole_modules: Dict | None = None,
             command_prefix: Optional[str] = None,
             keep_output: int = 0,
             exopt_all: bool = False):
@@ -454,7 +457,7 @@ class TMModel(ElectronicModel_):
 
         if not self.command_prefix:
             if not turbomole_is_installed():
-                raise RuntimeError("Turbomole is not installed")
+                raise ExternalCodeError("Turbomole is not installed")
 
         if turbomole_modules is None:
             # always need energy and gradients
@@ -468,14 +471,14 @@ class TMModel(ElectronicModel_):
             if not all(
                     shutil.which(x) is not None
                     for x in self.turbomole_modules.values()):
-                raise RuntimeError("Turbomole modules not found")
+                raise ExternalCodeError("Turbomole modules not found")
 
         if not self.expert:
             self.apply_suggested_parameters()
 
         self.exopt_all = exopt_all
 
-    def apply_suggested_parameters(self):
+    def apply_suggested_parameters(self) -> None:
         """ Apply suggested parameters for Turbomole to work well with NAMD
 
         This function will update the control file to ensure that Turbomole
@@ -502,7 +505,7 @@ class TMModel(ElectronicModel_):
 
         # probably force phaser on as well
 
-    def update_coords(self, X):
+    def update_coords(self, X: np.ndarray) -> None:
         """ Update the coordinates in the control file
 
         :param X: numpy array of shape (n_atoms * 3) with coordinates in Bohr
@@ -523,11 +526,12 @@ class TMModel(ElectronicModel_):
 
         # Reached end of file without finding $coord.
         if line == "":
-            raise ValueError(f"$coord entry not found in file: {coord_path}!")
+            raise ConfigurationError(f"$coord entry not found in file: {coord_path}!")
 
         coordline += 1
         for i, coord_list in enumerate(X):
             x, y, z = coord_list[:3]
+            assert self.atom_types is not None
             s = self.atom_types[i]
             lines[coordline] = f"{x:26.16e} {y:28.16e} {z:28.16e} {s:>7}\n"
             coordline += 1
@@ -678,7 +682,7 @@ class TMModel(ElectronicModel_):
                     (parent / f"tm.{n}").unlink(missing_ok=True)
 
     def compute(self,
-                X,
+                X: np.ndarray,
                 couplings: Any = None,
                 gradients: Any = None,
                 reference: Any = None) -> None:
@@ -691,7 +695,7 @@ class TMModel(ElectronicModel_):
 
         Parameters
         ----------
-        X : ArrayLike
+        X : np.ndarray
             Position at which to compute properties
         couplings : list of tuple(int, int) or None, optional
             Which coupling pairs to compute. None means all.
@@ -769,7 +773,7 @@ class TMModel(ElectronicModel_):
         for (i, j) in needed_c:
             self._derivative_couplings_available[i, j] = True
 
-    def clone(self):
+    def clone(self) -> TMModel:
         model_clone = cp.deepcopy(self)
         unique_workdir = find_unique_name(self.workdir_stem,
                                           self.run_turbomole_dir,

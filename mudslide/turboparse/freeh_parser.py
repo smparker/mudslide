@@ -1,40 +1,59 @@
 #!/usr/bin/env python
+"""Parser for Turbomole freeh (free enthalpy) module output.
+
+Extracts thermodynamic data including temperature, pressure, partition
+functions (translational, rotational, vibrational), chemical potential,
+energy, entropy, heat capacities (Cv, Cp), and enthalpy.
+"""
+from __future__ import annotations
 
 import re
+from typing import Any
 
 from .section_parser import ParseSection
+from .stack_iterator import StackIterator
 
-FLT = r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?"
+FLT: str = r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?"
 
-def try_to_fill_with_float(dict_obj, key, value):
-    """Try to fill a dict with a float, but do nothing if it fails."""
+
+def try_to_fill_with_float(dict_obj: dict[str, float], key: str,
+                           value: str | None) -> None:
+    """Store value as float in dict_obj[key], silently ignoring conversion failures."""
     try:
-        dict_obj[key] = float(value)
-    except:
+        dict_obj[key] = float(value)  # type: ignore[arg-type]
+    except (ValueError, TypeError):
         pass
 
+
 class FreeHData(ParseSection):
+    """Parser for the thermodynamic data table within a freeh section."""
     name = ''
 
-    start1st_re = re.compile(r"T\s+p\s+ln\(qtrans\)\s+ln\(qrot\)\s+ln\(qvib\)\s+chem\.pot\.\s+energy\s+entropy")
-    data1st_re = re.compile(rf"({FLT})\s+({FLT})\s+({FLT})\s+({FLT})\s+({FLT})\s+({FLT})\s+({FLT})\s+({FLT})")
-    start2nd_re = re.compile(r"\(K\)\s+\(MPa\)\s+\(kJ/mol-K\)\s+\(kJ/mol-K\)(?:\s+\(kJ/mol\))?")
-    data2nd_re = re.compile(rf"({FLT})\s+({FLT})\s+({FLT})\s+({FLT})\s*({FLT})?")
-    end_re = re.compile(r"\*{50}")
+    start1st_re: re.Pattern[str] = re.compile(
+        r"T\s+p\s+ln\(qtrans\)\s+ln\(qrot\)\s+ln\(qvib\)\s+chem\.pot\.\s+energy\s+entropy"
+    )
+    data1st_re: re.Pattern[str] = re.compile(
+        rf"({FLT})\s+({FLT})\s+({FLT})\s+({FLT})\s+({FLT})\s+({FLT})\s+({FLT})\s+({FLT})"
+    )
+    start2nd_re: re.Pattern[str] = re.compile(
+        r"\(K\)\s+\(MPa\)\s+\(kJ/mol-K\)\s+\(kJ/mol-K\)(?:\s+\(kJ/mol\))?")
+    data2nd_re: re.Pattern[str] = re.compile(
+        rf"({FLT})\s+({FLT})\s+({FLT})\s+({FLT})\s*({FLT})?")
+    end_re: re.Pattern[str] = re.compile(r"\*{50}")
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
             r"T\s+p\s+ln\(qtrans\)\s+ln\(qrot\)\s+ln\(qvib\)\s+chem\.pot\.\s+energy\s+entropy",
             r"\*{50}",
             multi=False)
 
-    def parse_driver(self, liter, out):
+    def parse_driver(self, liter: StackIterator, out: dict[str, Any]) -> bool:
         """
         Driver to FreeH section
 
         return: advanced (whether next has been called on liter)
         """
-        data = []
+        data: list[dict[str, float]] = []
         done = False
         advanced = False
         while not done:
@@ -47,15 +66,19 @@ class FreeHData(ParseSection):
                 while not done1st:
                     m1st = self.data1st_re.search(liter.top())
                     if m1st:
-                        new_data = {}
+                        new_data: dict[str, float] = {}
                         try_to_fill_with_float(new_data, 'T', m1st.group(1))
                         try_to_fill_with_float(new_data, 'P', m1st.group(2))
-                        try_to_fill_with_float(new_data, 'qtrans', m1st.group(3))
+                        try_to_fill_with_float(new_data, 'qtrans',
+                                               m1st.group(3))
                         try_to_fill_with_float(new_data, 'qrot', m1st.group(4))
                         try_to_fill_with_float(new_data, 'qvib', m1st.group(5))
-                        try_to_fill_with_float(new_data, 'chem.pot.', m1st.group(6))
-                        try_to_fill_with_float(new_data, 'energy', m1st.group(7))
-                        try_to_fill_with_float(new_data, 'entropy', m1st.group(8))
+                        try_to_fill_with_float(new_data, 'chem.pot.',
+                                               m1st.group(6))
+                        try_to_fill_with_float(new_data, 'energy',
+                                               m1st.group(7))
+                        try_to_fill_with_float(new_data, 'entropy',
+                                               m1st.group(8))
                         data.append(new_data)
 
                     mend = self.start2nd_re.search(liter.top())
@@ -111,8 +134,9 @@ class FreeHData(ParseSection):
 
 
 class FreeHParser(ParseSection):
+    """Parser for the freeh (free enthalpy) module output."""
     name = "freeh"
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(r"f r e e   e n t h a l p y", r"freeh\s*:\s*all done")
         self.parsers = [FreeHData()]

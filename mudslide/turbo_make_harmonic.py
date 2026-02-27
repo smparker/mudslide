@@ -3,18 +3,23 @@
 Extract harmonic parameters from a vibrational analysis
 """
 
+from __future__ import annotations
+
 from typing import Any
 import argparse
 import sys
 
 import numpy as np
 
+from .exceptions import ExternalCodeError
 from .models.turbomole_model import TurboControl, turbomole_is_installed_or_prefixed
 from .models.harmonic_model import HarmonicModel
 from .units import amu
 from .version import get_version_info
 
-def add_make_harmonic_parser(subparsers):
+
+
+def add_make_harmonic_parser(subparsers: Any) -> None:
     """Add make_harmonic subparser to an argument parser.
 
     Parameters
@@ -29,12 +34,13 @@ def add_make_harmonic_parser(subparsers):
     """
     parser = subparsers.add_parser(
         "make_harmonic",
-        help="Generate a harmonic model from a vibrational analysis"
-    )
+        help="Generate a harmonic model from a vibrational analysis")
     add_make_harmonic_arguments(parser)
     parser.set_defaults(func=make_harmonic_main)
 
-def add_make_harmonic_arguments(parser):
+
+
+def add_make_harmonic_arguments(parser: Any) -> None:
     """Add command line arguments for make_harmonic command.
 
     Parameters
@@ -47,13 +53,23 @@ def add_make_harmonic_arguments(parser):
     None
         Modifies parser in place by adding arguments
     """
-    parser.add_argument("-c", "--control", default="control", help="Control file")
-    parser.add_argument("-d", "--model-dest", default="harmonic.json",
+    parser.add_argument("-c",
+                        "--control",
+                        default="control",
+                        help="Control file")
+    parser.add_argument("-d",
+                        "--model-dest",
+                        default="harmonic.json",
                         help="Where to write harmonic model as a json output")
-    parser.add_argument("-o", "--output", default=sys.stdout, type=argparse.FileType('w'),
+    parser.add_argument("-o",
+                        "--output",
+                        default=sys.stdout,
+                        type=argparse.FileType('w'),
                         help="Where to print output")
 
-def main(argv=None):
+
+
+def main(argv: list[str] | None = None) -> None:
     """Parse command line arguments and run make_harmonic command.
 
     Parameters
@@ -70,13 +86,18 @@ def main(argv=None):
         description="Generate a harmonic model from a vibrational analysis",
         epilog=get_version_info(),
         formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('-v', '--version', action='version', version=get_version_info())
+    parser.add_argument('-v',
+                        '--version',
+                        action='version',
+                        version=get_version_info())
     add_make_harmonic_arguments(parser)
     args = parser.parse_args(argv)
 
     make_harmonic_wrapper(args)
 
-def make_harmonic_wrapper(args):
+
+
+def make_harmonic_wrapper(args: Any) -> None:
     """Wrapper function for make_harmonic command.
 
     Parameters
@@ -91,7 +112,9 @@ def make_harmonic_wrapper(args):
     """
     make_harmonic_main(args.control, args.model_dest, args.output)
 
-def make_harmonic_main(control: str, model_dest: str, output: Any):
+
+
+def make_harmonic_main(control: str, model_dest: str, output: Any) -> None:
     """Main function for make_harmonic command.
 
     Parameters
@@ -109,7 +132,7 @@ def make_harmonic_main(control: str, model_dest: str, output: Any):
         Writes harmonic model to model_dest
     """
     if not turbomole_is_installed_or_prefixed():
-        raise RuntimeError("Turbomole is not available")
+        raise ExternalCodeError("Turbomole is not available")
 
     print(f"Reading Turbomole control file from {control}", file=output)
     print(file=output)
@@ -122,15 +145,18 @@ def make_harmonic_main(control: str, model_dest: str, output: Any):
     masses = turbo.get_masses(symbols)
 
     print("Reference geometry:", file=output)
-    print(f"{'el':>3s} {'x (Å)':>20s} {'y (Å)':>20s} {'z (Å)':>20s} {'mass (amu)':>20s}", file=output)
+    print(
+        f"{'el':>3s} {'x (Å)':>20s} {'y (Å)':>20s} {'z (Å)':>20s} {'mass (amu)':>20s}",
+        file=output)
     print("-" * 100, file=output)
 
     ms = masses.reshape(-1, 3)[:, 0]
     for symbol, coord, mass in zip(symbols, coords.reshape(-1, 3), ms):
-        print(f"{symbol:3s} "
-              f"{coord[0]: 20.16g} {coord[1]: 20.16g} {coord[2]: 20.16g} "
-              f"{mass / amu: 20.16g}",
-              file=output)
+        print(
+            f"{symbol:3s} "
+            f"{coord[0]: 20.16g} {coord[1]: 20.16g} {coord[2]: 20.16g} "
+            f"{mass / amu: 20.16g}",
+            file=output)
     print(file=output)
 
     # read Hessian
@@ -141,7 +167,12 @@ def make_harmonic_main(control: str, model_dest: str, output: Any):
         print(f"  {i:3d} {val:20.10g}", file=output)
     print(file=output)
 
-    harmonic = HarmonicModel(coords, 0.0, hessian, masses, symbols, ndims=3,
+    harmonic = HarmonicModel(coords,
+                             0.0,
+                             hessian,
+                             masses,
+                             symbols,
+                             ndims=3,
                              nparticles=len(symbols))
 
     print(f"Writing harmonic model to {model_dest}", file=output)

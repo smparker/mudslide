@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Collect results from single trajectories"""
 
+from __future__ import annotations
+
 import bz2
 import copy as cp
 import gzip
@@ -16,6 +18,7 @@ import numpy as np
 from numpy.typing import ArrayLike
 
 from .constants import fs_to_au
+from .exceptions import ConfigurationError
 from .util import find_unique_name, is_string
 from .math import RollingAverage
 from .version import __version__
@@ -34,7 +37,7 @@ _COMPRESSION_EXTENSIONS = {
 }
 
 
-def _open_log(path: str, mode: str = "rt"):
+def _open_log(path: str, mode: str = "rt") -> Any:
     """Open a log file, automatically handling compression based on extension."""
     for ext, module in _COMPRESSION_EXTENSIONS.items():
         if path.endswith(ext):
@@ -132,7 +135,7 @@ class Trace_(ABC):
             Number of snapshots
         """
 
-    def form_data(self, snap_dict: Dict) -> Dict:
+    def form_data(self, snap_dict: Dict) -> Dict[str, Any]:
         """Convert snapshot dictionary to appropriate data types.
 
         Parameters
@@ -145,7 +148,7 @@ class Trace_(ABC):
         Dict
             Processed snapshot data
         """
-        out = {}
+        out: Dict[str, Any] = {}
         for k, v in snap_dict.items():
             if isinstance(v, list):
                 o = np.array(v)
@@ -238,7 +241,7 @@ class Trace_(ABC):
 
             print(line, file=file)
 
-    def outcome(self) -> ArrayLike:
+    def outcome(self) -> np.ndarray:
         """Classifies end of simulation: 2*state + [0 for left, 1 for right]"""
         last_snapshot = self[-1]
         ndof = len(last_snapshot["position"])
@@ -290,7 +293,7 @@ class InMemoryTrace(Trace_):
         """collect and optionally process data"""
         self.data.append(snapshot)
 
-    def record_event(self, event_dict: Dict, event_type: str = "hop"):
+    def record_event(self, event_dict: Dict, event_type: str = "hop") -> None:
         if event_type == "hop":
             self.hops.append(event_dict)
             return
@@ -363,9 +366,8 @@ class YAMLTrace(Trace_):
         super().__init__(weight=weight)
 
         if compression is not None and compression not in _COMPRESSORS:
-            raise ValueError(
-                f"Unknown compression type: {compression}. "
-                f"Supported types: {list(_COMPRESSORS.keys())}")
+            raise ConfigurationError(f"Unknown compression type: {compression}. "
+                             f"Supported types: {list(_COMPRESSORS.keys())}")
 
         self.weight: float = weight
         self.log_pitch = log_pitch
@@ -421,7 +423,7 @@ class YAMLTrace(Trace_):
             self.logfiles = logdata["logfiles"]
             self.main_log = self.unique_name + ".yaml"
             if self.main_log != os.path.basename(load_main_log):
-                raise RuntimeError(
+                raise ConfigurationError(
                     f"It looks like the log file {load_main_log} was renamed. "
                     "This is undefined behavior for now!")
             self.active_logfile = self.logfiles[-1]
@@ -440,7 +442,7 @@ class YAMLTrace(Trace_):
             self.logsize = self.log_pitch * (self.nlogs -
                                              1) + self.active_logsize
 
-    def files(self, absolute_path=True):
+    def files(self, absolute_path: bool = True) -> List[str]:
         """returns a list of all files associated with this trace
 
         :param absolute_path: if True, returns the absolute path to the files,
@@ -453,7 +455,7 @@ class YAMLTrace(Trace_):
             return [os.path.join(self.location, x) for x in rel_files]
         return rel_files
 
-    def write_main_log(self):
+    def write_main_log(self) -> None:
         """Writes main log file, which points to other files for logging information"""
         out = {
             "name": self.unique_name,
@@ -481,6 +483,7 @@ class YAMLTrace(Trace_):
         log_index : int
             Index into self.logfiles of the log to compress
         """
+        assert self.compression is not None
         module, ext = _COMPRESSORS[self.compression]
         old_name = self.logfiles[log_index]
         new_name = old_name + ext
@@ -519,7 +522,7 @@ class YAMLTrace(Trace_):
 
         self.logsize += 1
 
-    def record_event(self, event_dict: Dict, event_type: str = "hop"):
+    def record_event(self, event_dict: Dict, event_type: str = "hop") -> None:
         if event_type == "hop":
             log = self.hop_log
         else:
@@ -541,7 +544,7 @@ class YAMLTrace(Trace_):
                       default_flow_style=False,
                       explicit_start=False)
 
-    def clone(self):
+    def clone(self) -> YAMLTrace:
         """Create a deep copy of the trace.
 
         Returns
@@ -614,9 +617,8 @@ class YAMLTrace(Trace_):
 
         target_log = i // self.log_pitch
         target_snap = i - target_log * self.log_pitch
-        with _open_log(
-                os.path.join(self.location, self.logfiles[target_log]),
-                "rt") as f:
+        with _open_log(os.path.join(self.location, self.logfiles[target_log]),
+                       "rt") as f:
             chunk = yaml.safe_load(f)
             return self.form_data(chunk[target_snap])
 
@@ -637,14 +639,14 @@ class YAMLTrace(Trace_):
             }
 
 
-def load_log(main_log_name):
+def load_log(main_log_name: str) -> YAMLTrace:
     """prepare a trace object from a main log file"""
     # assuming online yaml logs for now
     out = YAMLTrace(load_main_log=main_log_name)
     return out
 
 
-def trace_factory(trace_type: str = "yaml"):
+def trace_factory(trace_type: str = "yaml") -> type:
     """returns the appropriate trace class based on the type specified
 
     Parameters
@@ -656,10 +658,10 @@ def trace_factory(trace_type: str = "yaml"):
         return YAMLTrace
     if trace_type == "in_memory":
         return InMemoryTrace
-    raise ValueError(f"Invalid trace type specified: {trace_type}")
+    raise ConfigurationError(f"Invalid trace type specified: {trace_type}")
 
 
-def Trace(trace_type, *args, **kwargs):
+def Trace(trace_type: Any, *args: Any, **kwargs: Any) -> Trace_:
     """Create a trace object based on the type specified.
 
     Parameters
@@ -695,23 +697,23 @@ def Trace(trace_type, *args, **kwargs):
     elif isinstance(trace_type, Trace_):
         return trace_type
 
-    raise ValueError("Unrecognized Trace option")
+    raise ConfigurationError("Unrecognized Trace option")
 
 
 class TraceManager:
     """Manage the collection of observables from a set of trajectories"""
 
     def __init__(self,
-                 trace_type="default",
-                 trace_args=None,
-                 trace_kwargs=None) -> None:
+                 trace_type: str = "default",
+                 trace_args: Optional[List[Any]] = None,
+                 trace_kwargs: Optional[Dict[str, Any]] = None) -> None:
         self.trace_type = trace_type
 
         self.trace_args = trace_args if trace_args is not None else []
         self.trace_kwargs = trace_kwargs if trace_kwargs is not None else {}
 
         self.traces: List = []
-        self.outcomes: ArrayLike
+        self.outcomes: np.ndarray
 
     def spawn_tracer(self) -> Trace_:
         """returns a Tracer object that collects all of the observables for a given trajectory"""
@@ -731,14 +733,14 @@ class TraceManager:
     def __getitem__(self, i: int) -> Trace_:
         return self.traces[i]
 
-    def outcome(self) -> ArrayLike:
+    def outcome(self) -> np.ndarray:
         """summarize outcomes from entire set of traces"""
         weight_norm = sum((t.weight for t in self.traces))
         outcome = sum(
             (t.weight * t.outcome() for t in self.traces)) / weight_norm
         return outcome
 
-    def counts(self) -> ArrayLike:
+    def counts(self) -> np.ndarray:
         """summarize outcomes from entire set of traces"""
         out = sum(t.outcome() for t in self.traces)
         return out
@@ -804,7 +806,7 @@ class TraceManager:
 
     def as_dict(self) -> Dict:
         """return the object as a dictionary"""
-        out = {"hops": [], "data": [], "weight": []}
+        out: Dict[str, list[Any]] = {"hops": [], "data": [], "weight": []}
         for x in self.traces:
             out["hops"].append(x.as_dict()["hops"])
             out["data"].append(x.as_dict()["data"])

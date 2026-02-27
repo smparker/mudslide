@@ -6,6 +6,8 @@
 _build
 _static
 _templates
+dist/
 test/checks
 .claude
 .vscode
+mudslide.report

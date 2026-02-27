@@ -5,6 +5,8 @@ Loads settings from ``~/.config/mudslide/config.yaml`` (or
 ``$XDG_CONFIG_HOME/mudslide/config.yaml`` when that variable is set).
 """
 
+from __future__ import annotations
+
 import os
 from pathlib import Path
 from typing import Any, Optional

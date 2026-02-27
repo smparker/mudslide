@@ -7,6 +7,7 @@ import json
 import numpy as np
 import pytest
 import mudslide
+from mudslide.exceptions import ConfigurationError
 
 water_json = """
 {"x0": [0.0, 0.0, -0.12178983933899, 1.41713420892173, 0.0, 0.96657854674257, -1.41713420892173, 0.0, 0.96657854674257], "E0": 0.0, "H0": [[0.783125763, 0.0, 5e-10, -0.3915628813, 0.0, -0.3007228667, -0.3915628817, 0.0, 0.3007228662], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [5e-10, 0.0, 0.482147457, -0.245482284, 0.0, -0.2410737287, 0.2454822835, 0.0, -0.2410737283], [-0.3915628813, 0.0, -0.245482284, 0.4189939059, 0.0, 0.2731025751, -0.0274310246, 0.0, -0.0276202911], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [-0.3007228667, 0.0, -0.2410737287, 0.2731025751, 0.0, 0.2360154334, 0.0276202915, 0.0, 0.0050582953], [-0.3915628817, 0.0, 0.2454822835, -0.0274310246, 0.0, 0.0276202915, 0.4189939063, 0.0, -0.273102575], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.3007228662, 0.0, -0.2410737283, -0.0276202911, 0.0, 0.0050582953, -0.273102575, 0.0, 0.236015433]], "mass": [29156.945697766205, 29156.945697766205, 29156.945697766205, 1837.1526473562108, 1837.1526473562108, 1837.1526473562108, 1837.1526473562108, 1837.1526473562108, 1837.1526473562108], "atom_types": ["O", "H", "H"]}"""
@@ -75,7 +76,7 @@ def test_from_file_unknown_format(tmp_path):
     with open(filepath, "w") as f:
         f.write("hello")
 
-    with pytest.raises(ValueError, match="Unknown file format"):
+    with pytest.raises(ConfigurationError, match="Unknown file format"):
         mudslide.models.HarmonicModel.from_file(filepath)
 
 
@@ -107,7 +108,7 @@ def test_to_file_unknown_format(tmp_path):
     model = mudslide.models.HarmonicModel.from_dict(water_model)
     filepath = str(tmp_path / "out.txt")
 
-    with pytest.raises(ValueError, match="Unknown file format"):
+    with pytest.raises(ConfigurationError, match="Unknown file format"):
         model.to_file(filepath)
 
 

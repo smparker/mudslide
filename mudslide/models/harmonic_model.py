@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Harmonic model"""
 
+from __future__ import annotations
+
 from typing import Any, List
 import json
 import yaml
@@ -8,15 +10,23 @@ import yaml
 import numpy as np
 from numpy.typing import ArrayLike
 
+from ..exceptions import ConfigurationError
 from .electronics import ElectronicModel_
+
 
 class HarmonicModel(ElectronicModel_):
     r"""Adiabatic model for ground state dynamics
 
     """
 
-    def __init__(self, x0: ArrayLike, E0: float, H0: ArrayLike, mass: ArrayLike,
-                 atom_types: List[str] = None, ndims: int = 1, nparticles: int = 1):
+    def __init__(self,
+                 x0: np.ndarray,
+                 E0: float,
+                 H0: np.ndarray,
+                 mass: np.ndarray,
+                 atom_types: List[str] | None = None,
+                 ndims: int = 1,
+                 nparticles: int = 1):
         """Constructor
 
         Args:
@@ -28,22 +38,30 @@ class HarmonicModel(ElectronicModel_):
             ndims: Number of dimensions (e.g. 3 for 3D)
             nparticles: Number of particles (e.g. 1 for a single particle)
         """
-        super().__init__(nstates=1, ndims=ndims, nparticles=nparticles,
-                         atom_types=atom_types, representation="adiabatic")
+        super().__init__(nstates=1,
+                         ndims=ndims,
+                         nparticles=nparticles,
+                         atom_types=atom_types,
+                         representation="adiabatic")
         self.x0 = np.array(x0)
 
         self.E0 = E0
         self.H0 = np.array(H0)
 
         self.mass = np.array(mass, dtype=np.float64).reshape(self._ndof)
+        self.energies = np.array([])
 
         if self.H0.shape != (self._ndof, self._ndof):
-            raise ValueError("Incorrect shape of Hessian")
+            raise ConfigurationError("Incorrect shape of Hessian")
 
         if self.mass.shape != (self._ndof,):
-            raise ValueError("Incorrect shape of mass")
+            raise ConfigurationError("Incorrect shape of mass")
 
-    def compute(self, X: ArrayLike, gradients: Any = None, couplings: Any = None, reference: Any = None) -> None:
+    def compute(self,
+                X: np.ndarray,
+                couplings: Any = None,
+                gradients: Any = None,
+                reference: Any = None) -> None:
         """Compute and store the energies and gradients
 
         Args:
@@ -65,7 +83,7 @@ class HarmonicModel(ElectronicModel_):
         self._forces_available = np.ones(self.nstates, dtype=bool)
 
     @classmethod
-    def from_dict(cls, model_dict: dict) -> "HarmonicModel":
+    def from_dict(cls, model_dict: dict) -> HarmonicModel:
         """Create a harmonic model from a dictionary
 
         Args:
@@ -80,11 +98,16 @@ class HarmonicModel(ElectronicModel_):
         nparticles = len(atom_types) if atom_types is not None else 1
         ndims = x0.size // nparticles
 
-        return cls(x0, E0, H0, mass, atom_types=atom_types,
-                   ndims=ndims, nparticles=nparticles)
+        return cls(x0,
+                   E0,
+                   H0,
+                   mass,
+                   atom_types=atom_types,
+                   ndims=ndims,
+                   nparticles=nparticles)
 
     @classmethod
-    def from_file(cls, filename: str) -> "HarmonicModel":
+    def from_file(cls, filename: str) -> HarmonicModel:
         """Create a harmonic model from a file
 
         Args:
@@ -98,7 +121,7 @@ class HarmonicModel(ElectronicModel_):
             elif filename.endswith(".yaml"):
                 data = yaml.load(f, Loader=yaml.FullLoader)
             else:
-                raise ValueError("Unknown file format")
+                raise ConfigurationError("Unknown file format")
 
         return cls.from_dict(data)
 
@@ -107,7 +130,12 @@ class HarmonicModel(ElectronicModel_):
 
         Use the ending on the filename to determine the format.
         """
-        out = {"x0": self.x0.tolist(), "E0": self.E0, "H0": self.H0.tolist(), "mass": self.mass.tolist()}
+        out = {
+            "x0": self.x0.tolist(),
+            "E0": self.E0,
+            "H0": self.H0.tolist(),
+            "mass": self.mass.tolist()
+        }
         if self.atom_types is not None:
             out["atom_types"] = self.atom_types
 
@@ -117,4 +145,4 @@ class HarmonicModel(ElectronicModel_):
             elif filename.endswith(".yaml"):
                 yaml.dump(out, f)
             else:
-                raise ValueError("Unknown file format")
+                raise ConfigurationError("Unknown file format")

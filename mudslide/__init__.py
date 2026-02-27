@@ -7,6 +7,11 @@ nonadiabatic molecular dynamics.
 
 from .version import __version__
 from .header import print_header
+from .exceptions import (
+    MudslideError, ConfigurationError, ExternalCodeError,
+    ConvergenceError, ComputeError, MissingDataError,
+    MissingForceError, MissingCouplingError
+)
 
 from . import units
 from . import models
@@ -18,6 +23,7 @@ from . import collect
 from . import surface
 from . import turbo_make_harmonic
 
+from .trajectory_md import *
 from .surface_hopping_md import *
 from .adiabatic_propagator import *
 from .adiabatic_md import *
@@ -26,4 +32,3 @@ from .ehrenfest import *
 from .afssh import *
 from .batch import *
 from .tracer import *
-
