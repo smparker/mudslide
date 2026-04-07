@@ -1,0 +1,44 @@
+stages:
+  - lint
+  - test
+
+lint:
+  stage: lint
+  image: python:3.13
+  script:
+    - pip install -e ".[dev]"
+    - pylint mudslide/ --fail-under=9.5
+    - mypy mudslide/
+
+.test_template: &test_template
+  stage: test
+  script:
+    - pip install --upgrade pip
+    - pip install pytest pytest-cov
+    - if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+    - pip install -e .
+    - pytest --cov=mudslide --cov-report=term-missing
+
+test-3.9:
+  <<: *test_template
+  image: python:3.9
+
+test-3.10:
+  <<: *test_template
+  image: python:3.10
+
+test-3.11:
+  <<: *test_template
+  image: python:3.11
+
+test-3.12:
+  <<: *test_template
+  image: python:3.12
+
+test-3.13:
+  <<: *test_template
+  image: python:3.13
+
+test-3.14:
+  <<: *test_template
+  image: python:3.14
